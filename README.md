@@ -1,2 +1,2 @@
-# statistical-machine-learning-notes
+# Notes on Statistical and Machine Learning 
 Some notes on statistical and machine learning
