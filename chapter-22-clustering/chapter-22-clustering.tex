@@ -1,0 +1,1629 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 22, Clustering Analysis}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Clustering Analysis}{22}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is produced based on 
+\begin{itemize}
+	\item \textit{Chapter 12, Clustering Analysis} in \textcite{Izenman2009-jk}, 
+	\item \textit{Chapter 14, Unsupervised Learning} in  \textcite{Friedman2001-np}, 
+	\item \textit{A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise} by \textcite{Ester1996-kp}, and 
+	\item \textit{A Tutorial on Spectral Clustering} by \textcite{Luxburg2007-vl}. 
+\end{itemize}
+
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Introduction:} \textit{Clustering analysis}, also known as \textit{data segmentation} or \emph{class discovery}, is an example of unsupervised learning and is a popular tool for analyzing unstructured multivariate data. 
+	
+	\item \textbf{Assumption:} The underlying assumption is that the data form a heterogenous set that should separate into natural groups familiar to the domain experts. 
+	
+	\textit{Remark.} In practice, there is no guarantee that more than one group can be found. 
+	
+	\item \textbf{Goal:} Its goal is to segment a given dataset into homogenous subgroups or ``clusters''. 
+	
+	\item \textbf{Cluster:} A \emph{cluster} is generally thought of as a group of items satisfying the following properties: 
+	\begin{enumerate}
+		\item each item within a cluster is ``close'' (in some appropriate sense) to a central item of a cluster, and 
+		\item items of different clusters are ``far away'' from each other. 
+	\end{enumerate}
+	In particular, methods for clustering items depend on how similar or dissimilar the items are to each other. 
+	
+	\item \textbf{Clustering Tasks:} 
+	\begin{enumerate}
+		\item \textit{Clustering Observations:} We cluster $n$ observations into groups, where the number of groups, denoted by $K$, is unknown and has to be determined from the data. 
+	
+		\item \textit{Clustering Variables:} We partition $p$ variables into $K$ distinct groups, where the number $K$ is unknown. 
+		\begin{itemize}
+			\item It is possible that one variable forms a cluster, but most clusters will be formed by several variables; 
+			\item These clusters should be \textit{far enough apart} that groupings are easily identifiable; 
+			\item Each cluster of variables may be replaced by a single variable representative of that cluster. 
+		\end{itemize}
+		
+		\item \textit{Two-way Clustering:} We can cluster both observations and variables simultaneously. 
+	
+	\end{enumerate}
+	
+	In the remaining note, we focus on clustering observations only. 
+	
+	\item \textbf{Comparison with Classification:} Clustering and classification are different from the following perspectives: 
+	\begin{enumerate}
+		\item in terms of the number of classes and the membership of items: 
+		\begin{enumerate}
+			\item in classification, it is known \textit{a priori} how many classes or groups are present in the data, and which items are members of which class or group; 
+			\item in clustering, the number of classes and the membership of items are both unknown; 
+		\end{enumerate}
+		\item in terms of the objective: 
+		\begin{enumerate}
+			\item in classification, the objective is to classify new items (possibly in the form of a test set) into one of the given classes based upon the experience obtained using a learning set of data; 
+			\item clustering falls more into the framework of \emph{exploratory data analysis}, where no prior information is available regarding the class structure of the data; 
+		\end{enumerate}
+		\item in terms of what to classify: 
+		\begin{enumerate}
+			\item classification deals almost exclusively with classifying \textit{observations}; 
+			\item clustering can be applied to clustering \emph{observations} or \emph{variables} or \emph{both observations and variables} simultaneously, depending upon the context. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{Overview of Clustering Algorithms:} We will consider the following categories of clustering algorithms: 
+	\begin{enumerate}
+		\item Combinatorial clustering algorithms; 
+		\item Hierarchical clustering algorithms, including 
+		\begin{enumerate}
+			\item agglomerative clustering methods, and 
+			\item divisive cluster methods; 
+		\end{enumerate}
+		\item Partitioning methods, including 
+		\begin{enumerate}
+			\item $K$-means algorithm, and 
+			\item $K$-medoids algorithm; 
+		\end{enumerate}
+		\item Mixture modeling clustering algorithms; 
+		\item Density-based clustering algorithms; and 
+		\item Spectral clustering algorithms. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{II. Dissimilarity and Similarity Measurements and Proximity Matrix}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Dissimilarity Measurement:} Many clustering algorithms requires a measurement of the \emph{dissimilarity} or the similarity of one item relative to another item. Let $\bx_i, \bx_{i'} \in \Real^p$. 
+	\begin{enumerate}
+		\item \textit{Properties:} Dissimilarity measurement usually satisfy the following properties: 
+		\begin{enumerate}
+			\item[(i)] $d \parens{\bx_i, \bx_{i'}} \ge 0$; 
+			\item[(ii)] $d \parens{\bx_i, \bx_i} = 0$; 
+			\item[(iii)] $d \parens{\bx_{i'}, \bx_i} = d \parens{\bx_i, \bx_{i'}}$; and 
+			\item[(iv)] $d \parens{\bx_i, \bx_{i'}} \le d \parens{\bx_i, \bx_k} + d \parens{\bx_k, \bx_{i'}}$. 
+		\end{enumerate}
+		If a dissimilarity measurement $d$ satisfies (i)-(iv), it is said to be a \textit{metric}. 
+		
+		If $d$ satisfies (i)-(iii) above and does \emph{not} satisfy (iv) above but satisfies 
+		\begin{align*}
+			d \parens{\bx_i, \bx_{i'}} \le \max \braces{d \parens{\bx_i, \bx_k}, d \parens{\bx_{i'}, \bx_k}}, 
+		\end{align*}
+		it is said to be a \textit{ultra-metric}. 
+		
+		\item \textit{Examples:} Let $\bx_i = \parens{x_{i,1}, \cdots, x_{i,p}}^\top \in \Real^p$ and $\bx_{i'} = \parens{x_{i',1}, \cdots, x_{i',p}}^\top \in \Real^p$. 
+		\begin{enumerate}
+			\item \underline{Euclidean distance:} 
+			\begin{align*}
+				d \parens{\bx_i, \bx_{i'}} = \sqrt{\parens{\bx_i - \bx_{i'}}^\top \parens{\bx_i - \bx_{i'}}} = \sqrt{\sum_{j=1}^p \parens{x_{i,j} - x_{i',j}}^2}; 
+			\end{align*}
+			
+			\item \underline{Mahalanobis distance:} 
+			\begin{align*}
+				d \parens{\bx_i, \bx_{i'}} = \sqrt{\parens{\bx_i - \bx_{i'}}^\top \bS^{-1} \parens{\bx_i - \bx_{i'}}}, 
+			\end{align*}
+			where $\bS \in \Real^{p \times p}$ is a positive definite matrix; 
+			
+			\item \underline{Manhattan distance:} 
+			\begin{align*}
+				d \parens{\bx_i, \bx_{i'}} = \sum_{j=1}^p \abs{x_{i,j} - x_{i',j}}; 
+			\end{align*}
+			
+			\item \underline{Minkowski distance:} 
+			\begin{align*}
+				d \parens{\bx_i, \bx_{i'}} = \bracks[\Bigg]{\sum_{j=1}^p \abs{x_{i,j} - x_{i',j}}^m}^{\frac{1}{m}}; 
+			\end{align*}
+			
+			\item \underline{Correlation:} 
+			\begin{align*}
+				d \parens{\bx_i, \bx_{i'}} = 1 - \rho_{i,i'} = 1 - \frac{s_{i,i'}}{s_i s_{i'}}, 
+			\end{align*}
+			where $\rho_{i,i'} \in \bracks{-1, 1}$ is the correlation between the pair of observations $\bx_i$ and $\bx_{i'}$, and 
+			\begin{align*}
+				s_{i, i'} = & \, \sum_{j=1}^p \parens{x_{i,j} - \bar{x}_i} \parens{x_{i',j} - \bar{x}_{i'}}, \\ 
+				s_{i} = & \, \sqrt{\sum_{j=1}^p \parens{x_{i,j} - \bar{x}_i}^2}, \\ 
+				s_{i'} = & \, \sqrt{\sum_{j=1}^p \parens{x_{i',j} - \bar{x}_{i'}}^2}, \\ 
+				\bar{x}_{i} = & \, \frac{1}{p} \sum_{j=1}^p x_{i,j}, \\ 
+				\bar{x}_{i'} = & \, \frac{1}{p} \sum_{j=1}^p x_{i',j}. 
+			\end{align*}
+			A relatively large absolute value of $\rho_{i,i'}$ suggests $\bx_i$ and $\bx_{i'}$ are ``close'' to each other, whereas a small correlation ($\rho_{i,i'} \approx 0$) suggests $\bx_i$ and $\bx_{i'}$ are ``far away'' from each other. Thus, $1 - \rho_{i,i'}$ is taken as a measure of ``dissimilarity'' between them. 
+			
+			\textit{Remark.} From the formula above, notice that $\bar{x}_i$ and $\bar{x}_{i'}$ are obtained by averaging over variables, but not the observations, and the scale here matters. 
+			
+		\end{enumerate}
+		
+	\end{enumerate}
+	
+	\item \textbf{Dealing with Ordinal Variables:} 
+	\begin{enumerate}
+		\item \textit{Ordinal Variable:} The values of a \emph{ordinal variable} are often represented as contiguous integers, and the realizable values are considered to be an ordered set. 
+		
+		\item \textit{Dissimilarity Measurement of Ordinal Variable:} Dissimilarity measurements for ordinal variables are generally defined by replacing their $M$ original values with 
+		\begin{align*}
+			\frac{i - \frac{1}{2}}{M}, \qquad \text{ for all } i = 1, 2, \cdots, M, 
+		\end{align*}
+		in the prescribed order of their original values. They are then treated as quantitative variables on this scale. 
+	\end{enumerate}
+	
+	\item \textbf{Dealing with Unordered Categorical Variable:} With unordered categorical variables, the degree-of-difference between pairs of values must be delineated \emph{explicitly}. 
+	
+	If the variable assumes $M$ distinct values, their dissimilarities can be arranged in a symmetric $M \times M$ matrix, denoted by $\bL$, with elements 
+	\begin{align*}
+		L_{r, r'} = L_{r', r} \ge 0, \qquad \text{ and } \qquad L_{r,r} = 0, 
+	\end{align*}
+	where $L_{r, r'}$ denotes the $\parens{r, r'}$-th entry of $\bL$ for all $r, r' = 1, 2, \cdots, M$. 
+	
+	The most common choice is $L_{r,r'} = 1$ for all $r \neq r'$, while unequal losses can be used to emphasize some errors more than others. 
+	
+%	\item \textbf{Object Dissimilarity:} Suppose each observation $\bx_i \in \Real^p$ contains mixed datatype. Using the dissimilarity measurements we had above, we can combine them and compute the dissimilarity between $\bx_i$ and $\bx_{i'}$, where $i \neq i'$, as 
+%	\begin{align}\label{eq-object-dissimi}
+%		D \parens{\bx_i, \bx_{i'}} = \sum_{j=1}^p w_j d_j \parens{x_{i,j}, x_{i',j}}, 
+%	\end{align}
+%	where 
+%	\begin{enumerate}
+%		\item $w_j$ is a weight assigned to the $j$-th variable regulating the relative influence of that variable in determining the overall dissimilarity between two observations and satisfies 
+%		\begin{align*}
+%			\sum_{j=1}^p w_j = 1 \qquad \text{ and } \qquad  w_j > 0 \text{ for all } j = 1, 2, \cdots, p, 
+%		\end{align*}
+%		\item $d_{j} \parens{x_{i,j}, x_{i',j}}$ is the dissimilarity of the $j$-th variable in $\bx_i$ and $\bx_{i'}$. 
+%	\end{enumerate}
+%	
+%	\textit{Remark.} It is possible to group several quantitative variables together to compute their dissimilarity. 
+%	
+%	\item \textbf{Weights That Give Equal Influence:} Setting the weights $w_j$ to the same value for each variable (e.g., $w_j = 1$ for all $j$) does \emph{not} necessarily give all attributes equal influence. 
+%	
+%	The influence of the $j$-th variable $X_j$ on $D \parens{\bx_i, \bx_{i'}}$ depends on its relative contribution to the average object dissimilarity measure over all pairs of observations in the dataset 
+%	\begin{align*}
+%		\bar{D} = \frac{1}{n^2} \sum_{i=1}^n \sum_{i'=1}^n D \parens{\bx_i, \bx_{i'}} = \sum_{j=1}^p w_j \bar{d}_j, 
+%	\end{align*}
+%	where 
+%	\begin{align*}
+%		\bar{d}_j = \frac{1}{n^2} \sum_{i=1}^n \sum_{i'=1}^n d_{j} \parens{x_{i,j}, x_{i',j}}. 
+%	\end{align*}
+%	is the average dissimilarity on the $j$-th variable. Hence, if we choose 
+%	\begin{align}\label{eq-equal-weights}
+%		w_j \sim \bar{d}_j^{-1} \qquad \text{ for all } j = 1, 2, \cdots, p
+%	\end{align}
+%	would give all variables equal influence in characterizing overall dissimilarity between objects. 
+	
+	\item \textbf{Proximity Matrix:} Given $n$ observations, $\bx_1, \bx_2, \cdots, \bx_n \in \Real^p$, the \textit{proximity matrix}, denoted by $\bD$, is an $n \times n$ matrix with the $\parens{i, i'}$-th entry being 
+	\begin{align*}
+		d_{i,i'} := d \parens{\bx_i, \bx_{i'}}. 
+	\end{align*}
+	In other words, each entry $d_{i, i'}$ is the pairwise dissimilarities between observations $\bx_i$ and $\bx_{i'}$. 
+	
+	\textit{Remark 1.} Note that $\bD$ is symmetric, and all diagonal elements are 
+	\begin{align*}
+		d_{i,i} = d \parens{\bx_i, \bx_i} = 0, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+	\end{align*}
+	
+	\textit{Remark 2.} Computing the proximity matrix is the starting point of many clustering procedure. 
+	
+\end{enumerate}
+
+
+\section*{III. Combinatorial Algorithms}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Main Idea:} Combinatorial algorithms directly assign each observation to a group or cluster without regard to a probability model. 
+	
+	\item \textbf{Setup:} Let 
+	\begin{enumerate}
+		\item $\bx_1, \bx_2, \cdots, \bx_n$ be $n$ observations to be clustered, and 
+		\item $K$ be the number of clusters. 
+	\end{enumerate}
+	
+	\item \textbf{Goal:} We assign each observation to one and only one cluster. These assignments can be characterized by a many-to-one mapping 
+	\begin{align*}
+		C: \sets{1, 2, \cdots, n} \to \sets{1, 2, \cdots, K}
+	\end{align*}
+	that assigns the $i$-th observation to the $k$-th cluster. 
+	
+	One seeks the particular encoder $C^*$ that achieves a certain required objective, based on the dissimilarity measurements between every pair of observations. 
+	
+	\textit{Remark.} The encoder $C \parens{i}$ is explicitly delineated by giving the cluster assignment for each observation $i$. The cluster assignments are adjusted so as to minimize a ``loss'' function that characterizes the degree to which the clustering goal is not met. 
+	
+	\item \textbf{Problem Formulation:} The loss function we choose is the so-called \emph{within-cluster objective function} defined as 
+	\begin{align}
+		W \parens{C} := \frac{1}{2} \sum_{k=1}^K \sum_{C \parens{i} = k} \sum_{C \parens{i'} = k} d \parens{\bx_{i}, \bx_{i'}}. 
+	\end{align}
+	We minimize $W$ through some combinatorial optimization algorithm. 
+	
+	Note that the criterion $W$ characterizes the extent to which observations assigned to the same cluster tend to be close to one another. 
+	
+	\textit{Remark.} Note that 
+	\begin{align*}
+		T := & \, \frac{1}{2} \sum_{i=1}^n \sum_{i'=1}^n d \parens{\bx_i, \bx_{i'}} \\ 
+		= & \, \frac{1}{2} \sum_{k=1}^K \sum_{C \parens{i} = k} \parens[\Bigg]{ \sum_{C \parens{i'} = k} d \parens{\bx_i, \bx_{i'}} + \sum_{C \parens{i'} \neq k} d \parens{\bx_i, \bx_{i'}} } \\ 
+		= & \, \underbrace{\frac{1}{2} \sum_{k=1}^K \sum_{C \parens{i} = k} \sum_{C \parens{i'} = k} d \parens{\bx_i, \bx_{i'}}}_{=: W \parens{C}} + \underbrace{\frac{1}{2} \sum_{k=1}^K \sum_{C \parens{i} = k} \sum_{C \parens{i'} \neq k} d \parens{\bx_i, \bx_{i'}} }_{=: B \parens{C}}, 
+	\end{align*}
+	where $T$ is the sum of all dissimilarity measurements and is constant, and $B \parens{C}$ is called the \emph{between-clsuter objective function}. Note that $B \parens{C}$ tends to be large when observations assigned to different clusters are far apart. 
+	
+	Since 
+	\begin{align*}
+		W \parens{C} = T - B \parens{C}, 
+	\end{align*}
+	minimizing $W$ is equivalent to maximizing $B$. 
+	
+	\item \textbf{Issue with Minimizing $W$:} One minimizes $W$ or equivalently maximizes $B$ over \emph{all} possible assignments of the $n$ data points to $K$ clusters. Unfortunately, such optimization by complete enumeration is feasible only for \emph{very small} data sets. The number of distinct assignments is 
+	\begin{align}\label{eq-comb-cluster-num}
+		S \parens{n, K} = \frac{1}{K!} \sum_{k=1}^K \parens{-1}^{K-k} {K \choose k} k^n, 
+	\end{align}
+	which grows very rapidly with increasing values of $n$ and/or $K$. 
+	
+	\item \textbf{Iterative Greedy Descent Algorithm:} We can find a (locally) optimal cluster assignment using iterative greedy descent, where we assume $n$ or $K$ is small so that the algorithm is feasible. The complete algorithm is outlined in Algorithm \ref{algo-comb-cluster}. 
+	
+	\begin{minipage}{\linewidth}
+	\begin{algorithm}[H]
+		\caption{Combinatorial Clustering Algorithm}\label{algo-comb-cluster}
+		\begin{algorithmic}[1]
+			\REQUIRE An initial cluster assignment is specified. 
+			
+			\STATE At each iterative step, the cluster assignments are changed in such a way that the value of the criterion $W$ is improved from its previous value; 
+			
+			\STATE When the clustering prescription is unable to provide an improvement, the algorithm terminates with the current assignments as its solution. 
+			
+		\end{algorithmic} 
+	\end{algorithm}
+	\end{minipage}
+	\vspace{10pt}
+		
+	\textit{Remark 1.} Since the assignment of observations to clusters at any iteration is a perturbation of that for the previous iteration, only a very small fraction of all possible assignments \eqref{eq-comb-cluster-num} are examined. 
+	
+	\textit{Remark 2.} The algorithm described here converges to local optima which may be highly suboptimal when compared to the global optimum. 
+	
+\end{enumerate}
+
+
+\section*{IV. Hierarchical Clustering}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} Hierarchical clustering produces hierarchical representations in which the clusters at each level of the hierarchy are created by merging clusters at the next lower level: 
+	\begin{enumerate}
+		\item At the lowest level, each cluster contains a single observation; and 
+		\item At the highest level there is only one cluster containing all of the data. 
+	\end{enumerate}
+	
+	\item \textbf{Types:} There are two types of hierarchical clustering methods --- \textit{agglomerative} and \textit{divisive}. 
+	\begin{itemize}
+		\item \textit{Agglomerative Clustering Methods:} These methods are also called ``\underline{bottom-up}'' methods. They start from each item being its own cluster; then, clusters are successively merged until a single cluster remains; 
+		\item \textit{Divisive Cluster Methods:} These methods are also called ``\underline{top-down}'' methods. They start with all items as members of a single cluster; then, that single cluster is split into two separate clusters, and so on for every successive cluster, until each item is its own cluster. 
+	\end{itemize}
+	
+	\item \textbf{Dendrogram:} The end result of all hierarchical clustering methods is a \textit{dendrogram}, i.e., a hierarchical tree diagram, where the $k$-cluster solution is obtained by merging some of the clusters from the $\parens{k+1}$-cluster solution. 
+	
+	We assume dendrograms are formed in a \emph{vertical} way. 
+	\begin{enumerate}
+		\item \textit{How to Combine:} The dendrogram uses the ``\textit{height}'' of the linkage criterion at which items or clusters or both are combined together to form a new larger cluster. 
+		\begin{itemize}
+			\item Items that are similar to each other are combined at \emph{low} heights; 
+			\item Items that are more dissimilar are combined \emph{higher} up the dendrogram. 
+		\end{itemize}
+		The \emph{difference in heights} defines how close items are to each other. 
+		
+		\item \textit{How to Form Partitions:} We can ``cut'' a dendrogram at an appropriate height to form a partition of data into a specified number of groups. 
+		
+		Draw a horizontal line on the dendrogram at a given height. 
+		\begin{enumerate}
+			\item \underline{The Number of Clusters:} The number, $K$, of vertical lines cut by that horizontal line identifies a $K$-cluster solution; 
+			\item \underline{How Clusters Are Determined:} The \emph{intersection} of the horizontal line and one of those $K$ vertical lines represents a cluster; 
+			\item \underline{Cluster Members:} The items located at the end of all branches below that intersection constitute the members of the cluster. 
+		\end{enumerate}
+		
+	\end{enumerate}
+	
+	\item \textbf{Agglomerative Clustering:} 
+	\begin{enumerate}
+		\item \textit{General Idea:} Start from each item being a single cluster, and combine two clusters to form a new larger cluster. 
+		
+		\item \textit{Linkage Methods:} Three major methods to compute the distance between two clusters are the following: 
+		\begin{enumerate}
+			\item \emph{Single linkage} uses a minimum-distance metric between clusters; 
+			\item \emph{Complete linkage} uses a maximum-distance metric; and 
+			\item \emph{Average linkage} computes the average distance between all pairs of items within the two different clusters, one item from each cluster. 
+		\end{enumerate}
+		There is also a \emph{weighted version} of average linkage, where the weights reflect the (possibly disparate) sizes of the clusters in question. 
+		
+		\item \textit{Algorithm:} The complete algorithm using three different linkage methods is shown in Algorithm \ref{algo-agg-cluster}. 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+				\caption{Agglomerative Hierarchical Clustering}\label{algo-agg-cluster}
+				\begin{algorithmic}[1]
+					\REQUIRE Items to be clustered $\bx_1, \bx_2, \cdots, \bx_n$, where $n$ is the number of observations and is also the number of initial clusters. 
+					\STATE Compute $\bD \in \Real^{n \times n}$, the matrix of dissimilarities between the $n$ clusters, where the $\parens{i, i'}$-th entry of $\bD$ is $d_{i,i'} := d \parens{\bx_i, \bx_{i'}}$, for all $i, i' = 1, 2, \cdots, n$. 
+					\STATE \label{algo-agg-cluster-1}Find the \emph{smallest} dissimilarity, say, $d_{I,J}$, in $\bD = \bD^{\parens{1}}$. Merge clusters $I$ and $J$ to form a new cluster $\parens{I, J}$. 
+					\STATE \label{algo-agg-cluster-2} Compute dissimilarities, $d_{\parens{I, J}, K}$, between the new cluster $\parens{I, J}$ and all other clusters $K \neq I, J$. These dissimilarities depend upon which \underline{linkage method} is used. For all clusters $K \neq I, J$, we have the following linkage options: 
+					\begin{enumerate}
+						\item Single linkage: $d_{\parens{I, J}, K} = \min \sets{d_{I, K}, d_{J, K} }$; 
+						\item Complete linkage: $d_{\parens{I, J}, K} = \max \sets{d_{I, K}, d_{J, K} }$; 
+						\item Average linkage: $d_{\parens{I, J}, K} = \frac{1}{n_{\parens{I, J}} n_K} \sum_{i \in I, j} \sum_{k \in K} d_{i, k}$, where $n_{\parens{I, J}}$ and $n_K$ are the numbers of items in clusters $\parens{I, J}$ and $K$, respectively. 
+					\end{enumerate}
+					\STATE \label{algo-agg-cluster-3} Form a new $\parens{ \parens{n - 1} \times \parens{n - 1}}$-matrix, $\bD^{\parens{2}}$, by deleting rows and columns $I$ and $J$ and adding a new row and column $\parens{I, J}$ with dissimilarities computed from Step \ref{algo-agg-cluster-2}. 
+					\STATE Repeat Steps \ref{algo-agg-cluster-1}, \ref{algo-agg-cluster-2}, and \ref{algo-agg-cluster-3}, a total of $n-1$ times. At the $i$-th step, $\bD^{\parens{i}}$ is a symmetric $\parens{ \parens{n-i+1} \times \parens{n-i+1}}$-matrix, for all $i = 1, 2, \cdots, n$. At the last step where $i = n$, $\bD^{\parens{n}} = 0$, and all items are merged together into a single cluster. 
+					
+					\RETURN The following items are returned: 
+					\begin{enumerate}
+						\item list of which clusters are merged at each step, 
+						\item the value (or height) of the dissimilarity of each merge, and 
+						\item a dendrogram to summarize the clustering procedure. 
+					\end{enumerate}
+					
+				\end{algorithmic} 
+			\end{algorithm}
+		\end{minipage}
+		
+		\vspace{10pt}
+		
+		\item \textit{Properties:} 
+		\begin{enumerate}
+			\item No one of the linkage methods described above is uniformly best for all clustering problems; 
+			\item If the data dissimilarities $\sets{d \parens{\bx_i, \bx_{i'}}}_{i,i'=1,2,\cdots,n}$ exhibit a strong clustering tendency, with each of the clusters being compact and well separated from others, then all three linkage methods produce similar results; 
+			\item The dendrograms from single-linkage and complete-linkage methods are \emph{invariant} under monotone transformations of the pairwise dissimilarities, but this property does \emph{not} hold for the average-linkage method; 
+			\item Single-linkage often leads to long ``chains'' of clusters, joined by singleton points near each other; 
+			\item Complete-linkage tends to produce many small, compact clusters; 
+			\item Average linkage is dependent upon the \emph{size} of the clusters, whereas single and complete linkage, which depend only upon the smallest or largest dissimilarity, respectively, are \emph{not}. 
+		\end{enumerate}	
+	\end{enumerate}
+	
+	\item \textbf{Cluster Diameter:} Let $A \subset \sets{1, 2, \cdots, n}$ and $\sets{\bx_i}_{i \in A}$ denote a cluster of observations. Its \emph{cluster diameter} is defined as 
+	\begin{align}
+		D_A := \max_{i \in A, i' \in A} d \parens{\bx_i, \bx_{i'}}. 
+	\end{align}
+	\textit{Remark.} Single linkage can produce clusters with very large diameters, whereas complete linkage can produce clusters with small diameters. 
+	
+	\item \textbf{Divisive Clustering:} \emph{Divisive clustering} is a ``top-down'' method for hierarchical clustering. 
+	
+	At each step, the items are divided into a ``splinter'' group (say, Cluster $A$) and the ``remainder'' (say, Cluster $B$). The complete algorithm is shown in Algorithm \ref{algo-divisive-cluster}. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{Divisive Clustering}\label{algo-divisive-cluster}
+			\begin{algorithmic}[1]
+				\STATE The splinter group is initiated by extracting the item that has the largest average dissimilarity from all other items in the data set; that item is set up as Cluster $A$; 
+				
+				\STATE \label{enum-divisive-b} Given this separation of the data into Clusters $A$ and $B$, we next compute, for each item in Cluster $B$, the following two quantities:
+				\begin{enumerate}
+					\item[(1)] the average dissimilarity between that item and all other items in Cluster $B$, and 
+					\item[(2)] the average dissimilarity between that item and all items in cluster $A$. 
+				\end{enumerate}
+				
+				\STATE \label{enum-divisive-c} Compute the difference between (1) and (2) for each item in Cluster $B$: 
+				\begin{enumerate}
+					\item If all differences are negative, we stop the algorithm; 
+					\item If any of these differences are positive (indicating that the item in $B$ is closer on average to Cluster $A$ than to the other items in Cluster $B$), we take the item in $B$ with the largest positive difference, move it to $A$, and repeat the procedure. 
+				\end{enumerate}
+				
+				\STATE Steps \ref{enum-divisive-b} and \ref{enum-divisive-c} can then be used to obtain binary splits of each of the clusters $A$ and $B$ separately, until each observation becomes a single cluster. 
+				
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\textit{Remark.} This algorithm provides a binary split of the data into two clusters. 
+
+\end{enumerate}
+
+
+\section*{V. Partitioning Methods}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Overview:} \emph{Partitioning methods} split the data items into a pre-determined number $K$ of clusters. Given $K$, we seek to partition the data into $K$ clusters so that 
+	\begin{enumerate}
+		\item the items within each cluster are similar to each other, whereas 
+		\item the items from different clusters are quite dissimilar. 
+	\end{enumerate}
+	
+	\textit{Remark.} In contrast to hierarchical methods, in partitioning methods, there is no hierarchical relationship between the $K$-cluster solution and the $(K + 1)$-cluster solution; that is, the $K$-cluster solution is \emph{not} the initial step for the $(K + 1)$-cluster solution. 
+	
+	\item \textbf{$K$-Means Clustering:} 
+	\begin{enumerate}
+		\item \textit{Goal:} To find clusters that minimize within-cluster sum of squares: 
+		\begin{equation}\label{eq-prob-kmeans}
+			\begin{aligned}
+				\minimize_{C_1, C_2, \cdots, C_K} & \ \sum_{k=1}^K \sum_{i \in C_k} \norm{\bx_i - \bmu_k}_2^2, \\ 
+				\text{ subject to} & \, \text{$C_1, C_2, \cdots, C_K$ is a partition of $\sets{1, 2, \cdots, n}$, } \\ 
+				& \, \bmu_1, \cdots, \bmu_K \in \Real^p. 
+			\end{aligned}
+		\end{equation}
+		\item \textit{Necessity to Use a Greedy Algorithm:} The problem \eqref{eq-prob-kmeans} is a combinatorial problem. Finding a global minimum requires a computationally intractable combinatorial search. Most $K$-means algorithms use a \emph{greedy iterative heuristic} that examine only a small number of possible clusters. 
+		\item \textit{Equivalent Problem:} The problem \eqref{eq-prob-kmeans} is equivalent to 
+		\begin{equation}\label{eq-prob-kmeans-eq}
+			\begin{aligned}
+				\minimize & \ \sum_{k=1}^K \sum_{i \in C_k} \norm[\bigg]{\bx_i - \frac{1}{\abs{C_k}} \sum_{i' \in C_k} \bx_{i'}}_2^2, \\ 
+				\text{subject to } & \, \text{$C_1, C_2, \cdots, C_K$ is a partition of $\sets{1, 2, \cdots, n}$.}
+			\end{aligned}
+		\end{equation}
+		Thus, the main difficulty stems from determining $C_1, C_2, \cdots, C_K$ with respect to $\bmu_1, \bmu_2, \cdots, \bmu_K$. 
+		
+		\item \textit{Lloyd's Algorithm:} Lloyd's algorithm, provided in Algorithm \ref{algo-lloyd}, is a greedy algorithm to solve the problem \eqref{eq-prob-kmeans-eq}. 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+				\caption{Lloyd's Algorithm}\label{algo-lloyd}
+				\begin{algorithmic}[1]
+					\REQUIRE Number of clusters, $K$; 
+					\REQUIRE Data to be clustered, $\sets{\bx_1, \cdots, \bx_n}$; 
+					\REQUIRE Initial cluster assignment. 
+					
+					\REPEAT
+					\STATE Update 
+					\begin{align*}
+						\widehat{\bmu}_k \quad \longleftarrow \quad \frac{1}{\abs{\widehat{C}_k}} \sum_{i \in \widehat{C}_k} \bx_i, \qquad \text{ for all } k = 1, \cdots, K; 
+					\end{align*}
+					\STATE Initialize $\widehat{C}_k = \emptyset$ for all $k = 1, \cdots, K$; 
+					\FOR{$i = 1, \cdots, n$}
+					\STATE Assign 
+					\begin{align*}
+						\hat{k} \quad \longleftarrow \quad \argmin_{k \in \sets{1, \cdots, K}} \norm{\bx_i - \widehat{\bmu}_k}_2^2; 
+					\end{align*}
+					\STATE Update $\widehat{C}_{\hat{k}} \leftarrow \widehat{C}_{\hat{k}} \cup \sets{i}$. 
+					\ENDFOR
+					\UNTIL{Convergence is reached}
+					
+					\RETURN Cluster assignments $\widehat{C}_1, \cdots, \widehat{C}_K$ and cluster centers ${\widehat{\bmu}_1, \cdots, \widehat{\bmu}_K}$. 
+				\end{algorithmic} 
+			\end{algorithm}
+		\end{minipage}
+		
+		\vspace{10pt}
+		
+		\item \textit{Termination Criterion:} One can choose the following convergence criteria: 
+		\begin{enumerate}
+			\item Class assignments are unchanged; or 
+			\item The sum-of-squares objective function does \emph{not} change by more than a pre-specified tolerance parameter; 
+		\end{enumerate}
+		
+		\item \textit{Convergence Property of Lloyd's Algorithm:} 
+		\begin{enumerate}
+			\item Since the sum-of-squares objective function is non-increasing in each iteration, and is bounded from below. Thus, the algorithm must converge. 
+			\item Clustering will stabilize after at most $2^n$ iterations, which means that the algorithm terminates in a finite number of iterations. 
+		\end{enumerate}
+		
+		\item \textit{Non-uniqueness of the Solution:} The solution to \eqref{eq-prob-kmeans-eq}, a configuration of items into $K$ clusters, will typically \emph{not} be unique; the algorithm will only find a \emph{local minimum} of the objective function in \eqref{eq-prob-kmeans-eq}. 
+		
+		\textit{Remark.} Because of the non-uniquness of the solution, the algorithm should be run using different initial random assignments of the items to $K$ clusters (or by randomly selecting $K$ initial centroids) in order to find the lowest minimum of the objective function. 
+		
+		\item \textit{Cyclic Block Coordinate Descent View of Lloyd's Algorithm:} Lloyd's algorithm can be viewed as a cyclic block coordinate descent. Write the objective function in \eqref{eq-prob-kmeans} as 
+		\begin{align*}
+			f \parens{\bmu_1, \bmu_2, \cdots, \bmu_K, C_1, C_2, \cdots, C_K}. 
+		\end{align*}
+		The algorithm alternates 
+		\begin{align*}
+			\parens{\widehat{\bmu}_1, \widehat{\bmu}_2, \cdots, \widehat{\bmu}_K} = \argmin_{\bmu_1, \bmu_2, \cdots, \bmu_K} f \parens{\bmu_1, \bmu_2, \cdots, \bmu_K, \widehat{C}_1, \widehat{C}_2, \cdots, \widehat{C}_K}, \\ 
+			\parens{\widehat{C}_1, \widehat{C}_2, \cdots, \widehat{C}_K} = \argmin_{C_1, C_2, \cdots, C_K} f \parens{\widehat{\bmu}_1, \widehat{\bmu}_2, \cdots, \widehat{\bmu}_K, C_1, C_2, \cdots, C_K}. 
+		\end{align*}
+		
+		\item \textit{Drawbacks:} $K$-means clustering algorithm has the following potential drawbacks: 
+		\begin{enumerate}
+			\item $K$-means algorithm is only appropriate when the dissimilarity measurement is taken to be squared Euclidean distance, which requires that all of the variables have to be of the quantitative type. 
+			\item Using squared Euclidean distance places the highest influence on the largest distances, which causes the procedure to lack robustness against outliers that produce very large distances. 
+		\end{enumerate}
+		
+	\end{enumerate}
+	
+	\item \textbf{$K$-Medoids Algorithm:}
+	\begin{enumerate}
+		
+		\item \textit{Motivation:} In the $K$-means clustering algorithm, 
+		\begin{enumerate}
+			\item only the minimization step of \eqref{eq-prob-kmeans} involves the squared Euclidean distance, and 
+			\item due to the choice of the squared Euclidean distance, the cluster representation $\bmu_1, \bmu_2, \cdots, \bmu_K$ are taken to be the means of the currently assigned clusters. 
+		\end{enumerate}
+		The $K$-medoids algorithm generalizes the $K$-means clustering algorithm above, and 
+		\begin{enumerate}
+			\item replaces the squared Euclidean distance by the dissimilarity measurement, and 
+			\item restricts the center of each cluster to be one of the observations assigned to the cluster. 
+		\end{enumerate} 
+		
+		\item \textit{Medoid:} The \emph{medoid} of a cluster is the observation within this cluster that \emph{minimizes} the total dissimilarity to all other observations within that cluster. 
+		
+		\item \textit{Algorithm:}
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+				\caption{$K$-Medoids Algorithm}\label{algo-k-medoids}
+				\begin{algorithmic}[1]
+					\REQUIRE Number of clusters, $K$; 
+					\REQUIRE Proximity matrix, $\bD \in \Real^{n \times n}$ with the $\parens{i, i'}$-th entry being $d_{i, i'} := d \parens{\bx_i, \bx_{i'}}$ for all $i, i' = 1, 2, \cdots, n$. 
+					
+					\STATE Form an initial assignment of the items into $K$ clusters; 
+					\STATE \label{algo-step-kmedoids-2} Locate the medoid for each of the $K$ clusters. That is, we solve the following optimization problem 
+					\begin{align*}
+						i_k^* = \argmin_{\sets{i \,\vert\, i \in C_k}} \sum_{\sets{i' \,\vert\, i' \in C_k}} d \parens{\bx_i, \bx_{i'}}, \qquad \text{ for all } k = 1, 2, \cdots, K, 
+					\end{align*}
+					where $C_1, C_2, \cdots, C_K$ form a partition of $\sets{1, 2, \cdots, n}$. Then, $\bmu_k = \bx_{i_k^*}$, for all $k = 1, 2, \cdots, K$, are the current estimates of the cluster centers; 
+					
+					\STATE \label{algo-step-kmedoids-3} Given a current set of cluster centers $\sets{\bmu_1, \bmu_2, \cdots, \bmu_K}$, assign each observation to the closest (current) cluster center, i.e., 
+					\begin{align*}
+						\argmin_{k \in \sets{1, 2, \cdots, K}} d \parens{\bx_i, \bmu_k}; 
+					\end{align*}
+					
+					\STATE Repeat the preceding two steps until no further reassignment of items takes place. 
+				\end{algorithmic} 
+			\end{algorithm}
+		\end{minipage}
+		
+		\vspace{10pt}
+		
+		% \textit{Remark.} One consequence of the $K$-medoids clustering algorithm is that there is no need to explicitly compute cluster centers; instead, we just keep track of the indices $i_k^*$. 
+		
+		\item \textit{Equivalent Optimization Problem:} Alternating between \ref{algo-step-kmedoids-2} and \ref{algo-step-kmedoids-3} in Algorithm \ref{algo-k-medoids} represents a particular heuristic search strategy for solving 
+		\begin{align*}
+			\minimize_{C_1, C_2, \cdots, C_K, i_1, i_2, \cdots, i_K} \sum_{k=1}^K \sum_{\sets{i \,\vert\, i \in C_k}} d \parens{\bx_i, \bx_{i_k}}. 
+		\end{align*}
+		
+		\item \textit{Comparison to $K$-Means Algorithm:}
+		\begin{enumerate}
+			\item $K$-medoids algorithm searches for $K$ medoids among the items in the data, but the $K$-means algorithm searches for $K$ centroids; 
+			\item $K$-medoids algorithm uses a dissimilarity-based distance, but the $K$-means uses the squared Euclidean distance; 
+			\item $K$-medoids algorithm is more robust to data anomalies such as outliers and missing values; 
+			\item $K$-medoids algorithm is computationally more intensive than $K$-means algorithm. 
+		\end{enumerate}
+	\end{enumerate} 
+	 
+    \item \textbf{Partitioning Around Medoids (PAM) Algorithm:} PAM algorithm is a modification of the $K$-medoids algorithm by introducing a swapping strategy: \emph{replace the medoid of each cluster by another item in that cluster only if such a swap can reduce the value of the objective function}. 
+    
+    \begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{Partitioning Around Medoid Algorithm}\label{algo-pam}
+			\begin{algorithmic}[1]
+				\REQUIRE Number of clusters, $K$; 
+				\REQUIRE Proximity matrix, $\bD \in \Real^{n \times n}$ with the $\parens{i, i'}$-th entry being $d_{i, i'} := d \parens{\bx_i, \bx_{i'}}$ for all $i, i' = 1, 2, \cdots, n$. 
+				
+				\STATE Form an initial assignment of the items into $K$ clusters; 
+				\STATE Locate the medoid for each of the $K$ clusters. That is, we solve the following optimization problem 
+					\begin{align*}
+						i_k^* = \argmin_{\sets{i \,\vert\, \bx_i \in C_k}} \sum_{\sets{i' \,\vert\, \bx_{i'} \in C_k}} d \parens{\bx_i, \bx_{i'}}, \qquad \text{ for all } k = 1, 2, \cdots, K, 
+					\end{align*}
+					where $C_1, C_2, \cdots, C_K$ form a partition of $\sets{1, 2, \cdots, n}$. Then, $\bmu_k = \bx_{i_k^*}$, for all $k = 1, 2, \cdots, K$, are the current estimates of the cluster centers; 
+				\STATE For each cluster, swap the medoid with the non-medoid item that gives the largest reduction in 
+				\begin{align*}
+					\mathrm{ESS}_{\mathrm{medoid}} := \sum_{k=1}^K \sum_{\sets{i \,\vert\, i \in C_k}} d \parens{\bx_i, \bx_{i_k}}; 
+				\end{align*}
+				
+				\STATE Repeat the preceding two steps until no further reduction in $\mathrm{ESS}_{\mathrm{medoid}}$ takes place. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\textit{Remark.} Similar to the $K$-medoids algorithm, PAM algorithm is computationally intensive and performs well on small datasets but are \emph{not} efficient on large datasets. 
+	
+	\item \textbf{How to Choose the Value of $K$:} A choice for the number of clusters $K$ depends on the goal and is usually defined as part of the problem. There are several ways of determining the value of $K$. 
+	\begin{enumerate}
+		\item \textit{Known $K$:} In some scenarios, the value of $K$ is pre-determined based on the problem at hand. 
+		\item \textit{Elbow Point Method:} We plot the within-cluster dissimilarity $W_K$ as a function of the number of clusters $K$, for $K \in \sets{1, 2, \cdots, K_{\max}}$. Typically, we have 
+		\begin{align*}
+			W_1 \ge W_2 \ge \cdots \ge W_{K_{\max}}. 
+		\end{align*}
+		If there are actually $K^*$ distinct groupings of the observations, the plot of $W_K$ against $K$ should exhibit a shape decrease at $K^*$. A natural estimate of $K^*$ is then obtained by identifying a elbow point in this plot. 
+		
+		\item \textit{Average Silhouette Width:} See below. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Silhouette Plot and Coefficient:} 
+	\begin{enumerate}
+		\item \textit{Notation:} Let 
+		\begin{enumerate}
+			\item $\calC_K$ be a particular clustering of the data into $K$ clusters; 
+			\item $C \parens{i}$ denote the cluster containing the $i$-th observation; 
+			\item $a_i$ be the average dissimilarity of that $i$-th item to all other members of the same cluster $C \parens{i}$; 
+			\item $d \parens{\bx_i, \bx_C}$ be the average dissimilarity of the $i$-th observation to all members of $C$, where $C$ may be some cluster other than $C \parens{i}$; 
+			\item $b_i := \min_{C \neq C \parens{i}} d \parens{\bx_i, \bx_C}$ be the minimal average dissimilarity of the $i$-th observation to all other clusters other than $C \parens{i}$. 
+		\end{enumerate}
+		
+		\textit{Remark.} If $b_i = d \parens{\bx_i, \bx_{C^*}}$, then, Cluster $C^*$ is called the \emph{neighbor} of the $i$-th observation and is regarded as the second-best cluster for the $i$-th observation. 
+		
+		\item \textit{$i$-th Silhouette Value:} The \emph{$i$-th silhouette value} (or \emph{width}) is given by 
+		\begin{align}
+			s_i \parens{\calC_K} := s_{i, K} = \frac{b_i - a_i}{\max \sets{a_i, b_i}}. 
+		\end{align}
+		Note that $s_{i, K} \in \bracks{-1, 1}$. 
+		
+		\item \textit{Properties of $s_{i, K}$:} 
+		\begin{enumerate}
+			\item Large positive values of $s_{i, K}$, indicate $a_i \approx 0$ and that the $i$-th observation is well-clustered; 
+			\item Large negative values of $s_{i, K}$ indicate $b_i \approx 0$ and poor clustering, and 
+			\item $s_{i, K} \approx 0$, i.e., $a_i \approx b_i$, indicates that the $i$-th item lies between two clusters. 
+		\end{enumerate}
+		
+		\textit{Remark 1.} The observations corresponding to negative silhouette values are considered to be borderline allocations, and are neither well-clustered nor assigned by the clustering process to an alternative cluster. 
+		
+		\textit{Remark 2.} If $\max_i \sets{s_{i,K}} < 0.25$, this indicates either that there are \emph{no} definable clusters in the data or that, even if there are, the clustering procedure has \emph{not} found it. 
+		
+		\item \textit{Silhouette Plot:} A \emph{silhouette plot} is a bar plot of all the $\sets{s_{i,K}}_{i=1}^n$ values after they are ranked in decreasing order within each cluster, where the length of the $i$-th bar is $s_{i,K}$. 
+		
+		\item \textit{Average Silhouette Width:} The \emph{average silhouette width}, denoted by $\bar{s}_K$, is the average of all the $\sets{s_{i,K}}_{i=1}^n$ values. 
+		
+		\textit{Remark.} The statistic $\bar{s}_K$ has been found to be a very useful indicator of the merit of the clustering $\calC_K$. The average silhouette width has also been used to choose the value of $K$ by finding $K$ to maximize $\bar{s}_K$. 
+		
+		\item \textit{Silhouette Coefficient:} Define the \emph{silhouette coefficient} to be 
+		\begin{align*}
+			\mathrm{SC} := \max_K \sets{\bar{s}_K}. 
+		\end{align*}
+		A subjective interpretation of SC is provided in Table \ref{table-interpretation-sc}. 
+		
+		\begin{table}[h!]
+		\centering
+			\begin{tabular}{cc}
+				\toprule 
+				SC value & Interpretation \\ 
+				\midrule 
+				$> 0.70$ & A strong structure has been found \\ 
+				$(0.50, 0.70]$ & A reasonable structure has been found \\ 
+				$(0.25, 0.50]$ & The structure is weak and could be artificial \\ 
+				$\le 0.25$ & No substantial structure has been found \\ 
+				\bottomrule \\
+			\end{tabular}
+			\caption{Interpretation of silhouette coefficient.}
+			\label{table-interpretation-sc}
+		\end{table}
+		
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{IV. Clustering Based on Mixture Models}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup and Motivation:} Suppose $X \iid p \parens{\,\cdot\, \,\vert\, \btheta}$, where $p \parens{\,\cdot\, \,\vert\, \btheta}$ is a density function with the unknown parameter $\btheta \in \bTheta$, and $\bTheta$ is the parameter space. 
+	
+	Assume there is no missing values in $X$. The \emph{complete-date likelihood function} is 
+	\begin{align*}
+		L \parens{\btheta \,\vert\, X} := p \parens{X \,\vert\, \btheta}. 
+	\end{align*}
+	Now, suppose some components of $X$ are missing and write 
+	\begin{align*}
+		X = \parens{X_{\mathrm{obs}}^\top, X_{\mathrm{mis}}^\top}^\top, 
+	\end{align*}
+	where $X_{\mathrm{obs}}$ is the observed part of $X$, and $X_{\mathrm{mis}}$ is the missing part of $X$. The likelihood function for the observed data is 
+	\begin{align*}
+		L_{\mathrm{obs}} \parens{\btheta \,\vert\, X_{\mathrm{obs}}} := \int p \parens{X_{\mathrm{obs}}, x_{\mathrm{mis}} \,\vert\, \btheta} \, \diff x_{\mathrm{mis}}. 
+	\end{align*}
+	Estimating $\btheta$ via maximizing $L_{\mathrm{obs}} \parens{\,\cdot\,\,\vert\, X_{\mathrm{obs}}}$ directly is usually hard. 
+	
+	\item \textbf{EM Algorithm:} The \emph{EM algorithm} is a two-step iterative process, incorporating 
+	\begin{enumerate}
+		\item an \emph{expectation step} (E-step): compute the conditional expectation of the complete-data log-likelihood given the observed data and the current parameter estimate, and then 
+		\item a \emph{maximization step} (M-step): update the parameter estimate by maximizing the conditional expectation from the E-step. 
+	\end{enumerate}
+	
+	\item \textbf{Derivation of EM Algorithm:} Since 
+	\begin{align*}
+		p \parens{X \,\vert\, \btheta} = p \parens{X_{\mathrm{obs}}, X_{\mathrm{mis}} \,\vert\, \btheta} = p \parens{X_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta} \times p \parens{X_{\mathrm{obs}} \,\vert\, \btheta}, 
+	\end{align*}
+	or equivalently, 
+	\begin{align*}
+		p \parens{X_{\mathrm{obs}} \,\vert\, \btheta} = \frac{p \parens{X_{\mathrm{obs}}, X_{\mathrm{mis}} \,\vert\, \btheta}}{p \parens{X_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta}}, 
+	\end{align*}
+	the log-likelihood function for the observed data is 
+	\begin{align}
+		\ell \parens{\btheta \,\vert\, X_{\mathrm{obs}}} = & \, \log p \parens{X_{\mathrm{obs}}, X_{\mathrm{mis}} \,\vert\, \btheta} - \log p \parens{X_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta} \nonumber \\ 
+		= & \, \ell \parens{\btheta \,\vert\, X} - \log p \parens{X_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta}, \label{eq-em1}
+	\end{align}
+	where $\ell \parens{\,\cdot\, \,\vert\, X}$ is the log-likelihood function for the complete data, which may be easy to compute, and $\log p \parens{X_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta}$ is the part of the log-likelihood function for the complete data due to the missing data. 
+	
+	Take the expectation of both sides of \eqref{eq-em1} with respect to the conditional distribution of the missing variable conditioning on the observed part and the current parameter estimate $\btheta'$, %$p \parens{X_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'}$, where $\btheta'$ is the current value of $\btheta$, 
+	we have 
+	\begin{align*}
+		\ell \parens{\btheta \,\vert\, X_{\mathrm{obs}}} = & \, \E \bracks{\ell \parens{\btheta \,\vert\, X} \,\vert\, X_{\mathrm{obs}}, \btheta'} - \E \bracks{ \log p \parens{X_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta} \,\vert\, X_{\mathrm{obs}}, \btheta'} \\ 
+		= & \, Q \parens{\btheta, \btheta'} - R \parens{\btheta, \btheta'}, 
+	\end{align*}
+	where
+	\begin{align*}
+		Q \parens{\btheta, \btheta'} := & \, \E \bracks{\ell \parens{\btheta \,\vert\, X} \,\vert\, X_{\mathrm{obs}}, \btheta'} \\ 
+		= & \, \int \ell \parens{\btheta \,\vert\, X} p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'} \diff x_{\mathrm{mis}}
+	\end{align*}
+	and 
+	\begin{align*}
+		R \parens{\btheta, \btheta'} := & \, \E \bracks{ \log p \parens{X_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta} \,\vert\, X_{\mathrm{obs}}, \btheta'} \\ 
+		= & \, \int p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'} \log p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta}  \diff x_{\mathrm{mis}}. 
+	\end{align*}
+	Now, for $R \parens{\btheta, \btheta'}$, we notice 
+	\begin{align*}
+		R \parens{\btheta, \btheta'} = & \, \int p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'} \log p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta}  \diff x_{\mathrm{mis}} \\ 
+		= & \, \int p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'} \log \parens[\bigg]{p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta} \frac{p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'}}{p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'}}} \diff x_{\mathrm{mis}} \\ 
+		= & \, \int p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'} \log \parens[\bigg]{ \frac{p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta}}{p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'}}} \diff x_{\mathrm{mis}} \\ 
+		& \qquad + \int p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'} \log p \parens{x_{\mathrm{mis}} \,\vert\, X_{\mathrm{obs}}, \btheta'} \diff x_{\mathrm{mis}} \\ 
+		= & \, - \mathrm{KL} \parens[\big]{p \parens{\,\cdot\, \,\vert\, X_{\mathrm{obs}}, \btheta'} \,\Vert\, p \parens{\,\cdot\, \,\vert\, X_{\mathrm{obs}}, \btheta}} + R \parens{\btheta', \btheta'} \\ 
+		\le & \, R \parens{\btheta', \btheta'},  
+	\end{align*}
+	where $\mathrm{KL} \parens{p \,\Vert\, q} := \int p \parens{x} \log \parens{p \parens{x} / q \parens{x}} \diff x$ is the Kullback-Leibler divergence between density functions $p$ and $q$, and $\mathrm{KL} \parens{p \,\Vert\, q} \ge 0$ always holds due to Jensen's inequality. 
+	
+	Given the current value $\btheta'$, if we can find $\btheta'' \in \bTheta$ such that $Q \parens{\btheta'', \btheta'} > Q \parens{\btheta', \btheta'}$, we must have 
+	\begin{align*}
+		\ell \parens{\btheta'' \,\vert\, X_{\mathrm{obs}}} - \ell \parens{\btheta' \,\vert\, X_{\mathrm{obs}}} = & \, \bracks[\big]{Q \parens{\btheta'', \btheta'} - R \parens{\btheta'', \btheta'}} - \bracks[\big]{Q \parens{\btheta', \btheta'} - R \parens{\btheta', \btheta'}} \\ 
+		= & \, \bracks[\big]{Q \parens{\btheta'', \btheta'} - Q \parens{\btheta', \btheta'}} - \bracks[\big]{R \parens{\btheta'', \btheta'} - R \parens{\btheta', \btheta'}} \\ 
+		> & \, 0, 
+	\end{align*}
+	that is, we are keeping increasing the value of the log-likelihood function for the observed data. 
+	
+	The complete EM algorithm is given in Algorithm \ref{algo-em}. 
+
+	\begin{minipage}{\linewidth}
+	\begin{algorithm}[H]
+		\caption{EM Algorithm}\label{algo-em}
+		\begin{algorithmic}[1]
+			\REQUIRE Initial guess of the parameter value, $\btheta^{\parens{0}}$; 
+			
+			\STATE For $m = 0, 1, 2, \cdots$, iterate between the following two steps: 
+			\begin{enumerate}
+				\item \emph{E-step:} Compute 
+				\begin{align*}
+					Q \parens{\btheta, \btheta^{\parens{m}}} = \E \bracks{\ell \parens{\btheta \,\vert\, X} \,\vert\, X_{\mathrm{obs}}, \btheta^{\parens{m}}}; 
+				\end{align*}
+				
+				\item \emph{M-step:} Compute 
+				\begin{align*}
+					\btheta^{\parens{m+1}} := \argmax_{\bTheta} Q \parens{\btheta, \btheta^{\parens{m}}}; 
+				\end{align*}
+			\end{enumerate}
+			
+			\STATE Stop when convergence of the log-likelihood is attained. 
+		\end{algorithmic} 
+	\end{algorithm}
+	\end{minipage}
+	
+	\vspace{10pt}
+	
+	\textit{Remark.} In the M-step above, we do \emph{not} need to solve the maximization exactly, but just need an estimate $\btheta^{\parens{m+1}}$ satisfying $Q \parens{\btheta^{\parens{m+1}}, \btheta^{\parens{m}}} > Q \parens{\btheta^{\parens{m}}, \btheta^{\parens{m}}}$. 
+	
+	\item \textbf{Convergence Property:} Under certain mild regularity conditions, the EM algorithm is guaranteed to converge to a local maximum of the log-likelihood function. 
+	
+	\textit{Remark.} Local convergence of the log-likelihood function does \emph{not} imply local convergence of the parameter estimates, although the latter can be achieved under additional regularity conditions. 
+	
+	\item \textbf{Comments:} 
+	\begin{enumerate}
+		\item The EM algorithm possesses reliable convergence properties and low cost per iteration, does \emph{not} require much storage space, and is easy to program; 
+		\item The EM algorithm may be extremely slow to converge; 
+		\item Because convergence is guaranteed only to a \emph{local} maximum, and because likelihood surfaces often possess many local maxima, it is usually necessary to run the EM algorithm using different starting points to try to find a global maximum of the log-likelihood function. 
+	\end{enumerate}
+	
+	\item \textbf{Application of EM Algorithm in Fitting Finite Mixture Models:} 
+	\begin{enumerate}
+		\item \textit{Model:} Suppose a density $p$ is a mixture of $K$ component density functions, $p_1, p_2, \cdots, p_K$, that is, 
+		\begin{align*}
+			p \parens{\bx \,\vert\, \btheta} = \sum_{k=1}^K \pi_k p_k \parens{\bx \,\vert\, \btheta_k}, \qquad \text{ for all } \bx, 
+		\end{align*}
+		where $\pi_k \ge 0$ for all $k = 1, 2, \cdots, K$ and $\sum_{k=1}^K \pi_k = 1$, $\btheta_k$ denotes the parameters associated with the $k$-th component density function, and $\btheta := \parens{\sets{\pi_k}_{k=1}^K, \sets{\btheta_k}_{k=1}^K}$ denotes the set of all parameter in this mixture model. 
+		
+		\item \textit{Observed, Missing and Complete Data:} Let $\bx_{1, \mathrm{obs}}, \bx_{2, \mathrm{obs}}, \cdots, \bx_{n, \mathrm{obs}}$ be $n$ i.i.d observed samples, and $\bx_{i, \mathrm{mis}}$ be the missing component associated with $\bx_{i, \mathrm{obs}}$, for all $i = 1, 2, \cdots, n$. Here, 
+		\begin{align*}
+			\bx_{i, \mathrm{mis}} := \parens{x_{i, 1, \mathrm{mis}}, x_{i, 2, \mathrm{mis}}, \cdots, x_{i, K, \mathrm{mis}}}^\top \in \sets{0, 1}^K
+		\end{align*}
+		and 
+		\begin{align*}
+			x_{i, k, \mathrm{mis}} = \begin{cases}
+				1, & \, \text{ if } \bx_{i, \mathrm{obs}} \text{ belongs to the $k$-component}, \\ 
+				0, & \, \text{ otherwise }, 
+			\end{cases}
+		\end{align*}
+		for all $i = 1, 2, \cdots, n$ and $k = 1, 2, \cdots, K$. As a consequence, the complete data for the $i$-th observation is 
+		\begin{align*}
+			\bx_i := \parens{\bx_{i, \mathrm{obs}}^\top, \bx_{i, \mathrm{mis}}^\top}^\top, 
+		\end{align*}
+		for all $i = 1, 2, \cdots, n$. 
+		
+		\item \textit{Assumptions on Missing Data:} Assume that $\bx_{i, \mathrm{mis}}$ is a realization of a $K$-class multinomial distribution with cell probabilities given by $\parens{\pi_1, \pi_2, \cdots, \pi_K}$. 
+		
+		\item \textit{Log-likelihood Function for Complete Data:} The log-likelihood function for complete data is given by 
+		\begin{align}\label{eq-em-2}
+			\ell \parens{\btheta \,\vert\, \bx_1, \cdots, \bx_n} := \sum_{i=1}^n \sum_{k=1}^K x_{i,k,\mathrm{mis}} \log \parens[\big]{\pi_k p_k \parens{\bx_{i, \mathrm{obs}} \,\vert\, \btheta_k}}. 
+		\end{align}
+		
+		\item \textit{Derivation of E-step:} Given the current value of the parameter $\btheta'$, we compute 
+		\begin{align*}
+			Q \parens{\btheta, \btheta'} = & \, \E \bracks{\ell \parens{\btheta \,\vert\, \bx_1, \cdots, \bx_n} \,\vert\, \bx_{1, \mathrm{obs}}, \bx_{2, \mathrm{obs}}, \cdots, \bx_{n, \mathrm{obs}}, \btheta'} \\ 
+			= & \, \sum_{i=1}^n \sum_{k=1}^K \E \bracks{x_{i,k,\mathrm{mis}} \,\vert\, \bx_{1, \mathrm{obs}}, \bx_{2, \mathrm{obs}}, \cdots, \bx_{n, \mathrm{obs}}, \btheta'} \log \parens[\big]{\pi_k p_k \parens{\bx_{i, \mathrm{obs}} \,\vert\, \btheta_k}} \\ 
+			= & \, \sum_{i=1}^n \sum_{k=1}^K \hat{x}_{i,k,\mathrm{mis}} \log \parens[\big]{\pi_k p_k \parens{\bx_{i, \mathrm{obs}} \,\vert\, \btheta_k}}, 
+		\end{align*}
+		where 
+		\begin{align*}
+			\hat{x}_{i,k,\mathrm{mis}} := \frac{\pi_k' p_k \parens{\bx_{i, \mathrm{obs}} \,\vert\, \btheta_k'}}{\sum_{\ell=1}^K \pi_{\ell}' p_{\ell} \parens{\bx_{i, \mathrm{obs}} \,\vert\, \btheta_{\ell}'}}, 
+		\end{align*}
+		and $\pi_k'$'s and $\btheta_{k}'$'s are the corresponding values in $\btheta'$. 
+		
+		\item \textit{Derivation of M-step:} The M-step then takes the probabilities $\sets{\hat{x}_{i,k,\mathrm{mis}}}$ provided by the E-step and updates the parameter values by maximizing \eqref{eq-em-2} with respect to $\sets{\pi_k}_{k=1}^K$ and $\sets{\btheta_k}_{k=1}^K$. 
+		
+		In particular, the M-step outcome for the mixture proportions $\sets{\pi_k}_{k=1}^K$ is given by 
+		\begin{align*}
+			\pi_k'' = \frac{1}{n} \sum_{i=1}^n \hat{x}_{i,k,\mathrm{mis}}, \qquad \text{ for all } k = 1, 2, \cdots, K. 
+		\end{align*}
+		
+		\textit{Remark.} The maximum likelihood determination of the density component for the $i$-th observation is the component corresponding to the largest value of $\hat{x}_{i,k,\mathrm{mis}}$. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Connection between EM Algorithm and $K$-Means Algorithm:} $K$-means algorithm can be viewed as the limit of the EM algorithm for the Gaussian finite mixture model where the component covariances are assumed to be all equal to $\sigma^2 \bI_p$ as $\sigma^2 \to 0$, where we assume $\bx_i \in \Real^p$ for all $i = 1, 2, \cdots, n$. 
+	
+	Let the $k$-th component density function be 
+	\begin{align*}
+		p_k \parens{\bx \,\vert\, \bmu_k, \sigma^2} = \frac{1}{\parens{\sqrt{2\pi \sigma^2}}^p } \exp \parens[\bigg]{- \frac{1}{2 \sigma^2} \parens{\bx - \bmu_k}^\top \parens{\bx - \bmu_k}}, \quad \text{ for all } \bx \in \Real^p, 
+	\end{align*}
+	where $\sigma > 0$ is known. 
+	
+	Then, using the notation above, given the value of $\btheta$ at the $m$-th iteration, the E-step is to update 
+	\begin{align*}
+		\hat{x}_{i,k,\mathrm{mis}}^{\parens{m+1}} = & \, \frac{\pi_k^{\parens{m}} p_k \parens{\bx_{i, \mathrm{obs}} \,\vert\, \btheta_k^{\parens{m}}}}{\sum_{\ell=1}^K \pi_{\ell}^{\parens{m}} p_{\ell} \parens{\bx_{i, \mathrm{obs}} \,\vert\, \btheta_{\ell}^{\parens{m}}}} \\ 
+		= & \, \frac{\pi_k^{\parens{m}} \exp \parens[\big]{- \frac{1}{2 {\sigma}^2} \parens{\bx - \bmu_k^{\parens{m}}}^\top \parens{\bx - \bmu_k^{\parens{m}}}} }{\sum_{\ell=1}^K \pi_{\ell}^{\parens{m}} \exp \parens[\big]{- \frac{1}{2 {\sigma}^2} \parens{\bx - \bmu_k^{\parens{m}}}^\top \parens{\bx - \bmu_k^{\parens{m}}}} }. 
+	\end{align*}
+	Now, letting $\sigma^2 \to 0^+$, we have 
+	\begin{align*}
+		\hat{x}_{i,k,\mathrm{mis}}^{\parens{m+1}} \to 
+		\begin{cases}
+			1, & \, \text{ if $k = \argmin_{k = 1, 2, \cdots, K} \norm{\bx_i - \bmu_k^{\parens{m}}}^2$ }, \\ 
+			0, & \, \text{ otherwise}. 
+		\end{cases}
+	\end{align*}
+	Thus, if we consider a restricted version of the Gaussian mixture model with the covariance matrix $\sigma^2 \bI_p$ known, then the steps of the EM algorithm become approximately the same as those of $K$-means algorithm as $\sigma^2 \to 0^+$. 
+	
+	\textit{Remark.} If we simply compare the two algorithms, we can also see that the EM algorithm is like a ``soft'' version of the $K$-means algorithm: 
+	\begin{enumerate}
+		\item $K$-means assigns each observation to exactly one cluster, whereas 
+		\item Gaussian EM gives a conditional probability distribution over $K$ clusters. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{V. Density-based Spatial Clustering of Applications with Noise (DBSCAN)}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Main Idea:} DBSCAN is a non-parametric density-based clustering algorithm. Given a set of points in some space, it groups together points that are closely packed together, marking points that lie alone in low-density regions as outliers. 
+	
+	\item \textbf{Basic Assumption:} The assumption underlying DBSCAN is that the clusters are dense regions in space separated by regions of lower density. 
+	
+	\item \textbf{Setup:} Let 
+	\begin{enumerate}
+		\item $\calD := \sets{\bx_1, \bx_2, \cdots, \bx_n}$ be a set of data points to be clustered, 
+		\item $\varepsilon > 0$, and 
+		\item $n_{\min}$ be a strictly positive integer. 
+	\end{enumerate}
+	
+	\item \textbf{$\varepsilon$-neighborhood of a Point:} Let $\bx$ be a point in space. The $\varepsilon$-neighborhood of $\bx$, denoted by $\calN_{\varepsilon} \parens{\bx}$, is defined as 
+	\begin{align}
+		\calN_{\varepsilon} \parens{\bx} := \sets[\Big]{ \bx_i \in \calD \,\big\vert\, d \parens{\bx, \bx_i} \le \varepsilon}. 
+	\end{align}
+	
+	\item \textbf{Directly Density-reachable Points:} A point $\bx$ is \emph{directly density-reachable} from a point $\by$ with respect to $\varepsilon$ and $n_{\min}$ if 
+	\begin{align*}
+		\bx \in \calN_{\varepsilon} \parens{\by}, \qquad \text{ and } \qquad \abs{\calN_{\varepsilon} \parens{\by}} \ge n_{\min}. 
+	\end{align*}
+	
+	\textit{Remark 1.} Suppose $\bx$ and $\by$ are both \emph{core points}, meaning that they are points inside of the cluster, direct-reachability is symmetric for them. 
+	
+	If, however, $\bx$ is a core point and $\by$ is a \emph{border point}, meaning that it is a point on the border of the cluster, direct reachability may \emph{not} be symmetric for them. 
+		
+	\textit{Remark 2.} The second criterion in the definition indicates that the point $\by$ is a core point. 
+	
+	\item \textbf{Density-reachable Points:} A point $\bx$ is \emph{density-reachable} from a point $\by$ with respect to $\varepsilon$ and $n_{\min}$ if there exist $m \in \Natural$ and a chain of points $\by_1, \by_2, \cdots, \by_m$, where $\by_1 = \by$ and $\by_m = \bx$ such that $\by_{i+1}$ is directly density-reachable from $\by_i$. 
+	
+	\textit{Remark 1.} Density reachability is a transitive relation, but is \emph{not} symmetric in general. 
+	
+	\textit{Remark 2.} Two border points of the same cluster $C$ may \emph{not} be density-reachable from each other because the core point condition might \emph{not} hold for both of them. However, there must be a core point in $C$ from which both border points are density-reachable. 
+	
+	\item \textbf{Density-connected:} A point $\bx$ is \emph{density-connected} to a point $\by$ with respect to $\varepsilon$ and $n_{\min}$ if there is a point $\bz$ such that both $\bx$ and $\by$ are density-reachable from $\bz$ with respect to $\varepsilon$ and $n_{\min}$. 
+	
+	\textit{Remark 1.} Density-connectivity is a symmetric relation. 
+	
+	\textit{Remark 2.} For density-reachable points, the relation of density-connectivity is reflexive. 
+	
+	\item \textbf{Cluster in DBSCAN:} A \emph{cluster} $C$ with respect to $\varepsilon$ and $n_{\min}$ is a non-empty subset of $\calD$ satisfying the following two conditions: 
+	\begin{enumerate}
+		\item \textit{Maximality:} for any $\bx, \by \in \calD$, if $\bx \in C$ and $\by$ is density-reachable from $\bx$ with respect to $\varepsilon$ and $n_{\min}$, then $\by \in C$; 
+		\item \textit{Connectivity:} For any $\bx, \by \in C$, $\bx$ is density-connected to $\by$ with respect to $\varepsilon$ and $n_{\min}$. 
+	\end{enumerate}
+	
+	\textit{Remark.} A cluster with respect to $\varepsilon$ and $n_{\min}$ contains at least $n_{\min}$ points. 
+	
+	\item \textbf{Noise in DBSCAN:} Let $C_1, C_2, \cdots, C_K$ be the clusters of $\calD$ with respect to parameters $\varepsilon_k$ and $n_{\min, k}$, for all $k = 1, 2, \cdots, K$. Then, we define the \emph{noise} as the set of points in $\calD$ \emph{not} belonging to any cluster $C_k$. 
+	
+	\item \textbf{Lemmas:}
+	\begin{enumerate}
+		\item Let $\bx \in \calD$ and $\abs{\calN_{\varepsilon} \parens{\bx}} > n_{\min}$. Then, the set 
+		\begin{align*}
+			S := \sets[\bigg]{\bz \in \calD \,\Big\vert\, \bz \text{ is density-reachable from $\bx$ with respect to $\varepsilon$ and $n_{\min}$}}
+		\end{align*}
+		is a cluster with respect to $\varepsilon$ and $n_{\min}$. 
+		
+		\item Let $C$ be a cluster with respect to $\varepsilon$ and $n_{\min}$ and let $\bx$ be any point in $C$ with $\abs{\calN_{\varepsilon} \parens{\bx}} > n_{\min}$. Then, $C = S$. 
+	\end{enumerate}
+	
+	\item \textbf{DBSCAN Algorithm:} The complete DBSCAN algorithm is shown in Algorithm \ref{algo-dbscan}. 
+	
+	\begin{minipage}{\linewidth}
+	\begin{algorithm}[H]
+		\caption{DBSCAN Algorithm}\label{algo-dbscan}
+		\begin{algorithmic}[1]
+			\REQUIRE Data to be clustered, $\calD = \sets{\bx_1, \bx_2, \cdots, \bx_n}$; 
+			\REQUIRE $\varepsilon > 0$ and $n_{\min} > 0$. 
+			
+			\STATE \label{algo-dbscan-step1} Choose an arbitrary point $\bx$ from $\calD$; 
+			\IF{$\bx$ is a core point}
+			\STATE Retrieve all points that are density-reachable from $\bx$ and obtain the cluster containing $\bx$, and label the remaining ones as noise; 
+			\ELSE 
+			\STATE Mark $\bx$ as a noise point and go back to Step \ref{algo-dbscan-step1}. 
+			\ENDIF
+			\STATE Repeat the preceding steps until all remaining points labeled as noises have distances to all clusters by more than $\varepsilon$, where the distance of a point $\bx$ to a cluster $C$ is defined to be 
+			\begin{align*}
+				\min_{\sets{i \,\vert\, i \in C}} d \parens{\bx, \bx_i}. 
+			\end{align*}
+		\end{algorithmic}
+	\end{algorithm}
+	\end{minipage}
+	
+	\item \textbf{Choice of $n_{\min}$:} 
+	\begin{enumerate}
+		\item As a rule of thumb, $n_{\min} = 2 \ \times$ dimensionality of data can be used; 
+		\item Domain knowledge and a deep understanding of data can help in choosing the most appropriate value of $n_{\min}$. 
+	\end{enumerate}
+	
+	\item \textbf{Choice of $\varepsilon$:}
+	\begin{enumerate}
+		\item \textit{Effects of $\varepsilon$:}
+		\begin{enumerate}
+			\item if $\varepsilon$ is chosen too small, a large part of the data will not be clustered; but 
+			\item if $\varepsilon$ is chosen too large, clusters will merge and the majority of objects will be in the same cluster. 
+		\end{enumerate}
+		In general, small values of $\varepsilon$ are preferable, and, as a rule of thumb, only a small fraction of points should be within this distance of one another. 
+		
+		\item \textit{How to Choose $\varepsilon$ in Practice:} We create a so-called \emph{$K$-distance plot}, where $K = n_{\min} - 1$. $K$-distance plot plots the distances to the $K$-th nearest neighbor of all points, ordered from the largest to the smallest. Good candidates of $\varepsilon$ are those where this plot shows an ``elbow''. 
+		
+		\textit{Remark.} The $K$ nearest neighbors of a point consist of exactly $n_{\min}$ points. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Advantages:}
+	\begin{enumerate}
+		\item DBSCAN does \emph{not} require the specification of the number of clusters \emph{a priori}, as opposed to the $K$-means algorithm or the $K$-medoids algorithm; 
+		\item DBSCAN can find \emph{arbitrarily-shaped} clusters. It can even find a cluster completely surrounded by (but not connected to) a different cluster; 
+		\item DBSCAN has a notion of noise, and is robust to outliers; 
+		\item DBSCAN requires just two parameters and is mostly insensitive to the ordering of the points in the database. 
+		\item The parameters $\varepsilon$ and $n_{\min}$ can be set by a domain expert, if the data is well understood. 
+	\end{enumerate}
+	
+	\item \textbf{Disadvantages:}
+	\begin{enumerate}
+		\item DBSCAN is \emph{not} entirely deterministic: border points that are reachable from more than one cluster can be part of either cluster, depending on the order the data are processed; 
+		\item The quality of DBSCAN depends on the dissimilarity measure. This is especially true for high-dimensional data, where the algorithm may suffer from the so-called ``curse of dimensionality''; 
+		\item DBSCAN cannot cluster datasets well with large differences in densities, since the $\varepsilon$-$n_{\min}$ combination cannot then be chosen appropriately for \emph{all} clusters; 
+		\item If the data and scale are not well understood, choosing a meaningful distance threshold $\varepsilon$ can be difficult. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{VI. Spectral Clustering}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Overview:} Spectral clustering is a generalization of standard clustering methods and is able to handle arbitrarily-shaped clusters. It is very easy to implement and can be solved efficiently by standard linear algebra methods. 
+	
+	\item \textbf{Setup:} Let 
+	\begin{enumerate}
+		\item $\sets{\bx_1, \bx_2, \cdots, \bx_n}$ be a set of data points to be clustered, and 
+		\item $s_{i, {i'}} := s \parens{\bx_i, \bx_{i'}} \ge 0$ be the similarity between $\bx_i$ and $\bx_{i'}$. 
+	\end{enumerate}
+	
+	\textit{Remark.} Similarity measurements $s \parens{\bx_i, \bx_{i'}}$ can be obtained by a transformation of the dissimilarity measurements $d \parens{\bx_i, \bx_{i'}}$. 
+	
+	\item \textbf{Similarity Graph:} A \emph{similarity graph}, denoted by $\calG = \parens{V, E}$, is an undirected graph with vertex set $V = \sets{\bx_1, \bx_2, \cdots, \bx_n}$. In addition, $\calG$ satisfies the following properties: 
+	\begin{enumerate}
+		\item two vertices, say $\bx_i$ and $\bx_{i'}$, are connected if their similarity $s_{i,i'}$ is strictly positive or is larger than a certain threshold; 
+		\item each edge is weighted with the weight being the similarity of the corresponding two vertices. 
+	\end{enumerate}
+	
+	\item \textbf{Reformulation of Clustering Problem:}	With the similarity graph defined as above, the clustering can be recast as the following: Given a similarity graph, we want to find a partition of the graph such that 
+	\begin{enumerate}
+		\item the edges between different clusters have very low weights, meaning that points in different clusters are dissimilar from each other, and 
+		\item the edges within a cluster have high weights, meaning that points within the same cluster are similar to each other. 
+	\end{enumerate}
+	
+	\item \textbf{Basic Definitions from Graph Theory:} Consider a general graph (not necessarily a similarity graph) $\calG = \parens{V, E}$, with the vertex set being $V = \sets{\bv_1, \bv_2, \cdots, \bv_n}$ and the edge connecting $\bv_i$ and $\bv_{i'}$ being weighted by $w_{i,i'}$, for all $i, i' = 1, 2, \cdots, n$. 
+	\begin{enumerate}
+		\item \textit{Weighted Adjacency Matrix:} The \emph{weighted adjacency matrix} of the graph is the matrix $\bW$ with the $\parens{i, i'}$-th entry being $w_{i,i'}$, for all $i, i' = 1, 2, \cdots, n$. 
+		
+		\textit{Remark 1.} If $w_{i,i'} = 0$, this means that the vertices $\bv_i$ and $\bv_{i'}$ are \emph{not} connected by an edge. 
+		
+		\textit{Remark 2.} Since $\calG$ is undirected, we require $w_{i,i'} = w_{i',i}$. In other words, $\bW$ is a symmetric matrix. 
+		
+		\item \textit{Degree:} The \emph{degree} of a vertex $\bv_i \in V$ is defined as 
+		\begin{align*}
+			d_i := \sum_{i'=1}^n w_{i,i'}, 
+		\end{align*}
+		i.e., the sum of all weights of edges connected with $\bv_i$. 
+		
+		\item \textit{Degree Matrix:} The \emph{degree matrix} $\bD \in \Real^{n \times n}$ is defined as the diagonal matrix with the degrees $d_1, d_2, \cdots, d_n$ on the diagonal. 
+		
+		\item \textit{Connected Subset of Vertices:} Let $A \subset V$ be a subset of vertices in $V$. Then, $A$ is said to be \emph{connected} if any two vertices in $A$ can be joined by a path such that all intermediate vertices also reside in $A$. 
+		
+		\item \textit{Connected Component:} A subset $A \subset V$ is said to be a \emph{connected component} if 
+		\begin{enumerate}
+			\item it is connected, and 
+			\item there are no connections between vertices in $A$ and $A^{\complement}$. 
+		\end{enumerate}	
+		
+		\item \textit{Partition:} The nonempty sets $A_1, A_2, \cdots, A_k$ form a \emph{partition} of the graph if $A_i \cap A_{i'} = \emptyset$ for $i \neq i'$ and $A_1 \cup A_2 \cup \cdots \cup A_k = V$. 
+		
+		\item \textit{Size of a Subset of Vertices:} Let $A \subset V$ be a subset of vertices in $V$. We use the following two quantities to measure the \emph{size} of $A$ 
+		\begin{align*}
+			\abs{A} := & \, \text{ the number of vertices in $A$}, \\ 
+			\mathrm{vol} \parens{A} := & \, \sum_{\sets{i \,\vert\, \bv_i \in A}} d_i. 
+		\end{align*}
+		Intuitively, $\abs{A}$ measures the size of $A$ by its number of vertices, while $\mathrm{vol} \parens{A}$ measures the size of $A$ by summing over the weights of all edges attached to vertices in $A$. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Notation:}
+	\begin{enumerate}
+		\item For two not necessarily disjoint sets $A, B \subset V$, we define 
+		\begin{align*}
+			W \parens{A, B} := \sum_{\sets{\parens{i,i'} \vert \bv_i \in A, \bv_{i'} \in B}} w_{i, i'}. 
+		\end{align*}
+		
+		\item Let $A$ be a subset of vertices in $V$. Denote its complement by $A^{\complement}$. 
+		
+		\item Let $A$ be a subset of vertices in $V$. Let $\boldone_A := \parens{a_1, a_2, \cdots, a_n}^\top \in \Real^n$, where, for all $i = 1, 2, \cdots, n$, 
+		\begin{align*}
+			a_i = \begin{cases}
+				1, & \, \text{ if } \bv_i \in A, \\ 
+				0, & \, \text{ if } \bv_i \notin A. 
+			\end{cases}
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Different Similarity Graphs:} 
+	\begin{enumerate}
+		\item \textit{$\varepsilon$-neighborhood Graph:} We connect \emph{all} data points whose pairwise distances are smaller than a pre-specified parameter $\varepsilon > 0$. 
+		
+		\textit{Remark.} Since the distances between all connected points are roughly of the same scale (at most $\varepsilon$), the $\varepsilon$-neighborhood graph is usually considered as an \emph{unweighted} graph. 
+		
+		\item \textit{$k$-nearest Neighbor Graph:} We connect the data point $\bx_i$ with the data point $\bx_{i'}$ if $\bx_{i'}$ is among the $k$-nearest neighbors of $\bx_i$. 
+		
+		\textit{Remark.} This approach leads to a \emph{directed} graph, as the neighborhood relationship is \emph{not} symmetric. To make this graph undirected, there are two ideas: 
+		\begin{enumerate}
+			\item Ignore the directions of the edges --- we connect $\bx_i$ and $\bx_{i'}$ with an undirected edge if $\bx_i$ is among the $k$-nearest neighbors of $\bx_{i'}$ \underline{or} if $\bx_{i'}$ is among the $k$-nearest neighbors of $\bx_i$. Call this resulting graph the $k$-nearest neighbor graph. 
+			
+			\item Connect vertices $\bx_i$ and $\bx_{i'}$ if both $\bx_i$ is among the $k$-nearest neighbors of $\bx_{i'}$ \underline{and} $\bx_{i'}$ is also among the $k$-nearest neighbors of $\bx_i$. Call this resulting graph the \emph{mutual $k$-nearest neighbor graph}. 
+		\end{enumerate}
+		
+		\item \textit{Fully Connected Graph:} We connect all points with positive similarity with each other and weigh all edges by $s \parens{\bx_i, \bx_{i'}}$. 
+		
+		This requires us to choose an appropriate similarity function that models local neighborhood. One such choice is the Gaussian similarity function 
+		\begin{align}\label{eq-gaussian-similarity}
+			s \parens{\bx_i, \bx_{i'}} = \exp \parens[\bigg]{- \frac{\norm{\bx_i - \bx_{i'}}_2^2}{2 \sigma^2}}, 
+		\end{align}
+		where $\sigma > 0$ controls the width of the neighborhood. 
+	\end{enumerate}
+	
+	\item \textbf{Un-normalized Graph Laplacian Matrix:} The \emph{un-normalized graph Laplacian matrix} is defined to be 
+	\begin{align}
+		\bL := \bD - \bW, 
+	\end{align}
+	where $\bD$ is the degree matrix and $\bW$ is the weighted adjacency matrix. 
+	
+	\item \textbf{Properties of $\bL$:}
+	\begin{enumerate}
+		\item For any vector $\ba = \parens{a_1, a_2, \cdots, a_n} \in \Real^n$, we have 
+		\begin{align*}
+			\ba^\top \bL \ba = \frac{1}{2} \sum_{i=1}^n \sum_{i'=1}^n w_{i, i'} \parens{a_i - a_{i'}}^2; 
+		\end{align*}
+		\item $\bL$ is symmetric and positive semi-definite; 
+		\item The smallest eigenvalue of $\bL$ is 0 with the corresponding eigenvector being $\boldone_n$; 
+		\item $\bL$ has $n$ non-negative real-valued eigenvalues $\lambda_1 \ge \lambda_2 \ge \cdots \lambda_n = 0$. 
+	\end{enumerate}
+	
+	% \textit{Remark.} The un-normalized graph Laplacian matrix does \emph{not} depend on the diagonal elements of the adjacency matrix $\bW$. Hence, each adjacency matrix which coincides with $\bW$ on all off-diagonal positions leads to the same un-normalized graph Laplacian. 
+	
+	\item \textbf{Number of Connected Components and Zero Eigenvalue of $\bL$:} Let $\calG$ be an undirected graph with non-negative weights. Then, the following statements hold: 
+	\begin{enumerate}
+		\item The multiplicity $k$ of the eigenvalue 0 of $\bL$ equals the number of connected components $A_1, A_2, \cdots, A_k$ in the graph. 
+		\item The eigen-space of the eigenvalue 0 is spanned by the indicator vectors $\boldone_{A_1}, \cdots, \boldone_{A_k}$ of those components. 
+	\end{enumerate}
+	
+	\item \textbf{Normalized Graph Laplacian Matrix:} There are two kinds of normalized graph Laplacian matrices, namely, 
+	\begin{align}
+		\bL_{\mathrm{sym}} := & \, \bD^{-\frac{1}{2}} \bL \bD^{-\frac{1}{2}} = \bI_n - \bD^{-\frac{1}{2}} \bW \bD^{-\frac{1}{2}}, \\ 
+		\bL_{\mathrm{rw}} := & \, \bD^{-1} \bL = \bI - \bD^{-1} \bW. 
+	\end{align}
+	
+	\item \textbf{Properties of $\bL_{\mathrm{sym}}$ and $\bL_{\mathrm{rw}}$:}
+	\begin{enumerate}
+		\item For every $\ba := \parens{a_1, a_2, \cdots, a_n}^\top \in \Real^n$, we have 
+		\begin{align*}
+			\ba^\top \bL_{\mathrm{sym}} \ba = \frac{1}{2} \sum_{i=1}^n \sum_{i'=1}^n w_{i, i'} \parens[\bigg]{\frac{a_i}{\sqrt{d_i}} - \frac{a_{i'}}{\sqrt{d_{i'}}}}^2. 
+		\end{align*}
+		
+		\item $\lambda$ is an eigenvalue of $\bL_{\mathrm{rw}}$ with eigenvector $\bu$ if and only if $\lambda$ is an eigenvalue of $\bL_{\mathrm{sym}}$ with eigenvector $\bw = \bD^{-\frac{1}{2}} \bu$; 
+		
+		\item $\lambda$ is an eigenvalue of $\bL_{\mathrm{rw}}$ with eigenvector $\bu$ if and only if $\lambda$ and $\bu$ solve the generalized eigen-problem $\bL \bu = \lambda \bD \bu$; 
+		
+		\item Zero is an eigenvalue of $\bL_{\mathrm{rw}}$ with the eigenvector $\boldone_n$, and zero is an eigenvalue of $\bL_{\mathrm{sym}}$ with eigenvector $\bD^{- \frac{1}{2}} \boldone_n$; 
+		
+		\item $\bL_{\mathrm{sym}}$ and $\bL_{\mathrm{rw}}$ are positive semi-definite and have $n$ non-negative real-valued eigenvalues $\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_n = 0$. 
+	\end{enumerate}
+	
+	\item \textbf{Number of Connected Components and Spectra of $\bL_{\mathrm{sym}}$ and $\bL_{\mathrm{rw}}$}: Let $\calG$ be an undirected graph with non-negative weights. Then, the multiplicity $k$ of the eigenvalue 0 of both $\bL_{\mathrm{rw}}$ and $\bL_{\mathrm{sym}}$ equals the number of connected components $A_1, A_2, \cdots, A_k$ in the graph. Furthermore, 
+	\begin{enumerate}
+		\item for $\bL_{\mathrm{rw}}$, the eigen-space of 0 is spanned by the indicator vectors $\boldone_{A_i}$'s; 
+		\item for $\bL_{\mathrm{sym}}$, the eigen-space of 0 is spanned by the vectors $\bD^{-\frac{1}{2}} \boldone_{A_i}$'s. 
+	\end{enumerate}
+	
+	\item \textbf{Spectral Clustering Algorithm --- Using Un-normalized Graph Laplacian $\bL$:} The complete spectral clustering algorithm using un-normalized graph Laplacian $\bL$ is shown in Algorithm \ref{algo-spectral-unnorm}. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{Spectral Clustering Algorithm (using $\bL$)}\label{algo-spectral-unnorm}
+			\begin{algorithmic}[1]
+				\REQUIRE Similarity matrix, $\bS \in \Real^{n \times n}$; 
+				\REQUIRE The number of clusters, $K$. 
+				
+				\STATE Construct a similarity graph and let $\bW$ be its weighted adjacency matrix; 
+				\STATE Compute the un-normalized graph Laplacian matrix $\bL$; 
+				\STATE Compute the eigenvectors $\bu_1, \bu_2, \cdots, \bu_K$ associated with the $K$ smallest eigenvalues of $\bL$; 
+				\STATE Let $\bU \in \Real^{n \times K}$ be the matrix containing the vectors $\bu_1, \bu_2, \cdots, \bu_K$ as columns; 
+				\STATE For $i = 1, 2, \cdots, n$, let $\by_i \in \Real^K$ be the vector corresponding to the $i$-th row of $\bU$; 
+				\STATE Cluster the points $\by_1, \by_2, \cdots, \by_n \in \Real^K$ with the $K$-means clustering algorithm into clusters $C_1, C_2, \cdots, C_K$. 
+				\RETURN Clusters $A_1, A_2, \cdots, A_K$ with $A_k = \sets{i \,\vert\, \by_i \in C_k}$ for all $k = 1, 2, \cdots, K$. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\item \textbf{Spectral Clustering Algorithm --- Using Normalized Graph Laplacian $\bL_{\mathrm{rw}}$:} The complete spectral clustering algorithm using normalized graph Laplacian $\bL_{\mathrm{rw}}$ is shown in Algorithm \ref{algo-spectral-norm-rw}. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{Spectral Clustering Algorithm (using $\bL_{\mathrm{rw}}$)}\label{algo-spectral-norm-rw}
+			\begin{algorithmic}[1]
+				\REQUIRE Similarity matrix, $\bS \in \Real^{n \times n}$; 
+				\REQUIRE The number of clusters, $K$. 
+				
+				\STATE Construct a similarity graph and let $\bW$ be its weighted adjacency matrix; 
+				\STATE Compute the un-normalized graph Laplacian matrix $\bL$; 
+				\STATE Compute the eigenvectors $\bu_1, \bu_2, \cdots, \bu_K$ associated with the $K$ smallest eigenvalues of the generalized eigen-problem $\bL \bu = \lambda \bD \bu$; 
+				\STATE Let $\bU \in \Real^{n \times K}$ be the matrix containing the vectors $\bu_1, \bu_2, \cdots, \bu_K$ as columns; 
+				\STATE For $i = 1, 2, \cdots, n$, let $\by_i \in \Real^K$ be the vector corresponding to the $i$-th row of $\bU$; 
+				\STATE Cluster the points $\by_1, \by_2, \cdots, \by_n \in \Real^K$ with the $K$-means clustering algorithm into clusters $C_1, C_2, \cdots, C_K$. 
+				
+				\RETURN Clusters $A_1, A_2, \cdots, A_K$ with $A_k = \sets{i \,\vert\, \by_i \in C_k}$ for all $k = 1, 2, \cdots, K$. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\textit{Remark.} Algorithm \ref{algo-spectral-norm-rw} uses the generalized eigenvectors of $\bL$, which corresponds to the eigenvectors of the normalized graph Laplacian matrix $\bL_{\mathrm{rw}}$. 
+	
+	\item \textbf{Spectral Clustering Algorithm --- Using normalized graph Laplacian $\bL_{\mathrm{sym}}$:} The complete spectral clustering algorithm using normalized graph Laplacian $\bL_{\mathrm{sym}}$ is shown in Algorithm \ref{algo-spectral-norm-sym}. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{Spectral Clustering Algorithm (using $\bL_{\mathrm{sym}}$)}\label{algo-spectral-norm-sym}
+			\begin{algorithmic}[1]
+				\REQUIRE Similarity matrix, $\bS \in \Real^{n \times n}$; 
+				\REQUIRE The number of clusters, $K$. 
+				
+				\STATE Construct a similarity graph and let $\bW$ be its weighted adjacency matrix; 
+				\STATE Compute the un-normalized graph Laplacian matrix $\bL$; 
+				\STATE Compute the eigenvectors $\bu_1, \bu_2, \cdots, \bu_K$ associated with the $K$ smallest eigenvalues of the normalized graph Laplacian matrix $\bL_{\mathrm{sym}}$; 
+				\STATE Let $\bU \in \Real^{n \times K}$ be the matrix containing the vectors $\bu_1, \bu_2, \cdots, \bu_K$ as columns; 
+				\STATE Form the matrix $\bT \in \Real^{n \times K}$ from $\bU$ by normalizing the rows to norm 1, i.e., 
+				\begin{align*}
+					t_{i, k} = \frac{u_{i, k}}{\sqrt{\sum_{\ell=1}^K u_{i,\ell}^2}}, \qquad \text{ for all } i = 1, 2, \cdots, n \text{ and } k = 1, 2, \cdots, K; 
+				\end{align*}
+				\STATE For $i = 1, 2, \cdots, n$, let $\by_i \in \Real^K$ be the vector corresponding to the $i$-th row of $\bT$; 
+				\STATE Cluster the points $\by_1, \by_2, \cdots, \by_n \in \Real^K$ with the $K$-means clustering algorithm into clusters $C_1, C_2, \cdots, C_K$. 
+				\RETURN Clusters $A_1, A_2, \cdots, A_K$ with $A_k = \sets{i \,\vert\, \by_i \in C_k}$ for all $k = 1, 2, \cdots, K$. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\item \textbf{Graph Cut Point of View of Spectral Clustering:} 
+	\begin{enumerate}
+		\item \textit{Motivation:} Given a similarity graph $\calG = \parens{V, E}$ constructed from the data $\bx_1, \bx_2, \cdots, \bx_n$, clustering problem can be reformulated as the following: we want to find a partition of the graph such that 
+		\begin{enumerate}
+			\item the edges between different groups have very low weights, meaning that points in different clusters are dissimilar from each other, and 
+			\item the edges within a group have high weights, meaning that points within the same cluster are similar to each other. 
+		\end{enumerate}
+		
+		\item \textit{Mincut Formulation:} Given a similarity graph $\calG$ and the corresponding weighted adjacency matrix $\bW \in \Real^{n \times n}$, the motivation above can be naturally translated a \emph{mincut problem}. 
+		
+		More precisely, for a given number of $K$ subsets, we choose a partition $A_1, A_2, \cdots, A_K$ to minimize the following cut objective function 
+		\begin{align}
+			\mathrm{Cut} \, \parens{A_1, A_2, \cdots, A_K} := \frac{1}{2} \sum_{k=1}^K W \parens{A_K, A_k^{\complement}}. 
+		\end{align}
+		
+		\textit{Remark.} The issue with this formulation is that, typically, the solution separates an individual vertex from the rest of the graph, which is obviously unsatisfactory. 
+		
+		\item \textit{Improvement Upon Mincut Problem:} We require that the subsets $A_1, A_2, \cdots, A_K$ are all ``reasonably large''. Two objective functions that meet this requirement are 
+		\begin{align}
+			\mathrm{RatioCut} \, \parens{A_1, A_2, \cdots, A_K} := \frac{1}{2} \sum_{k=1}^K \frac{W \parens{A_k, A_k^{\complement}}}{\abs{A_k}} = \sum_{k=1}^K \frac{ \mathrm{Cut} \parens{A_k, A_k^{\complement}}}{\abs{A_k}}, \\ 
+			\mathrm{NCut} \, \parens{A_1, A_2, \cdots, A_K} := \frac{1}{2} \sum_{k=1}^K \frac{W \parens{A_k, A_k^{\complement}}}{\mathrm{vol} \parens{A_k}} = \sum_{k=1}^K \frac{ \mathrm{Cut} \parens{A_k, A_k^{\complement}}}{\mathrm{vol} \parens{A_k}}. 
+		\end{align}
+		
+		\textit{Remark 1.} Both objective functions above take a relatively small value if the clusters $A_k$'s are \emph{not} too small. 
+		
+		\textit{Remark 2.} The minimum of the function $\sum_{k=1}^K 1 / \abs{A_k}$ is achieved if 
+		\begin{align*}
+			\abs{A_1} = \abs{A_2} = \cdots = \abs{A_K}, 
+		\end{align*}
+		and the minimum of the function $\sum_{k=1}^K 1 / \mathrm{vol} \parens{A_k}$ is achieved if 
+		\begin{align*}
+			\mathrm{vol} \parens{A_1} = \mathrm{vol} \parens{A_2} = \cdots = \mathrm{vol} \parens{A_K}. 
+		\end{align*}
+		Hence, what the objective functions $\mathrm{RatioCut}$ and $\mathrm{NCut}$ attempt to achieve is that the clusters are ``balanced'', as measured by the number of vertices or edge weights, respectively. 
+		
+		\textit{Remark 3.} Minimizing $\mathrm{RatioCut}$ and $\mathrm{NCut}$ are both NP-hard. Spectral clustering is a way to solve relaxed versions of these problems. 
+		
+		\item \textit{Minimizing $\mathrm{RatioCut}$ When $K = 2$:} Let $K = 2$. We consider minimizing the $\mathrm{RatioCut}$ objective function, i.e., 
+		\begin{align}\label{eq-ratiocur-k=2}
+			\minimize_{A \subset V} \, \mathrm{RatioCut} \parens{A, A^{\complement}}. 
+		\end{align}
+		Let $\bA \subset V$ be given and $\ba := \parens{a_1, a_2, \cdots, a_n}^\top \in \Real^n$ with 
+		\begin{align}\label{eq-vector-comp-ratiocut-k=2}
+			a_i = \begin{cases}
+			\sqrt{\abs{A^{\complement}} / \abs{A}}, & \, \text{ if } \bx_i \in A, \\ 
+			- \sqrt{\abs{A} / \abs{A^{\complement}}}, & \, \text{ if } \bx_i \notin A, 
+			\end{cases}
+		\end{align}
+		for all $i = 1, 2, \cdots, n$. Then, 
+		\begin{align*}
+			\ba^\top \bL \ba = & \, \frac{1}{2} \sum_{i=1}^n \sum_{i'=1}^n w_{i, i'} \parens{a_i - a_{i'}}^2 \\ 
+			= & \, \frac{1}{2} \sum_{\sets{\parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in A^{\complement}}} w_{i, i'} \parens[\Bigg]{\sqrt{\frac{\abs{A^{\complement}}}{\abs{A}}} + \sqrt{\frac{\abs{A} }{\abs{A^{\complement}}}}}^2 \\ 
+			& \qquad + \frac{1}{2} \sum_{\sets{\parens{i, i'} \,\vert\, \bx_i \in A^{\complement}, \bx_{i'} \in A}} w_{i, i'} \parens[\Bigg]{- \sqrt{\frac{\abs{A} }{\abs{A^{\complement}}}} - \sqrt{\frac{\abs{A^{\complement}}}{\abs{A}}} }^2 \\
+			= & \, \frac{1}{2} W \parens{A, A^{\complement}} \parens[\Bigg]{\sqrt{\frac{\abs{A^{\complement}}}{\abs{A}}} + \sqrt{\frac{\abs{A} }{\abs{A^{\complement}}}}}^2 + \frac{1}{2} W \parens{A^{\complement}, A} \parens[\Bigg]{ - \sqrt{\frac{\abs{A} }{\abs{A^{\complement}}}}  - \sqrt{\frac{\abs{A^{\complement}}}{\abs{A}}}}^2 \\ 
+			= & \, W \parens{A, A^{\complement}} \parens[\Bigg]{\sqrt{\frac{\abs{A^{\complement}}}{\abs{A}}} + \sqrt{\frac{\abs{A} }{\abs{A^{\complement}}}}}^2 \\ 
+			= & \, \mathrm{Cut} \parens{A, A^{\complement}} \parens[\Bigg]{\frac{\abs{A^{\complement}}}{\abs{A}} + \frac{\abs{A} }{\abs{A^{\complement}}} + 2}  \\ 
+			= & \, \mathrm{Cut} \parens{A, A^{\complement}} \parens[\Bigg]{\frac{\abs{A^{\complement}} + \abs{A}}{\abs{A}} + \frac{\abs{A^{\complement}} + \abs{A} }{\abs{A^{\complement}}}}  \\ 
+			= & \, \abs{V} \cdot \mathrm{RatioCut} \, \parens{A, A^{\complement}}. 
+		\end{align*}
+		Additionally, $\ba$ defined above is orthogonal to the vector $\boldone_n$, since 
+		\begin{align*}
+			\boldone_n^\top \ba = \sum_{i=1}^n a_i = & \, \sum_{\sets{i \,\vert\, \bx_i \in A}} \sqrt{\frac{\abs{A^{\complement}}}{\abs{A}}} - \sum_{\sets{i \,\vert\, \bx_i \in A^{\complement}}} \sqrt{\frac{\abs{A}}{\abs{A^{\complement}}}} \\ 
+			= & \, \abs{A} \sqrt{\frac{\abs{A^{\complement}}}{\abs{A}}} - \abs{A^{\complement}} \sqrt{\frac{\abs{A}}{\abs{A^{\complement}}}} \\ 
+			= & \, \sqrt{\abs{A} \abs{A^{\complement}}} - \sqrt{\abs{A} \abs{A^{\complement}}} \\ 
+			= & \, 0. 
+		\end{align*}
+		Finally, we have 
+		\begin{align*}
+			\norm{\ba}_2^2 = \sum_{i=1}^n a_i^2 = & \, \sum_{\sets{i \,\vert\, \bx_i \in A}} \frac{\abs{A^{\complement}}}{\abs{A}} + \sum_{\sets{i \,\vert\, \bx_i \in A^{\complement}}} \frac{\abs{A}}{\abs{A^{\complement}}} \\ 
+			= & \, \abs{A} \frac{\abs{A^{\complement}}}{\abs{A}} + \abs{A^{\complement}} \frac{\abs{A}}{\abs{A^{\complement}}} \\ 
+			= & \, \abs{A^{\complement}} + \abs{A} \\ 
+			= & \, n. 
+		\end{align*}
+		Therefore, the problem \eqref{eq-ratiocur-k=2} is equivalent to the following one 
+		\begin{align*}
+			\minimize_{A \subset V} & \, \, \ba^\top \bL \ba \\ 
+			\text{ subject to } \ & \, \boldone_n^\top \ba = 0, \\ 
+			& \, \text{components of $\ba$ are of the form in \eqref{eq-vector-comp-ratiocut-k=2}, and } \\ 
+			& \, \norm{\ba}_2 = \sqrt{n}. 
+		\end{align*}
+		
+		This preceding problem is still NP-hard, since components of $\ba$ are only allowed two values. Instead, we consider the following relaxed problem 
+		\begin{align*}
+			\minimize_{\ba \in \Real^n} & \, \, \ba^\top \bL \ba \\ 
+			\text{ subject to } \ & \, \boldone_n^\top \ba = 0, \\ 
+			& \, \norm{\ba}_2 = \sqrt{n}. 
+		\end{align*}
+		
+		The solution to this problem is given by the eigenvector associated with the second smallest eigenvalue of $\bL$. Letting $\hat{\ba} = \parens{\hat{a}_1, \hat{a}_2, \cdots, \hat{a}_n}^\top \in \Real^n$ be the solution, we can assign each data point to a cluster by 
+		\begin{align}
+			\begin{cases}
+				\bx_i \in A, & \, \text{ if } \hat{a}_i \ge 0, \\ 
+				\bx_i \in A^{\complement}, & \, \text{ if } \hat{a}_i < 0. 
+			\end{cases}
+		\end{align}
+		
+		\underline{Connection to Spectral Clustering:} In spectral clustering, we consider the coordinates $a_i$ as points in $\Real$ and cluster them into two groups by the $K$-means clustering algorithm. Then, we carry over the resulting clustering to the underlying data points 
+		\begin{align*}
+			\begin{cases}
+				\bx_i \in A, & \, \text{ if } a_i \in C, \\ 
+				\bx_i \in A^{\complement}, & \, \text{ if } a_i \in C^{\complement}. 
+			\end{cases}
+		\end{align*}
+		This is the spectral clustering algorithm using the un-normalized graph Laplacian matrix when $K = 2$. 
+		
+		\item \textit{Minimizing $\mathrm{RatioCut}$ When $K > 2$:} Let $K > 2$ be given. Given a partition of $V$ into $K$ subsets, denoted by $A_1, A_2, \cdots, A_K$, we define $K$ indicator vectors $\bh_k := \parens{h_{k,1}, h_{k,2}, \cdots, h_{k,n}}^\top \in \Real^n$ by 
+		\begin{align}\label{eq-ratiocut-k>2-h}
+			h_{k, i} = \begin{cases}
+			\abs{A_k}^{-\frac{1}{2}}, & \, \text{ if } \bx_i \in A_k, \\ 
+			0, & \, \text{ otherwise}, 
+			\end{cases}
+		\end{align}
+		for all $i = 1, 2, \cdots, n$ and $k = 1, 2, \cdots, K$. Let $\bH \in \Real^{n \times K}$ be the matrix containing these $K$ indicator vectors as columns. Notice that columns of $\bH$ are orthonormal, i.e., $\bH^\top \bH = \bI_K$. 
+		
+		By a calculation as before, we have, for all $k = 1, 2, \cdots, K$, 
+		\begin{align*}
+			\bh_k^\top \bL \bh_k = \frac{\mathrm{Cut} \parens{A_k, A_k^{\complement}}}{\abs{A_k}}
+		\end{align*}
+		and 
+		\begin{align*}
+			\bh_k^\top \bL \bh_k = \bracks{\bH^\top \bL \bH}_{k, k}, 
+		\end{align*}
+		where $\bracks{\bA}_{k, k}$ indicates the $\parens{k, k}$-th entry of the matrix $\bA$. 
+		
+		Combining everything above, we have 
+		\begin{align*}
+			\mathrm{RatioCut} \, \parens{A_1, A_2, \cdots, A_K} = \sum_{k=1}^K \bh_k^\top \bL \bh_k = \sum_{k=1}^K \bracks{\bH^\top \bL \bH}_{k, k} = \tr \parens{\bH^\top \bL \bH}. 
+		\end{align*}
+		Therefore, the problem of minimizing $\mathrm{RatioCut} \, \parens{A_1, A_2, \cdots, A_K}$ can be rewritten as 
+		\begin{align*}
+			\minimize_{A_1, A_2, \cdots, A_K} & \, \tr \parens{\bH^\top \bL \bH} \\ 
+			\text{ subject to } & \, \bH^\top \bH = \bI_K, \\ 
+			& \, \text{entries of $\bH$ are given by \eqref{eq-ratiocut-k>2-h}}. 
+		\end{align*}
+		Similar to to before, we relax the preceding problem to the following one 
+		\begin{align*}
+			\minimize_{\bH \in \Real^{n \times K}} & \, \tr \parens{\bH^\top \bL \bH} \\ 
+			\text{ subject to } & \, \bH^\top \bH = \bI_K. 
+		\end{align*}
+		The solution then is given the matrix of dimensionality $n \times K$ containing $K$ eigenvectors of $\bL$ associated with the smallest $K$ eigenvalues. 
+		
+		\textit{Remark.} There is \emph{no} guarantee on the quality of the solution of the relaxed problem compared to the exact solution. 
+		
+		More precisely, if $A_1, A_2, \cdots, A_K$ is the exact solution of minimizing $\mathrm{RatioCut}$, and $B_1, B_2, \cdots, B_K$ is the solution constructed by unnormalized spectral clustering, then 
+		\begin{align*}
+			\mathrm{RatioCut} \, \parens{B_1, B_2, \cdots, B_K} - \mathrm{RatioCut} \, \parens{A_1, A_2, \cdots, A_K}
+		\end{align*}
+		can be arbitrary large. 
+		
+		\item \textit{Minimizing $\mathrm{NCut}$ When $K = 2$:} Let $K = 2$, and $A$ and $A^{\complement}$ be a partition of $V$. Define the indicator vector $\ba = \parens{a_1, a_2, \cdots, a_n} \in \Real^n$ to be 
+		\begin{align}\label{eq-ncut-k=2-entries-a}
+			a_i = \begin{cases}
+				\sqrt{\mathrm{vol} \parens{A^{\complement}} / \mathrm{vol} \parens{A}}, & \, \text{ if } \bx_i \in A, \\ 
+				- \sqrt{\mathrm{vol} \parens{A} / \mathrm{vol} \parens{A^{\complement}}}, & \, \text{ if } \bx_i \in A^{\complement}. 
+			\end{cases}
+		\end{align}
+		Then, we have 
+		\begin{align*}
+			\bD \ba = \begin{pmatrix}
+				d_1 a_1 \\ d_2 a_2 \\ \vdots \\ d_n a_n
+			\end{pmatrix} \in \Real^n. 
+		\end{align*}
+		As a consequence, we have 
+		\begin{align*}
+			\parens{\bD \ba}^\top \boldone_n = & \, \sum_{i=1}^n d_i a_i \\ 
+			= & \, \sum_{\sets{i \,\vert\, \bx_i \in A}} d_i a_i + \sum_{\sets{i \,\vert\, \bx_i \in A^{\complement}}} d_i a_i \\ 
+			= & \, \sum_{\sets{i \,\vert\, \bx_i \in A}} d_i \sqrt{\frac{\mathrm{vol} \parens{A^{\complement}}}{\mathrm{vol} \parens{A}}} - \sum_{\sets{i \,\vert\, \bx_i \in A^{\complement}}} d_i \sqrt{\frac{\mathrm{vol} \parens{A}}{ \mathrm{vol} \parens{A^{\complement}}}} \\ 
+			= & \, \mathrm{vol} \parens{A} \sqrt{\frac{\mathrm{vol} \parens{A^{\complement}}}{\mathrm{vol} \parens{A}}} - \mathrm{vol} \parens{A^{\complement}} \sqrt{\frac{\mathrm{vol} \parens{A}}{ \mathrm{vol} \parens{A^{\complement}}}} \\ 
+			= & \, \sqrt{\mathrm{vol} \parens{A} \times \mathrm{vol} \parens{A^{\complement}}} - \sqrt{\mathrm{vol} \parens{A} \times \mathrm{vol} \parens{A^{\complement}}} \\ 
+			= & \, 0, 
+		\end{align*}
+		and 
+		\begin{align*}
+			\ba^\top \bD \ba = & \, \sum_{i=1}^n d_i a_i^2 \\ 
+			= & \, \sum_{\sets{i \,\vert\, \bx_i \in A}} d_i a_i^2 + \sum_{\sets{i \,\vert\, \bx_i \in A^{\complement}}} d_i a_i^2 \\ 
+			= & \, \sum_{\sets{i \,\vert\, \bx_i \in A}} d_i \frac{\mathrm{vol} \parens{A^{\complement}}}{\mathrm{vol} \parens{A}} + \sum_{\sets{i \,\vert\, \bx_i \in A^{\complement}}} d_i \frac{\mathrm{vol} \parens{A}}{ \mathrm{vol} \parens{A^{\complement}}} \\ 
+			= & \, \mathrm{vol} \parens{A} \frac{\mathrm{vol} \parens{A^{\complement}}}{\mathrm{vol} \parens{A}} + \mathrm{vol} \parens{A^{\complement}} \frac{\mathrm{vol} \parens{A}}{ \mathrm{vol} \parens{A^{\complement}}} \\ 
+			= & \, \mathrm{vol} \parens{V}. 
+		\end{align*}
+		Finally, we also have 
+		\begin{align*}
+			\ba^\top \bL \ba = & \, \frac{1}{2} \sum_{i=1}^n \sum_{i'=1}^n w_{i, i'} \parens{a_i - a_{i'}}^2 \\ 
+			= & \, \frac{1}{2} \sum_{\sets{ \parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in A^{\complement}}} w_{i, i'} \parens{a_i - a_{i'}}^2 + \frac{1}{2} \sum_{\sets{ \parens{i, i'} \,\vert\, \bx_i \in A^{\complement}, \bx_{i'} \in A}} w_{i, i'} \parens{a_i - a_{i'}}^2 \\ 
+			= & \, \frac{1}{2} \sum_{\sets{ \parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in A^{\complement}}} w_{i, i'} \parens[\Bigg]{\sqrt{\frac{\mathrm{vol} \parens{A^{\complement}}}{\mathrm{vol} \parens{A}}} + \sqrt{\frac{\mathrm{vol} \parens{A}}{ \mathrm{vol} \parens{A^{\complement}}}}}^2 \\ 
+			& \qquad + \frac{1}{2} \sum_{\sets{ \parens{i, i'} \,\vert\, \bx_i \in A^{\complement}, \bx_{i'} \in A}} w_{i, i'} \parens[\Bigg]{- \sqrt{\frac{\mathrm{vol} \parens{A}}{ \mathrm{vol} \parens{A^{\complement}}}} - \sqrt{\frac{\mathrm{vol} \parens{A^{\complement}}}{\mathrm{vol} \parens{A}}} }^2 \\ 
+			= & \, \frac{1}{2} \parens{W \parens{A, A^{\complement}} + W \parens{A^{\complement}, A}} \parens[\Bigg]{\frac{\mathrm{vol} \parens{A^{\complement}}}{\mathrm{vol} \parens{A}} + \frac{\mathrm{vol} \parens{A}}{ \mathrm{vol} \parens{A^{\complement}}} + 2} \\ 
+			= & \, \mathrm{Cut} \parens{A, A^{\complement}} \parens[\Bigg]{\frac{\mathrm{vol} \parens{A^{\complement}} + \mathrm{vol} \parens{A}}{\mathrm{vol} \parens{A}} + \frac{\mathrm{vol} \parens{A} + \mathrm{vol} \parens{A^{\complement}}}{ \mathrm{vol} \parens{A^{\complement}}} } \\ 
+			= & \, \mathrm{vol} \parens{V} \parens[\Bigg]{\frac{\mathrm{Cut} \parens{A, A^{\complement}} }{\mathrm{vol} \parens{A}} + \frac{\mathrm{Cut} \parens{A, A^{\complement}}}{ \mathrm{vol} \parens{A^{\complement}}} } \\ 
+			= & \, \mathrm{vol} \parens{V} \mathrm{NCut} \parens{A, A^{\complement}}. 
+		\end{align*}
+		Therefore, we can write the problem of minimizing $\mathrm{NCut} \parens{A, A^{\complement}}$ as 
+		\begin{equation}\label{eq-ncut-ba}
+			\begin{aligned}
+			\minimize_{A \subset V} \ & \, \ba^\top \bL \ba \\ 
+			\text{ subject to } & \, \parens{\bD \ba}^\top \boldone_n = 0, \\ 
+			& \, \text{entries of $\ba$ is of the form in \eqref{eq-ncut-k=2-entries-a}}, \\ 
+			& \, \ba^\top \bD \ba = \mathrm{vol} \parens{V}, 
+			\end{aligned}
+		\end{equation}
+		which is NP-hard. Again, we can relax the preceding problem as the following one 
+		\begin{equation}\label{eq-ncut-ba-1}
+			\begin{aligned}
+				\minimize_{\ba \in \Real^n} \ & \, \ba^\top \bL \ba \\ 
+				\text{ subject to } & \, \parens{\bD \ba}^\top \boldone_n = 0, \text{ and } \ba^\top \bD \ba = \mathrm{vol} \parens{V}. 
+			\end{aligned}
+		\end{equation}
+		If we let $\bb := \bD^{\frac{1}{2}} \ba$, the preceding problem can be rewritten as 
+		\begin{equation}\label{eq-ncut-transform-bb}
+			\begin{aligned}
+				\minimize_{\bb \in \Real^n} \ & \, \bb^\top \bD^{-\frac{1}{2}} \bL \bD^{-\frac{1}{2}} \bb \\ 
+				\text{ subject to } & \, \bb^\top \bD^{\frac{1}{2}} \boldone_n = 0, \text{ and } \norm{\bb}_2^2 = \mathrm{vol} \parens{V}. 
+			\end{aligned}
+		\end{equation}
+		
+		Notice that $\bD^{- \frac{1}{2}} \bL \bD^{- \frac{1}{2}} = \bL_{\mathrm{sym}}$, $\bD^{\frac{1}{2}} \boldone_n$ is the eigenvector of $\bL_{\mathrm{sym}}$ associated with its smallest eigenvalue 0, and $\mathrm{vol} \parens{V}$ is a constant. Then, the minimizer of the problem \eqref{eq-ncut-transform-bb} is given by the eigenvector associated with the second smallest eigenvalue of $\bL_{\mathrm{sym}}$. As a consequence, the minimizer to \eqref{eq-ncut-ba-1} is $\bD^{-\frac{1}{2}}$ times the eigenvector associated with the second smallest eigenvalue of $\bL_{\mathrm{sym}}$, which is also the eigenvector associated with the second smallest eigenvalue of $\bL_{\mathrm{rw}}$. 
+		
+		\item \textit{Minimizing $\mathrm{NCut}$ When $K > 2$:} Let $K > 2$ be given. Define the indicator vector $\bh_k := \parens{h_{k,1}, h_{k,2}, \cdots, h_{k,n}}^\top \in \Real^n$ by 
+		\begin{align}\label{eq-ncut-entries-k>2}
+			h_{k, i} = \begin{cases}
+				\bracks{\mathrm{vol} \parens{A_k}}^{-\frac{1}{2}}, & \, \text{ if } \bx_i \in A_k, \\ 
+				0, & \, \text{ otherwise}, 
+			\end{cases}
+		\end{align}
+		for all $i = 1, 2, \cdots, n$ and $k = 1, 2, \cdots, K$. Let $\bH \in \Real^{n \times K}$ be the matrix containing these $K$ indicator vectors as columns. Observe that $\bH^\top \bH = \bI_K$, and, for all $k = 1, 2, \cdots, K$, 
+		\begin{align*}
+			 \bh_k \bD \bh_k = 1, \qquad \text{ and } \qquad \bh_k \bL \bh_k = \frac{\mathrm{Cut} \, \parens{A_k, A_k^{\complement}}}{\mathrm{vol} \parens{A_k}}. 
+		\end{align*}
+		
+		Therefore, we can write the problem of minimizing $\mathrm{Ncut}$ as 
+		\begin{align*}
+			\minimize_{A_1, A_2, \cdots, A_K} \ & \, \tr \parens{\bH^\top \bL \bH} \\ 
+			\text{subject to } & \, \bH^\top \bD \bH = \bI_K, \\ 
+			& \, \text{entries of $\bH$ is of the form in \eqref{eq-ncut-entries-k>2}}. 
+		\end{align*}
+		Relaxing the discreteness condition and substituting $\bT := \bD^{\frac{1}{2}} \bH$, we obtain the relaxed problem 
+		\begin{align*}
+			\minimize_{\bT \in \Real^{n \times K}} \ & \, \tr \parens{\bT^\top \bD^{-\frac{1}{2}} \bL \bD^{-\frac{1}{2}} \bT} \\ 
+			\text{subject to } & \, \bT^\top \bT = \bI_K. 
+		\end{align*}
+		This, again, is the standard trace minimization problem which is solved by the matrix $\bT$ which contains the eigenvectors of $\bL_{\mathrm{sym}}$ associated with the $K$ smallest eigenvalues as columns. Resubstituting $\bH = \bD^{-\frac{1}{2}} \bT$, we see that the solution $\bH$ consists of the eigenvectors of the matrix $\bL_{\mathrm{rw}}$ associated with the $K$ smallest eigenvalues. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Random Walk Point of View of Spectral Clustering:} 
+	\begin{enumerate}
+		\item \textit{Overview:} From the point of view of random walks, spectral clustering can be interpreted as trying to find a partition of the graph such that the random walk stays long within the same cluster and seldom jumps between clusters. 
+		
+		\item \textit{Random Walk on a Graph:} A \emph{random walk on a graph} is a stochastic process which randomly jumps from a vertex to another. 
+		
+		\item \textit{Transition Probability:} The \emph{transition probability} of jumping in one step from the vertex $\bx_i$ to the vertex $\bx_{i'}$ is proportional to the edge weight $w_{i, i'}$ and is given by 
+		\begin{align*}
+			p_{i, i'} := \frac{w_{i, i'}}{d_i}. 
+		\end{align*}
+		The \emph{transition matrix} $\bP := \parens{p_{i, i'}}_{i, i' = 1, 2, \cdots, n}$ of the random walk is thus defined by 
+		\begin{align*}
+			\bP = \bD^{-1} \bW. 
+		\end{align*}
+		
+		\item \textit{Property:} If the graph is connected and non-bipartite, then the random walk always possesses a unique stationary distribution 
+		\begin{align*}
+			\bpi := \parens{\pi_1, \pi_2, \cdots, \pi_n}^\top \in \Real^n, 
+		\end{align*}
+		where $\pi_i = \frac{d_i}{\mathrm{vol} \parens{V}}$. 
+		
+		\item \textit{Relationship between $\bL_{\mathrm{rw}}$ and $\bP$:} Since $\bL_{\mathrm{rw}} = \bI - \bD^{-1} \bW$, we have 
+		\begin{align*}
+			\bL_{\mathrm{rw}} = \bI - \bP. 
+		\end{align*}
+		As a consequence, $\lambda$ is an eigenvalue of $\bL_{\mathrm{rw}}$ with the eigenvector $\bu$ if and only if $1 - \lambda$ is an eigenvalue of $\bP$ with the eigenvector $\bu$. 
+		
+		\item \textit{$\mathrm{NCut}$ via Transition Probabilities:} Let $\calG$ be connected and non-bipartite. Assume that we run the random walk $\sets{X_t}_{t \in \Natural}$ starting with $X_0$ in the stationary distribution $\bpi$. For disjoint subsets $A, B \subset V$, denote by $\Pr \parens{B \,\vert\, A} := \Pr \parens{X_1 \in B \,\vert\, X_0 \in A}$. Then, 
+		\begin{align*}
+			\mathrm{NCut} \, \parens{A, A^{\complement}} = \Pr \parens{A^{\complement} \,\vert\, A} + \Pr \parens{A \,\vert\, A^{\complement}}. 
+		\end{align*}
+		
+		\begin{proof}
+			First note that 
+			\begin{align*}
+				\Pr \parens{X_0 \in A, X_1 \in B} = & \, \sum_{\sets{\parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in B}} \Pr \parens{X_0 = \bx_i, X_1 = \bx_{i'}} \\ 
+				= & \, \sum_{\sets{\parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in B}} \pi_i p_{i, i'} \\ 
+				= & \, \sum_{\sets{\parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in B}} \frac{d_i}{\mathrm{vol} \parens{V}} \frac{w_{i, i'}}{d_i} \\ 
+				= & \, \frac{1}{\mathrm{vol} \parens{V}} \sum_{\sets{\parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in B}} w_{i, i'}. 
+			\end{align*}
+			Then, we have 
+			\begin{align*}
+				\Pr \parens{X_1 \in B \,\vert\, X_0 \in A} = & \, \frac{\Pr \parens{X_0 \in A, X_1 \in B}}{\Pr \parens{X_0 \in A}} \\ 
+				= & \, \parens[\bigg]{\frac{1}{\mathrm{vol} \parens{V}} \sum_{\sets{\parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in B}} w_{i, i'}} \parens[\bigg]{\frac{\mathrm{vol} \parens{A}}{\mathrm{vol} \parens{V}}}^{-1} \\ 
+				= & \, \frac{1}{\mathrm{vol} \parens{A}} \sum_{\sets{\parens{i, i'} \,\vert\, \bx_i \in A, \bx_{i'} \in B}} w_{i, i'}. 
+			\end{align*}
+			The desired result follows from the definition of $\mathrm{NCut}$. 
+		\end{proof}
+
+	\end{enumerate}
+	
+	\item \textbf{How to Choose the Number of Clusters $K$:} We adopt the following \emph{eigen-gap heuristic} to choose the number of clusters in spectral clustering. 
+	
+	\emph{Eigen-gap Heuristic:} We choose the number $K$ such that all eigenvalues $\lambda_1, \lambda_2, \cdots, \lambda_K$ are very small, but $\lambda_{K+1}$ is relatively large. 
+	
+	\item \textbf{Practical Issues 1 --- Choice of Similarity Function:} Similarity function is used to construct a similarity graph, based on which spectral clustering is performed. 
+	\begin{enumerate}
+		\item We need to make sure that the local neighborhoods induced by this similarity function are ``meaningful''; that is, we need to be sure that points considered to be ``very similar'' by the similarity function are also closely related in the application; 
+		\item Ultimately, the choice of the similarity function depends on the domain the data comes from and the application. 
+	\end{enumerate}
+	
+	\item \textbf{Practical Issues 2 --- Type of Similarity Graph:} 
+	\begin{enumerate}
+		\item When variables are of different scales, it may be hard to find an appropriate $\varepsilon$ value in constructing the $\varepsilon$-neighborhood graph. 
+		\item The $k$-nearest neighbor graph can connect points on different scales. 
+		\item The mutual $k$-nearest neighbor graph 
+		\begin{itemize}
+			\item works well with the variables of different scales, and 
+			\item has the property that it tends to connect points within regions of constant density, but does \emph{not} connect regions of different densities with each other. 
+		\end{itemize}
+		Hence, the mutual $k$-nearest neighbor graph seems particularly well-suited if we want to detect clusters of different densities. 
+		\item The fully-connected similarity graph based on the Gaussian similarity function \eqref{eq-gaussian-similarity} leads to a dense similarity matrix, but all others can lead to a sparse similarity matrix. 
+	\end{enumerate}
+	
+	\item \textbf{Practical Issues 3 --- Choice of Graph Laplacian:} 
+	\begin{enumerate}
+		\item \textit{Overview:} In spectral clustering, one should always look at the degree distribution of the similarity graph. 
+		\begin{itemize}
+			\item If the graph is very regular and most vertices have approximately the same degree, then all the Laplacians are very similar to each other, and will work equally well for clustering. 
+			\item If the degrees in the graph are very broadly distributed, then the Laplacians differ considerably. 
+		\end{itemize}
+		
+		\item \textit{Rule of Thumb:} 
+		\begin{enumerate}
+			\item Between un-normalized and normalized graph Laplacian matrices, the \underline{normalized} ones are preferred over the unnormalized one; 
+			\item Between $\bL_{\mathrm{sym}}$ and $\bL_{\mathrm{rw}}$ in the normalized case, $\bL_{\mathrm{rw}}$ is preferred over $\bL_{\mathrm{sym}}$. 
+		\end{enumerate}
+		
+		\item \textit{Review of the Objectives in Clustering:} Consider the special case where $K = 2$. Clustering has the following two objectives: 
+		\begin{enumerate}
+			\item We want to find a partition such that points in different clusters are dissimilar to each other, meaning that we want to minimize the between-cluster similarity. In the graph setting, this means to minimize $\mathrm{Cut} \parens{A, A^{\complement}}$. 
+			\item We want to find a partition such that points in the same cluster are similar to each other; that is, we want to maximize the within-cluster similarities $W \parens{A, A}$ and $W \parens{A^{\complement}, A^{\complement}}$. 
+		\end{enumerate}
+		
+		\item \textit{Why Prefer the Normalized Graph Laplacian Matrix Over the Un-normalized One?:} The spectral clustering using the normalized graph Laplacian matrix implements both clustering objectives above, but that using the unnormalized one \emph{only} implements the first objective. 
+		
+		\item \textit{Why Prefer $\bL_{\mathrm{rw}}$ over $\bL_{\mathrm{sym}}$?:} The eigenvectors of $\bL_{\mathrm{rw}}$ are cluster indicator vectors $\boldone_{A_{k}}$, while the eigenvectors of $\bL_{\mathrm{sym}}$ are additionally multiplied with $\bD^{\frac{1}{2}}$, which might lead to undesired artifacts. 
+		
+	\end{enumerate}
+	
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

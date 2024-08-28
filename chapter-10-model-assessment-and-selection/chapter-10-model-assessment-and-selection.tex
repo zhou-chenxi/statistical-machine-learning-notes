@@ -1,0 +1,829 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 10, Model Assessment and Selection}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Model Assessment and Selection}{10}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 7, Model Assessment and Selection} in \textcite{Friedman2001-np}. In this chapter, we study 
+\begin{enumerate}
+	\item how to \emph{assess} the performance, in particular, the generalized performance, of a model, and 
+	\item how to use these assessment to \emph{select} model. 
+\end{enumerate}
+
+
+\section*{I. Bias, Variance and Model Complexity} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Generalization Performance:} The \textit{generalization performance} of a learning method relates to its prediction capability on an \emph{independent test data}. It is important since it guides the choice of learning method or model and gives a measure of the quality of the ultimately chosen model. 
+	
+	\item \textbf{Basic Setup:} 
+	\begin{enumerate}
+		\item a target variable $Y$ (assumed to be \emph{continuous} for the moment), 
+		\item a vector of inputs $X$, 
+		\item a prediction model $\hat{f}$ estimated from a training dataset $\train$, 
+		\item a loss function $L \parens{Y, \hat{f} \parens{X}}$, measuring errors between $Y$ and $\hat{f} \parens{X}$. Typical choices are 
+		\begin{itemize}
+			\item \textit{Squared Error:} $L \parens{Y, \hat{f} \parens{X}} = \parens{Y - \hat{f} \parens{X}}^2$; 
+			\item \textit{Absolute Error:} $L \parens{Y, \hat{f} \parens{X}} = \abs{Y - \hat{f} \parens{X}}$. 
+		\end{itemize}
+	\end{enumerate}
+	
+	\item \textbf{Test/Generalization Error:} \textit{Test error} or \textit{generalization error} is the prediction error over an \underline{independent test sample}
+	\begin{align}\label{eq-test-error}
+		\mathrm{Err}_{\train} := \E \bracks{ L \parens{Y, \hat{f} \parens{X}} \,\vert\, \train}
+	\end{align}
+	where both $X$ and $Y$ are drawn randomly from their joint distribution (population). 
+	
+	\textit{Remark.} In \eqref{eq-test-error}, the training set $\train$ is fixed, and test error refers to the error for this \textit{specific} training set. 
+	
+	\item \textbf{Expected Prediction Error:} The \emph{expected prediction error} (or \emph{expected test error}) is 
+	\begin{align}\label{eq-epe}
+		\mathrm{Err} := \E \bracks{ L \parens{Y, \hat{f} \parens{X} } } = \E \bracks{ \mathrm{Err}_{\train} }
+	\end{align}
+	
+	\textit{Remark 1.} This expectation averages over \textit{everything} that is random, including the randomness in the \underline{training set $\train$} that produced $\hat{f}$. 
+	
+	\textit{Remark 2.} Estimation of $\mathrm{Err}_{\calT}$ is the \emph{goal}, but $\mathrm{Err}$ is more amenable to statistical analysis. 
+	
+	\item \textbf{Training Error:} \emph{Training error} is the average loss over the \underline{training sample}
+	\begin{align}
+		\overline{\mathrm{err}} := \frac{1}{n} \sum_{i=1}^n L \parens{y_i, \hat{f} \parens{\bx_i}}. 
+	\end{align}
+
+	\textit{Remark.} If the model we build is getting increasingly complex, we use the training dataset more to exploit the complicated underlying structures. Then, 
+	\begin{enumerate}
+		\item there is a tendency of lowering the bias and increasing the variance. There is some \emph{intermediate} model complexity that gives the minimum expected test error; 
+		\item training error consistently decreases with model complexity and can drop to 0 if one increases the model complexity sufficiently. However, a model with 0 training error is \emph{overfit} to the training set and is typically generalized \emph{poorly}. 
+	\end{enumerate}
+	
+	\item \textbf{Analogous Results for Categorical Response Variables:} Suppose the response variable is qualitative or categorical, denoted by $G$, that takes on one of $W$ values in $\calW := \sets{1, \cdots, W}$. We model the probabilities 
+	\begin{align*}
+		p_w \parens{X} := \Pr \parens{G = w \,\vert\, X}, 
+	\end{align*}
+	and classify $X$ according to the following rule 
+	\begin{align*}
+		\widehat{G} \parens{X} = \argmax_{w \in \calW} \hat{p}_w \parens{X}. 
+	\end{align*}
+	Some typical choices of loss functions are 
+	\begin{itemize}
+		\item \textit{0-1 loss:} 
+		\begin{align*}
+			L \parens{G, \widehat{G} \parens{X}} = \indic \parens{ G \ne \widehat{G} \parens{X}}; 
+		\end{align*}
+		\item \textit{$-2 \times$Log-likelihood loss:} 
+		\begin{align*}
+			L \parens{Y, \hat{p} \parens{X}} = & \, -2 \sum_{w=1}^W \indic \parens{G = w} \log \hat{p}_w \parens{X} \\ 
+			= & \, -2 \log \hat{p}_G \parens{X}. 
+		\end{align*}
+		The quantity ``$-2\times$log-likelihood'' is sometimes referred to the \textit{deviance}. 
+	\end{itemize}
+	For categorical variables, similar to before, 
+	\begin{enumerate}
+		\item the \textit{test error}, $\mathrm{Err}_{\train}$, is defined to be 
+		\begin{align*}
+			\mathrm{Err}_{\train} = \E \bracks[\big]{L \parens{G, \widehat{G} \parens{X}} \,\vert\, \train}, 
+		\end{align*}
+		the population misclassification error of the classifier trained on $\train$; 
+		\item the \textit{expected prediction error}, $\mathrm{Err}$, is the expected misclassification error 
+		\begin{align*}
+			\mathrm{Err} = \E \bracks{\mathrm{Err}_{\train}}; 
+		\end{align*}
+		\item the \textit{training error} is 
+		\begin{align*}
+			\overline{\mathrm{err}} = \frac{1}{n} \sum_{i=1}^n L \parens{g_i, \widehat{G} \parens{\bx_i}}, 
+		\end{align*}
+		where $\sets{\parens{\bx_i, g_i}}_{i=1}^n$ is the training dataset and $g_i \in \calW$ is the observed class label for the $i$-th observation for all $i = 1, \cdots, n$. 
+	\end{enumerate}
+	
+	\item \textbf{Log-Likelihood as a Loss Function:} The log-likelihood function can be used a loss function for general response density functions, such as Poisson, gamma, exponential, log-normal and so on. If $\Pr_{\theta \parens{X}}$ is the density function of $Y$, where $\theta \parens{X}$ is the parameter depending on the predictor $X$, then the loss function is 
+	\begin{align*}
+		L \parens{Y, \theta \parens{X}} = -2 \cdot \log \Pr_{\theta \parens{X}} \parens{Y}. 
+	\end{align*}
+	
+	\textit{Remark.} The ``$-2$'' in the front is to make the log-likelihood loss for the Gaussian distribution match the squared-error loss function. 
+	
+	\item \textbf{Model Selection vs. Model Assessment:} Typically, the model has a tuning parameter(s) $\alpha$ that affects the model complexity, and the predictions can be written as $\hat{f}_{\alpha} \parens{\bx}$. We wish to determine the value of $\alpha$ minimizing the errors. 
+	
+	In this procedure, there are two separate goals: 
+	\begin{itemize}
+		\item \textit{Model selection:} estimating the performance of different models in order to choose the best one; 
+		\item \textit{Model assessment/evaluation:} having chosen a final model, estimating its prediction error (generalization error) on new data. 
+	\end{itemize}
+	If we have a sufficiently rich dataset, one can randomly split it into \emph{three} parts: 
+	\begin{itemize}
+		\item \textit{Training Set:} used to fit the models; 
+		\item \textit{Validation Set:} used to estimate prediction error for model selection; 
+		\item  \textit{Test Set:} used for the assessment of the generalization error of the final chosen model. This set should be brought out \emph{only} at the end of the data analysis. 
+	\end{itemize}
+	A typical split for three parts might be $50\%$ for training, $25\%$ each for validation and testing. 
+	
+\end{enumerate}
+
+
+\section*{II. The Bias-Variance Decomposition} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{The Bias-Variance Decomposition --- General Case:} Assume that the model is of the form 
+	\begin{align*}
+		Y = f \parens{X} + \varepsilon, 
+	\end{align*}
+	where we assume $\E \bracks{\varepsilon} = 0$ and $\var \bracks{\varepsilon} = \sigma_{\varepsilon}^2$. Then, the \emph{expected prediction error} of a regression fit $\hat{f}$ at $X = \bx_0$ using the squared-error loss is derived as follows: 
+	\begin{align*}
+		\mathrm{Err} \parens{\bx_0} = & \, \E \bracks[\big]{\parens{Y - \hat{f}\parens{\bx_0} }^2 \bigm| X = \bx_0 } \\
+		= & \, \E \bracks[\big]{\parens{Y - f \parens{\bx_0} + f \parens{\bx_0} - \hat{f} \parens{\bx_0}}^2 \bigm| X = \bx_0 } \\
+		= & \E \bracks[\big]{ \parens{Y - f \parens{\bx_0}}^2 \bigm| X = \bx_0 } - 2 \E \bracks[\big]{ \parens{Y - f \parens{\bx_0}} \parens{ f \parens{\bx_0} - \hat{f} \parens{\bx_0}} \bigm| X = \bx_0 } \\ 
+		& \, + \E \bracks[\big]{ \parens{ f \parens{\bx_0} - \hat{f} \parens{\bx_0}}^2 \bigm| X = \bx_0 } \\
+		= & \sigma_{\varepsilon}^2 + 0 + \E \bracks[\big]{ \parens{ f \parens{\bx_0} - \hat{f} \parens{\bx_0}}^2 \bigm| X = \bx_0 } \\ 
+		= & \sigma_{\varepsilon}^2 + \E \bracks[\big]{ \parens{ f \parens{\bx_0} - \E \bracks{\hat{f} \parens{\bx_0}} + \E \bracks{\hat{f} \parens{\bx_0}} - \hat{f} \parens{\bx_0}}^2 \bigm| X = \bx_0 } \\ 
+		= & \sigma_{\varepsilon}^2 + \E \bracks[\big]{ \parens{ f \parens{\bx_0} - \E \bracks{\hat{f} \parens{\bx_0}}}^2 \bigm| X = \bx_0 } + \E \bracks[\big]{\parens{ \E \bracks{\hat{f}\parens{\bx_0}} - \hat{f} \parens{\bx_0}}^2 \bigm| X = \bx_0 } \\
+		= & \text{Irreducible Error} + \text{Bias}^2\parens{\hat{f}\parens{\bx_0}} + \var \bracks{\hat{f}\parens{\bx_0}}. 
+	\end{align*}
+	Analysis of the three terms: 
+	\begin{itemize}
+		\item The \textit{first term} is the \underline{variance of the target around its true mean} $ f \parens{\bx_0} $, and can \underline{not} be avoided no matter how well we estimate $ f \parens{\bx_0} $, unless $\sigma_{\varepsilon}^2 = 0$; 
+		\item The \textit{second term} is the \underline{squared bias}, the amount by which the average of our estimate $\hat{f} \parens{\bx_0}$ differs from the true mean $f \parens{\bx_0}$; 
+		\item The \textit{last term} is the \underline{variance}, the expected squared deviation of $\hat{f} \parens{\bx_0}$ around its mean. 
+	\end{itemize} 
+	\textit{Remark.} Typically, the more complex we make the model, the \textit{lower} the (squared) bias but the \textit{higher} the variance. 
+	
+	\item \textbf{The Bias-Variance Decomposition for $k$-Nearest Neighbor Regression:} For the $k$-nearest-neighbor regression fit, the bias-variance decomposition has the form 
+	\begin{align*}
+		\mathrm{Err} \parens{\bx_0} = & \, \E \bracks[\big]{ \parens{Y - \hat{f}_k \parens{\bx_0}}^2 \,\vert\, X = \bx_0 } \nonumber \\
+		= & \, \sigma_{\varepsilon}^2 + \bracks[\bigg]{ f \parens{\bx_0} - \frac{1}{k} \sum_{l=1}^k f\parens{\bx_{ \parens{l} }} }^2 + \frac{\sigma_{\varepsilon}^2}{k}, 
+	\end{align*}
+	where we assume the training inputs $\bx_i$ are fixed and the randomness arises from $y_i$'s. 
+	
+	\textit{Remark.} The number of neighbors $k$ is \emph{inversely} related to the model complexity. 
+	\begin{itemize}
+		\item For small $k$, the estimate $ \hat{f} \parens{\bx}$ can potentially adapt itself better to the underlying $f \parens{\bx}$; i.e., a smaller bias; 
+		\item As one increases $k$, the bias will typically increase and the variance decreases. 
+	\end{itemize}
+	
+	\item \textbf{The Bias-Variance Decomposition for Linear Regression Model:} Recall the linear model fit is $\hat{f} \parens{\bx} = \bx^\top \widehat{\bbeta}$, where $\widehat{\bbeta} \in \Real^p$ is the parameter estimated by the least squares method. Then, 
+	\begin{align}
+		\mathrm{Err} \parens{\bx_0} = & \, \E \bracks[\big]{ \parens{Y - \hat{f} \parens{\bx_0}}^2 \,\vert\, X = \bx_0 } \nonumber \\
+		= & \, \sigma_{\varepsilon}^2 + \E \bracks[\big]{ f \parens{\bx_0} - \E \bracks{\hat{f} \parens{\bx_0}} }^2 + \sigma_{\varepsilon}^2 \cdot \norm{\bh \parens{\bx_0}}_2^2, \label{eq-test-err-linear-reg}
+	\end{align}
+	where we assume the design matrix $\bX$ is of the full rank and $\bh\parens{\bx_0} = \bX\parens{\bX^\top \bX}^{-1} \bx_0$. 
+	
+	We show $\var \bracks{\hat{f} \parens{\bx_0}} = \sigma_{\varepsilon}^2 \cdot \norm{\bh \parens{\bx_0}}^2$. Recall that the least squares regression fit in the full rank case is of the form 
+	\begin{align*}
+		\hat{f} \parens{\bx_0} = \bx_0^\top \widehat{\bbeta} = \bx_0^\top \parens{\bX^\top \bX}^{-1} \bX^\top \bY.  
+	\end{align*}
+	Then, its variance is
+	\begin{align*}
+		\var \bracks{\hat{f} \parens{\bx_0}} = & \, \var \bracks{ \bx_0^\top \parens{\bX^\top \bX}^{-1} \bX^\top \bY } \\ 
+		= & \, \bx_0^\top \parens{\bX^\top \bX}^{-1} \bX^\top \var \bracks{\bY} \parens{\bx_0^\top \parens{\bX^\top \bX}^{-1}\bX^\top}^\top \\
+		= & \, \bx_0^\top \parens{\bX^\top \bX}^{-1} \bX^\top \cdot \sigma_{\varepsilon}^2 \bI \cdot \bX \parens{\bX^\top \bX} \bx_0 \\
+		= & \, \sigma_{\varepsilon}^2 \cdot \norm{ \bX \parens{\bX^\top \bX}^{-1} \bx_0}_2^2 \\ 
+		= & \, \sigma_{\varepsilon}^2 \cdot \norm{\bh\parens{\bx_0}}_2^2. 
+	\end{align*}
+	
+	Replacing $\bx_0$ by $\bx_i$ for all $i = 1, \cdots, n$ and taking the average, we have 
+	\begin{align*}
+		\frac{1}{n} \sum_{i=1}^n \var \bracks{\hat{f} \parens{\bx_i}} = & \, \frac{1}{n} \sum_{i=1}^{n} \sigma_{\varepsilon}^2 \norm{\bX \parens{\bX^\top \bX}^{-1} \bx_i}^2 \\ 
+		= & \, \frac{\sigma_{\varepsilon}^2}{n} \sum_{i=1}^n \bx_i^\top \parens{\bX^\top \bX}^{-1} \bX^\top \bX \parens{\bX^\top \bX}^{-1} \bx_i \\ 
+		= & \, \frac{\sigma_{\varepsilon}^2}{n} \sum_{i=1}^n \bx_i^\top \parens{\bX^\top \bX}^{-1} \bx_i \\ 
+		= & \, \frac{\sigma_{\varepsilon}^2}{n} \sum_{i=1}^n \tr \parens{ \bx_i^\top \parens{\bX^\top \bX}^{-1} \bx_i} \\ 
+		= & \, \frac{\sigma_{\varepsilon}^2}{n} \sum_{i=1}^n \tr \parens{ \bx_i \bx_i^\top \parens{\bX^\top \bX}^{-1}} \\ 
+		= & \, \frac{\sigma_{\varepsilon}^2}{n} \tr \parens[\Bigg]{\parens[\bigg]{\sum_{i=1}^n \bx_i \bx_i^\top} \parens{\bX^\top \bX}^{-1}} \\ 
+		= & \, \frac{\sigma_{\varepsilon}^2}{n} \tr \parens[\big]{\parens{\bX^\top \bX} \parens{\bX^\top \bX}^{-1}} \\ 
+		= & \, \frac{\sigma_{\varepsilon}^2}{n} \tr \parens{\bI_p} \\ 
+		= & \, \frac{p \sigma_{\varepsilon}^2}{n}. 
+	\end{align*}
+	Therefore, the \textit{in-sample error} is 
+	\begin{align*}
+		\overline{\mathrm{err}} = \frac{1}{n} \sum_{i=1}^n \mathrm{Err} \parens{\bx_i} = \sigma_{\varepsilon}^2 + \frac{1}{n} \sum_{i=1}^n \parens[\big]{ f \parens{\bx_i} - \E \bracks{ \hat{f} \parens{\bx_i} } }^2 + \frac{p}{n} \sigma_{\varepsilon}^2. 
+	\end{align*}
+	Notice that the complexity is directly related to the number of parameters $p$. 
+	
+	\item \textbf{The Bias-Variance Decomposition for Ridge Regression:} Consider the ridge regression where we solve the following optimization problem 
+	\begin{align*}
+		\minimize_{\bbeta} \ \braces[\bigg]{ \parens{\bY - \bX \bbeta}^\top \parens{\bY - \bX \bbeta} + \lambda \bbeta^\top \bbeta }, 
+	\end{align*}
+	where $\lambda > 0$ is the tuning parameter and we assume there is no intercept term. The minimizer to the preceding optimization problem, denoted by $\widehat{\bbeta}_{\lambda}$, is 
+	\begin{align*}
+		\widehat{\bbeta}_{\lambda} = \parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bX^\top \bY. 
+	\end{align*}
+	Let the prediction function be $\hat{f}_{\lambda} \parens{\bx} = \bx^\top \widehat{\bbeta}_{\lambda}$. 
+	
+	The test error has the same form as in \eqref{eq-test-err-linear-reg}, but the bias and variance components are different: 
+	\begin{itemize}
+		\item \textit{Bias:} Let $\bbeta^*$ be the parameters of the best-fitting linear approximation to $f$, i.e., 
+		\begin{align*}
+			\bbeta^* := \argmin_{\bbeta} \E \bracks[\big]{ \parens{f \parens{X} - X^\top \bbeta}^2 }, 
+		\end{align*}
+		where the expectation is taken with respect to the distribution of the input variables $X$. Then, the average squared bias is 
+		\begin{align*}
+			& \, \E_{\bx_0} \bracks[\big]{ \parens{ f \parens{\bx_0} - \E \bracks{\hat{f}_{\lambda} \parens{\bx_0}}}^2 } \\ 
+			= & \, \E_{\bx_0} \bracks[\big]{ \parens{ f \parens{\bx_0} - \bx_0^\top \bbeta^*}^2 } + \E_{\bx_0} \bracks[\big]{ \parens{\bx_0^\top \bbeta^* - \E \bracks{\bx_0^\top \widehat{\bbeta}_{\lambda}} }^2 } \\
+			= & \, \mathrm{Ave} \bracks{ \text{Model Bias} }^2 + \mathrm{Ave}\bracks{ \text{Estimation Bias} }^2. 
+		\end{align*}
+		
+		\begin{itemize}
+			\item The \underline{first} term is the \textit{average squared model bias}, the error between the best-fitting linear approximation and the true function; 
+			\item The \underline{second} term is the \textit{average squared estimation bias}, the error between the average estimate $ \E \bracks{\bx_0^\top \widehat{\bbeta}_{\lambda} } $ and the best-fitting linear approximation. 
+		\end{itemize}
+
+		\textit{Remark.} 
+		\begin{enumerate}
+			\item The model bias can only be reduced by \textit{enlarging} the class of linear models to a richer collection of models, by including \textit{interactions} and \textit{transformations of the variables} in the model. 
+			\item For linear models fit by \underline{ordinary least squares}, the \textit{estimation bias} is zero. For \underline{restricted fits} (such as ridge regression) it is positive, and we trade it off with the benefits of a reduced variance. 
+		\end{enumerate}
+		
+		\item \textit{Variance:} For the \textit{variance} component, $\bh$ function above becomes 
+		\begin{align*}
+			\widetilde{\bh} \parens{\bx_0} := \bX \parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bx_0, 
+		\end{align*}
+		and, hence, 
+		\begin{align*}
+			\var \bracks{\hat{f} \parens{\bx_0}} = \sigma_{\varepsilon}^2 \norm{\widetilde{\bh} \parens{\bx_0}}_2^2 = \sigma_{\varepsilon}^2 \bx_0^\top \parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bX^\top \bX \parens{\bX^\top \bX + \lambda \bI}^{-1} \bx_0. 
+		\end{align*}
+	\end{itemize}
+	
+	\textit{Remark.} The discussion above about the finer decomposition is \emph{not} restricted to ridge regression but can be generalized to any restricted fits. 
+	
+\end{enumerate}
+
+
+\section*{III. Optimism of the Training Error Rate} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Generalization Error:} Given a training set $ \train := \set{ \parens{\bx_i, y_i}}_{i=1}^n$, the \emph{generalization error} of a model $\hat{f}$ is 
+	\begin{align}
+		\mathrm{Err}_{\train} := \E_{X^0, Y^0} \bracks[\big]{ L \parens{Y^0, \hat{f} \parens{X^0} } \,\vert\, \train }, 
+	\end{align}
+	where the training dataset $\train$ here is considered to be \emph{fixed} and $\parens{X^0, Y^0}$ is a new test data point drawn from the joint distribution of the data. 
+	
+	\item \textbf{Expected Prediction Error:} Based on the definition of generalization error above, the \emph{expected prediction error} is obtained by averaging over the training set $\train$, that is, 
+	\begin{align}
+		\mathrm{Err} := \E_{\train} \bracks[\big]{ \E_{X^0, Y^0} \bracks{ L \parens{Y^0, \hat{f} \parens{X^0} } \,\vert\, \train } }. 
+	\end{align}
+	
+	\textit{Remark 1.} The quantity $\mathrm{Err}$ is more amenable to statistical analysis. 
+
+	\textit{Remark 2.} It turns out that most methods effectively estimate the $\mathrm{Err}$ rather than $\mathrm{Err}_{\train}$. 
+	
+	\item \textbf{Training Error:} The \emph{training error} is defined to be 
+	\begin{align}
+		\overline{\mathrm{err}} := \frac{1}{n} \sum_{i=1}^n L \parens{y_i, \hat{f} \parens{\bx_i}}.  
+	\end{align}
+	
+	\textit{Remark.} Typically, $\overline{\mathrm{err}} \le \text{Err}_{\train}$, since the same data $\train$ is used to fit the method and assess its error, and the model typically adapts to the training set, resulting in an \textit{overly optimistic} estimate of the generalization error $\mathrm{Err}_{\train}$. 
+	
+	\item \textbf{Extra- and In- Sample Error:} The quantity $\mathrm{Err}_{\train}$ can be thought of as \textit{extra-sample error} since the new test point $\parens{X^0, Y^0}$ does \emph{not} coincide the training input vectors. \\ The \textit{in-sample error} is defined to be 
+	\begin{align}
+		\mathrm{Err}_{\mathrm{in}} = \frac{1}{n} \sum_{i=1}^n \E_{\bY^0} \bracks[\big]{ L \parens{Y^0_i, \hat{f} \parens{\bx_i} } \,\vert\, \train }, 
+	\end{align}
+	where $\bY^0 := \parens{Y_1^0, \cdots, Y_n^0}^\top \in \Real^n$ indicates that we observe $n$ \emph{new} response values at each of the training points $\bx_i$, for all $i = 1, \cdots, n$. 
+	
+	\item \textbf{Optimism:} The \textit{optimism} is defined to be the difference between $\mathrm{Err}_{\mathrm{in}}$ and the training error $\overline{\mathrm{err}}$, 
+	\begin{align*}
+		\mathrm{op} := \mathrm{Err}_{\mathrm{in}} - \overline{\mathrm{err}}. 
+	\end{align*}
+	
+	\textit{Remark.} The optimism is typically positive as $\overline{\mathrm{err}}$ is usually biased downward as an estimate of prediction error. 
+	
+	\item \textbf{Average Optimism:} The \textit{average optimism} is defined to be the expectation of the optimism over the training sets 
+	\begin{align}
+		\omega := \E_{\bY} \bracks{\mathrm{op}}, 
+	\end{align}
+	where $\bY := \parens{y_1, y_2, \cdots, y_n}^\top \in \Real^n$ and the predictors in the training dataset are viewed as fixed and the expectation is taken over the \emph{training set outcome values}. 
+	
+	\item \textbf{Average Optimism for Squared Error Loss:} When the loss function is the squared error loss function, we have 
+	\begin{align*}
+		\mathrm{Err}_{\mathrm{in}} = & \, \frac{1}{n} \sum_{i=1}^n \E_{\bY^0} \bracks{\parens{Y_i^0 - \hat{f} \parens{\bx_i}}^2}, \qquad \text{ and } \qquad 
+		\overline{\mathrm{err}} = \frac{1}{n} \sum_{i=1}^n \parens{y_i - \hat{f} \parens{\bx_i}}^2. 
+	\end{align*}
+	We show that the average optimism is 
+	\begin{align}\label{eq-ave-op}
+		\omega = \frac{2}{n} \sum_{i=1}^n \cov \parens{y_i, \hat{y_i}}. 
+	\end{align}
+	where $\cov$ indicates the covariance. 
+	
+	First note the following 
+	\begin{align*}
+		\mathrm{Err}_{\mathrm{in}} = & \, \frac{1}{n} \sum_{i=1}^n \E_{\bY^0} \bracks[\big]{\parens{Y_i^0 - f \parens{\bx_i} + f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} + \E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}^2} \\ 
+		= & \, \frac{1}{n} \sum_{i=1}^n \E_{\bY^0} \bigg[ 
+		\parens{Y_i^0 - f \parens{\bx_i} }^2 + \parens{ f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} }^2 + \parens{\E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}^2 \\ 
+		& \qquad + 2 \parens{Y_i^0 - f \parens{\bx_i}} \parens{ f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}}} + 2 \parens{Y_i^0 - f \parens{\bx_i} } \parens{ \E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}} \\ 
+		& \qquad \qquad + 2 \parens{f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} } \parens{\E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}
+		\bigg] \\ 
+		= & \, \frac{1}{n} \sum_{i=1}^n \bigg[ \sigma_{\varepsilon}^2 + \parens{ f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} }^2 + \parens{\E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}^2 \\ 
+		& \qquad + 2 \parens{f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} } \parens{\E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}} \bigg]. 
+	\end{align*}
+	Also, note the following 
+	\begin{align*}
+		\overline{\mathrm{err}} = & \, \frac{1}{n}\sum_{i=1}^n \parens[\big]{y_i - f \parens{\bx_i} + f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} + \E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}^2 \\ 
+		= & \, \frac{1}{n} \sum_{i=1}^n \bigg[ \parens{y_i - f \parens{\bx_i} }^2 + \parens{ f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} }^2 + \parens{\E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}^2 \\ 
+		& \qquad + 2 \parens{y_i - f \parens{\bx_i}} \parens{ f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}}} + 2 \parens{y_i - f \parens{\bx_i} } \parens{ \E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}} \\ 
+		& \qquad \qquad + 2 \parens{f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} } \parens{\E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}^2
+		\bigg] \\ 
+		= & \, \frac{1}{n} \sum_{i=1}^n \bigg[ \varepsilon_i^2 + \parens{ f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} }^2 + \parens{\E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}^2 \\ 
+		& \qquad + 2 \varepsilon_i \parens{ f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}}} + 2 \varepsilon_i \parens{ \E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}} \\ 
+		& \qquad \qquad + 2 \parens{f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}} } \parens{\E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}^2
+		\bigg]. 
+	\end{align*}
+	Therefore, the optimism is given by 
+	\begin{align*}
+		\mathrm{op} = & \, \mathrm{Err}_{\mathrm{in}} - \overline{\mathrm{err}} \\ 
+		= & \, \sigma_{\varepsilon}^2 - \frac{1}{n} \sum_{i=1}^n \varepsilon_i^2 - \frac{2}{n} \sum_{i=1}^n \varepsilon_i \parens{ f \parens{\bx_i} - \E \bracks{\hat{f} \parens{\bx_i}}} - \frac{2}{n} \sum_{i=1}^n \varepsilon_i \parens{ \E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}. 
+	\end{align*}
+	As a consequence, the average optimism is 
+	\begin{align*}
+		\E_{\bY} \bracks{\mathrm{op}} = & \, - \frac{2}{n} \sum_{i=1}^n \E_{\bY} \bracks[\big]{\varepsilon_i \parens{ \E \bracks{\hat{f} \parens{\bx_i}} - \hat{f} \parens{\bx_i}}} \\ 
+		= & \, \frac{2}{n} \sum_{i=1}^n \E_{\bY} \bracks[\big]{ \parens{y_i - \E \bracks{y_i}} \parens{ \hat{f} \parens{\bx_i}} - \E \bracks{\hat{f} \parens{\bx_i}}} \\ 
+		= & \, \frac{2}{n} \sum_{i=1}^n \cov \parens{y_i, \hat{y_i}}. 
+	\end{align*}
+	
+	\textit{Remark 1.} For 0-1 and some other loss functions, we also have the average optimism is given by \eqref{eq-ave-op}. 
+	
+	\textit{Remark 2.} Equation \eqref{eq-ave-op} suggests that the amount by which $\overline{\mathrm{err}}$ underestimates the true error depends on how strongly $y_i$ affects its own prediction. 
+	
+	\item \textbf{Relationship Among In-sample Error, Training Error and Average Optimism:} Combining all results above, we have 
+	\begin{equation}\label{eq-relas}
+		\E_{\bY} \bracks{\mathrm{Err}_{\mathrm{in}}} = \E_{\bY} \bracks{\overline{\mathrm{err}}} + \frac{2}{n} \sum_{i=1}^n \cov \parens{\hat{y_i}, y_i}. 
+	\end{equation}
+	
+	\textit{Remark.} Suppose we work with linear regression and $\hat{y_i}$ is obtained by a linear fit with $p$ inputs or basis functions, for example, for the additive error model $Y = f \parens{X} + \varepsilon$, we have 
+	\begin{align*}
+		\sum_{i=1}^n \cov \parens{\hat{y_i}, y_i} = p \sigma_{\varepsilon}^2, 
+	\end{align*}
+	and \eqref{eq-relas} simplfies to 
+	\begin{align}\label{eq-insample}
+		\E_{\bY} \bracks{\mathrm{Err}_{\mathrm{in}}} = \E_{\bY} \bracks{\overline{\mathrm{err}}} + \frac{2p}{n} \sigma_{\varepsilon}^2. 
+	\end{align}
+	This result says that the optimism increases linearly with the number of inputs or basis functions, $p$, and decreases with the training sample size. 
+	
+	\item \textbf{Approaches to Estimation of the Prediction Error:} 
+	\begin{enumerate}
+		\item \textit{Approach 1:} Estimate the optimism and add it to the training error $\overline{\mathrm{err}}$. Examples include $C_p$, AIC, BIC; 
+		\item \textit{Approach 2:} Estimate the extra-sample error $\mathrm{Err}$ directly. Examples include cross-validation and bootstrap. 
+	\end{enumerate}
+\end{enumerate}
+
+
+\section*{IV. Estimates of In-Sample Prediction Error}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{In-Sample Error Estimate:} The general form of the in-sample error estimate is 
+	\begin{align*}
+		\widehat{\mathrm{Err}}_{\mathrm{in}} = \overline{\mathrm{err}} + \hat{\omega}, 
+	\end{align*}
+	where $\hat{\omega}$ is an estimate of the average optimism. 
+	
+	\item \textbf{Mallow's $C_p$ Statistic:} Based on the expression \eqref{eq-insample}, where $p$ parameters are fit under the squared error loss function, we obtain the $C_p$ statistic as
+	\begin{align}
+		C_p = \overline{\mathrm{err}} + \frac{2p}{n} \hat{\sigma}_{\varepsilon}^2, 
+	\end{align}
+	where $\hat{\sigma}_{\varepsilon}^2$ is an estimate of the variance. 
+	
+	\item \textbf{Akaike Information Criterion (AIC):} The \textit{Akaike Information Criterion} (AIC) is a more general estimate of $\mathrm{Err}_{\mathrm{in}}$ when a log-likelihood loss function is used. 
+	\begin{enumerate}
+		\item \textit{Theoretical Basis:} The development of AIC relies on the asymptotic result 
+		\begin{align*}
+			-2 \E \bracks{ \log \Pr_{\hat{\theta} } \parens{Y}} \approx - \frac{2}{n} \E \bracks{\text{log-likelihood}} + \frac{2p}{n}, 
+		\end{align*}
+		where $ \Pr_{\theta} $ is a family of densities for $Y$ containing the ``true'' density of it, $\hat{\theta}$ is the maximum-likelihood estimate of $\theta$, and ``log-likelihood'' is the maximized log-likelihood given by 
+		\begin{align*}
+			\text{log-likelihood} = \sum_{i=1}^n \log \Pr_{\hat{\theta}}\parens{y_i}. 
+		\end{align*}
+		
+		\item \textit{Examples:}
+		\begin{itemize}
+			\item For the \textit{logistic regression} using the binomial log-likelihood, we have 
+			\begin{align}
+				\mathrm{AIC} = - \frac{2}{n} \text{log-likelihood} + \frac{2p}{n}. 
+			\end{align}
+			\item For the \textit{Gaussian regression} with variance $\sigma_{\varepsilon}^2 = \hat{\sigma}_{\varepsilon}^2$ assumed to be \emph{known}, the {AIC} statistics is equivalent to $C_p$. 
+		\end{itemize}
+		
+		\item \textit{Using AIC for Model Selection:} To use the AIC for model selection, we choose the one with the \emph{smallest} AIC over the set of models considered. 
+		
+	\end{enumerate}
+	
+	\item \textbf{AIC for Model Selection in General Setting:} For nonlinear and more complex models, we need to replace $p$ appearing in AIC by some measure of model complexity. \newline Given a family of models ${f}_{\alpha}$ indexed by the tuning parameter $\alpha$, we let $\overline{\mathrm{err}} \parens{\alpha}$ be the training error and $p \parens{\alpha}$ be the number of parameters for each model. Then, the AIC, depending on $\alpha$, is defined to be 
+	\begin{align}
+		\mathrm{AIC} \parens{\alpha} = \overline{\mathrm{err}} \parens{\alpha} + \frac{2 p \parens{\alpha}}{n} \hat{\sigma}_{\varepsilon}^2, 
+	\end{align}
+	which provides an estimate of the \textit{test error curve}. We find the tuning parameter $\hat{\alpha}$ that minimizes $\mathrm{AIC} \parens{\alpha}$ and the final model is $f_{\hat{\alpha}}$. 
+	
+	% \textit{Note:} Suppose we have a total of $p$ inputs and we choose the best-fitting linear model with $d < p$ inputs, the optimism will exceed $2\cdot \frac{d}{N}\sigma_\epsilon^2$, i.e., the effective number of parameters fit is more than $d$. 
+	
+	\item \textbf{A Remark:} The formula 
+	\begin{align*}
+		\frac{2}{n} \sum_{i=1}^n \cov \parens{\hat{y_i}, y_i} = \frac{2p}{n}\sigma_{\varepsilon}^2
+	\end{align*}
+	\emph{exactly} holds for linear models with additive errors and squared error loss, and \emph{approximately} for linear models and log-likelihoods. 
+	
+	In particular, it does \emph{not} hold in general for the 0-1 loss function. 
+	
+\end{enumerate}
+
+
+\section*{V. The Effective Number of Parameters}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} We generalize the concept of the ``number of parameters'', especially in the context of regularized model fitting. 
+	
+	\item \textbf{Notation:} We let 
+	\begin{align*}
+		\bY = 
+		\begin{pmatrix} 
+			\  y_1 & y_2 & \cdots & y_n \  
+		\end{pmatrix}^\top \in \Real^n 
+	\end{align*}
+	to be the vector of responses and 
+	\begin{align*}
+		\widehat{\bY} = 
+		\begin{pmatrix} 
+			\  \hat{y}_1 & \hat{y}_2 & \cdots & \hat{y}_n \ 
+		\end{pmatrix}^\top \in \Real^n
+	\end{align*}
+	be the vector of the fitted values. 
+	
+	\item \textbf{Linear Fitting Method:} A method is said to a \emph{linear fitting method} if we can write 
+	\begin{align*}
+		\widehat{\bY} = \bS \bY, 
+	\end{align*}
+	where $\bS \in \Real^{n \times n}$ is a matrix depending \emph{not} on the input vectors $\bx_i$'s but \emph{not} on $y_i$'s. 
+	
+	\item \textbf{Effective Number of Parameters for Linear Fitting Methods:} The \textit{effective number of parameters} for linear fitting methods is defined to be 
+	\begin{align*}
+		\mathrm{df} \parens{\bS} = \tr \parens{\bS} = \sum_{i=1}^n \bS_{i,i}, 
+	\end{align*}
+	where $\bS_{i,i}$ is the $i$-th diagonal element of $\bS$. The quantity $\mathrm{df}$ is also known as the \textit{effective degrees-of-freedom}. 
+	
+	\item \textbf{Examples:} 
+	\begin{itemize}
+		\item If $\bS$ is an \emph{orthogonal-projection matrix} onto a basis set spanned by $M$ features, then $ \tr \parens{\bS} = M $; 
+		\item If $\bY$ arises from an additive-error model 
+		\begin{align*}
+			Y = f \parens{X} + \varepsilon, \qquad \text{ where } \var \bracks{\varepsilon} = \sigma_{\varepsilon}^2, 
+		\end{align*}
+		then 
+		\begin{align*}
+			\sum_{i=1}^n \cov \parens{\hat{y}_i, y_i} = \tr \parens{\bS} \sigma_{\varepsilon}^2, 
+		\end{align*}
+		which motivates the more general definition 
+		\begin{align*}
+			\mathrm{df} \parens{\widehat{\bY}} = \frac{1}{\sigma_{\varepsilon}^2} \sum_{i=1}^n \cov \parens{\hat{y_i}, y_i}; 
+		\end{align*}
+		
+		\item In the context of neural networks where we minimize an error function $R \parens{\bw}$ with the weight decay penalty $\alpha \bw^\top \bw = \alpha \sum_{m=1}^M w_m^2$, the effective number of parameters is of the form 
+		\begin{align*}
+			\mathrm{df} \parens{\alpha} = \sum_{m=1}^M \frac{\theta_m}{\theta_m + \alpha}, 
+		\end{align*}
+		where $\theta_m$'s are the eigenvalues of $\dfrac{\partial^2 R \parens{\bw}}{\partial \bw \partial \bw^\top}$. 
+	\end{itemize}
+	
+\end{enumerate}
+
+
+\section*{VI. The Bayesian Approach and BIC}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Introduction to BIC:} The \emph{Bayesian Information Criterion (BIC)} is applicable when the fitting is carried out by maximization of a log-likelihood function, which has the general form 
+	\begin{align}\label{eq-bic-def}
+		\mathrm{BIC} = -2 \times \text{log-likelihood} + p \log n. 
+	\end{align}
+	
+	\item \textbf{BIC under the Gaussian Model:} Under the Gaussian model and the assumption that $\sigma_{\varepsilon}^2$ is known, we have 
+	\begin{align*}
+		-2 \times \text{log-likelihood} = & \, \frac{1}{\sigma_{\varepsilon}^2} \sum_{i=1}^n \parens{y_i - \hat{f} \parens{\bx_i}}^2 \qquad \text{up to a constant} \\ 
+		= & \frac{n}{\sigma_{\varepsilon}^2} \overline{\mathrm{err}}. 
+	\end{align*}
+	Hence, we can write 
+	\begin{align}
+		\mathrm{BIC} = \frac{n}{\sigma_{\varepsilon}^2} \bracks[\bigg]{ \overline{\mathrm{err}} + \parens{\log n} \frac{p}{n}\sigma_{\varepsilon}^2 }, 
+	\end{align}
+	which is proportional to the AIC with the factor $2$ replaced by $\log n$. Therefore, BIC tends to penalize complex models \emph{more heavily} and gives preference to simpler models. 
+	
+	\item \textbf{Derivation of BIC:} The BIC is derived from a Bayesian approach to model selection. Assume that 
+	\begin{itemize}
+		\item we have a set of candidate models $\calM_m$, for $ m = 1, \cdots, M$, with the corresponding model parameters $ \theta_m $, and we wish to choose a best model from them; and 
+		\item we have a prior distribution $\Pr \parens{\theta_m \,\vert\, \calM_m} $ for the parameters in each model $\calM_m$. 
+	\end{itemize}
+	Then, letting $\bZ := \sets{\parens{\bx_i, y_i}}_{i=1}^n$ be the training data and applying Bayes Theorem, the posterior probability of a given model is 
+	\begin{equation*}
+		\begin{aligned}
+			\Pr \parens{\calM_m \,\vert\, \bZ} \propto & \, \Pr \parens{\calM_m} \cdot \Pr \parens{\bZ \,\vert\, \calM_m} \\ 
+			\propto & \, \Pr \parens{\calM_m} \int \Pr \parens{\bZ \,\vert\, \calM_m, \theta_m} \parens{\theta_m \,\vert\, \calM_m} \, \diff \theta_m. 
+		\end{aligned}
+	\end{equation*}
+	To compare two distinct models $\calM_m$ and $\calM_l$, with $m \neq l$, we take the ratio of their posterior probabilities
+	\begin{equation}\label{bf}
+		\calR := \frac{\Pr \parens{\calM_m \,\vert\, \bZ}}{\Pr \parens{\calM_l \,\vert\, \bZ}} = \frac{\Pr \parens{\calM_m}}{\Pr \parens{\calM_l}} \cdot \frac{\Pr \parens{\bZ \,\vert\, \calM_m}}{\Pr \parens{\bZ \,\vert\, \calM_l}}. 
+	\end{equation}
+	We choose $\calM_m$ if $\calR > 1$ and $\calM_l$ otherwise. 
+	
+	\item \textbf{Bayes Factor:} The quantity appearing in \eqref{bf} 
+	\begin{align}
+		\mathrm{BF} \parens{\bZ} := \frac{\Pr \parens{\bZ \,\vert\, \calM_m}}{\Pr \parens{\bZ \,\vert\, \calM_l}}
+	\end{align}
+	is called the \emph{Bayes Factor}, which is interpreted as ``the contribution of the data toward the posterior odds''. 
+
+	\item \textbf{Laplace Approximation of $\Pr \parens{\bZ \,\vert\, \calM_m}$:} Typically, one assumes that the prior probability distribution over the models $ \sets{\mathcal{M}_m}_{m=1}^M $ is uniform so that $\Pr \parens{\calM_m} = \frac{1}{M}$ is constant for all $m = 1, 2, \cdots, M$. And one needs to approximate $\Pr \parens{\bZ \,\vert\, \calM_m}$. One way to perform this approximation is the \textit{Laplace approximation} 
+	\begin{equation}\label{eq-bic-deriv}
+		\log \Pr \parens{\bZ \,\vert\, \calM_m} = \log \parens{\bZ \,\vert\, \hat{\theta}_m, \calM_m} - \frac{p_m}{2} \log n + \calO \parens{1}, 
+	\end{equation}
+	where $ \hat{\theta}_m $ is a maximum likelihood estimate and $p_m$ is the number of free parameters in model $ \calM_m$. 
+	
+	If we let the loss function be 
+	\begin{align*}
+		-2 \times \log \Pr \parens{\bZ \,\vert\, \hat{\theta}_m, \calM_m}, 
+	\end{align*}
+	the resulting quantity is equivalent to \eqref{eq-bic-def}. 
+	
+	\item \textbf{BIC for Model Selection:} We choose the model $\calM_{m^*}$ that gives the smallest BIC among all $\calM_1, \cdots, \calM_M$. \newline From \eqref{eq-bic-deriv}, we see that choosing the model with the \textit{minimum BIC} is equivalent to choosing the model with the largest (approximate) posterior probability. 
+	
+	\item \textbf{Posterior Probabilities for $\sets{\calM_m}_{m=1}^M$:} If one is able to compute the BIC criterion for a set of $M$ models, denoted by $\mathrm{BIC}_m$, for all $ m = 1, \cdots, M$, one can estimate the posterior probability of model $\calM_m$ as 
+	\begin{align*}
+		\frac{\exp \parens{- \frac{1}{2} \mathrm{BIC}_m}}{\sum_{l=1}^m \exp \parens{-\frac{1}{2} \mathrm{BIC}_l}}. 
+	\end{align*}
+	
+	\item \textbf{A Comparison between AIC and BIC:} 
+	\begin{itemize}
+		\item For model selection purposes, there is no clear choice between AIC and BIC; 
+		\item BIC is asymptotically consistent as a selection criterion in the sense that ``\textit{given a family of models, including the true model, the probability that BIC will select the correct model approaches one as the sample size $n \to \infty$}'', and AIC does \emph{not} have this property and tends to choose too complex models as $n \to \infty$; 
+		\item For finite samples, BIC tends to choose models that are \emph{too} simple, due to the heavy penalty on complexity. 
+	\end{itemize}
+\end{enumerate}
+
+
+%\section*{VIII. Vapnik-Chervonenkis Dimension:}
+%
+%The Vapnik–Chervonenkis (VC) theory provides \textit{a general measure of complexity} and gives \textit{associated bounds on the optimism}. Throughout this section, we use the notation $\left\{ f\parens{\bx, \balpha} \right\}$ to denote a family of functions with the input variable $\bx$ and the parameter $\balpha$. 
+%
+%\begin{enumerate} 
+%\item \textbf{A Motivating Example --- Indicator Function Case:} Assume that $f$ is an indicator function only taking on values of 0 and 1. 
+%\begin{itemize}
+%	\item Further, assume $\balpha = \parens{\alpha_0, \balpha_1}$ and $f$ is a linear indicator function of the form $f\parens{\bx, \balpha} = \indic\parens{\alpha_0 + \alpha_1^\top \bx > 0}$. It is reasonable to say the complexity of the class $f$ is the number of parameters $ p + 1 $. 
+%	\item Now, let $\bx = x \in \mathbb{R}$ and $\balpha = \alpha \in \mathbb{R}$ and consider the function of the form $f\parens{x, \alpha} = \indic\parens{\sin\parens{\alpha \cdot x} > 0}$. As $\alpha$ increases, the function becomes more wiggly and more complex, even though we only have one parameter in $\mathbb{R}$. 
+%	\begin{figure}[h]
+%	    \centering
+%		\includegraphics[scale = 0.5]{plot_7_5}
+%		\caption{$f\parens{x} = \sin\parens{\alpha\cdot x}$.}
+%	\end{figure}
+%\end{itemize} 
+%
+%\item \textbf{Vapnik-Chervonenkis Dimension:} The \textit{Vapnik - Chervonenkis dimension} is a way of measuring the \underline{complexity of a class of functions} by assessing how wiggly its members can be. More formally, the VC dimension of the class $\left\{ f\parens{\bx, \balpha} \right\}$ is defined to be the largest number of points (in some configuration) that can be shattered by members of $\left\{ f\parens{\bx, \balpha} \right\}$. 
+%\end{enumerate}
+
+
+\section*{VII. Cross-validation}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Overview:} \emph{Cross-validation} directly estimates the \textit{expected extra-sample error} 
+	\begin{align*}
+		\mathrm{Err} = \E \bracks{L \parens{Y, \hat{f} \parens{X}}}, 
+	\end{align*}
+	the average generalization error when $\hat{f}$ is applied to an independent test sample from the joint distribution of $X$ and $Y$. 
+	
+	\item \textbf{$K$-Fold Cross-Validation:} 
+	\begin{enumerate}
+		\item \textit{Motivation:} Ideally, when we have sufficient data, we set aside a validation set and use it to assess the performance of the prediction model. Since data are often scarce, this is \emph{not} usually possible. 
+		\item \textit{Main Idea:} The $K$-fold cross-validation uses part of data to fit the model and a different set to assess the model. 
+		\item \textit{Procedure:} 
+		\begin{itemize}
+			\item We split the dataset into $K$ roughly equal-sized parts. $K$-fold cross-validation uses $\parens{K-1}$ parts, excluding the $k$-th part, to fit the model and the remaining $k$-th part to test it. With the remaining part of data, we calculate the prediction error of the fitted model. We do this for $k = 1, 2, \cdots, K$ and combine the $K$ estimates of the prediction error; 
+			\item Let $\kappa: \sets{ 1, \cdots, n } \to \sets{ 1, \cdots, K }$ be an indexing function that indicates the partition to which observation $i$ is allocated by \textit{randomization}. Let $\hat{f}^{-k}$ denote the fitted function, computed without the $k$-th part of data. The cross-validation estimate of the prediction error is 
+			\begin{equation}
+				\cv \parens{\hat{f}} = \frac{1}{n} \sum_{i=1}^n L \parens{y_i, \hat{f}^{-\kappa \parens{i}} \parens{\bx_i}}. 
+			\end{equation}
+		\end{itemize} 
+		\item \textit{Remarks:}
+		\begin{itemize}
+			\item Typical choices of $K$ are 5 or 10. 
+			\item The case when $ K = n $ is known as \textit{leave-one-out cross-validation}, and in this case, $\kappa \parens{i} = i$. 
+		\end{itemize}
+
+	\end{enumerate}
+	
+	\item \textbf{Using $K$-Fold CV for Model Selection:} Consider a set of models $\sets{ f_{\alpha} }_{\alpha}$ with $\bx$ being the predictors and $\alpha$ being the tuning parameter. Let $\hat{f}_{\alpha}^{-k}$ be the $\alpha$-th model fit with the $k$-th part of the data removed. Then, the following quantity 
+	\begin{align}
+		\cv \parens{\hat{f}_{\alpha}} := \frac{1}{n} \sum_{i=1}^n L \parens{y_i, \hat{f}_{\alpha}^{-\kappa \parens{i}} \parens{\bx_i}}
+	\end{align}
+	provides an estimate of the \emph{test error curve} (as a function of $\alpha$). We choose the value of $\alpha$ that minimizes $\cv \parens{\hat{f}_{\alpha}}$, say $\hat{\alpha}$. The final model is $f_{\hat{\alpha}}$. 
+	
+	\item \textbf{Discussion on Choice of $K$ in $K$-Fold Cross-Validation:} 
+	\begin{enumerate}
+		\item With $\underline{K = n}$, 
+		\begin{enumerate}
+			\item the cross-validation estimator is approximately unbiased for the true \emph{expected predictor error}, but can have \emph{high variance}; 
+			\item the computation burden is considerable. 
+		\end{enumerate}
+		
+		\item With a \underline{smaller value of $K$}, say $K = 5$ or $10$, 
+		\begin{enumerate}
+			\item cross-validation has \emph{lower variance} but may have \emph{large bias}, which depends on how the performance of the learning method varies with the size of the training set; 
+			\item if the learning curve (plotting cross-validation error against size of training set) has a considerable slope at the given training set size, $5$- or $10$-fold cross-validation may overestimate the true prediction error. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\textit{Conclusion:} 5- or 10-fold cross-validation is recommended. 
+	
+	\item \textbf{Generalized Cross-Validation:} \emph{Generalized cross-validation (GCV)} provides a convenient approximation to leave-one-out cross-validation for \emph{linear fitting} under the \textit{squared-error loss function}. 
+	\begin{enumerate}
+		\item \textit{Review of linear fitting methods:} A linear fitting method is the one for which we can write 
+		\begin{align*}
+			\widehat{\bY} = \bS \bY, 
+		\end{align*}
+		where $\bY := \parens{y_1, \cdots, y_n}^\top \in \Real^n$ is the vector of the observed response variable, $\widehat{\bY} := \parens{\hat{y}_1, \cdots, \hat{y}_n}^\top \in \Real^n$ is the vector of the fitted values, and $\bS \in \Real^{n \times n}$. 
+		
+		\item \textit{Leave-one-out cross-validation relationship:} For many linear fitting methods, including the least squares method and cubic smoothing splines, we have 
+		\begin{align*}
+			\frac{1}{n} \sum_{i=1}^n \parens{y_i - \hat{f}^{-i} \parens{\bx_i}}^2 = \frac{1}{n} \sum_{i=1}^n \parens[\bigg]{\frac{y_i - \hat{f}\parens{\bx_i}}{1 - \bS_{i,i}}}^2, 
+		\end{align*}
+		where $\bS_{i,i}$ is the $i$-th diagonal element of the matrix $\bS$. 
+		
+		\item \textit{GCV approximation:} The \emph{GCV approximation} is defined to be 
+		\begin{align}\label{eq-gcv}
+			\mathrm{GCV} \parens{\hat{f}} := \frac{1}{n} \sum_{i=1}^n \parens[\bigg]{\frac{y_i - \hat{f} \parens{\bx_i}}{1 - \tr \parens{\bS}/n}}^2, 
+		\end{align}
+		where the quantity $\tr\parens{\bS}$ is the effective number of parameters. 
+		
+		\item \textit{Comparison between GCV and CV:} The GCV has the computing advantage in the settings where the trace of $\bS$ is easier to compute than the individual elements of $\bS$. 
+
+		\item \textit{Connection between GCV and $C_p$ and AIC:} Using the approximation $\frac{1}{\parens{1-x}^2} \approx 1 + 2x$, we have 
+		\begin{align}
+			\mathrm{GCV} \approx & \, \frac{1}{n} \sum_{i=1}^n \parens{y_i - \hat{f} \parens{\bx_i}}^2 \parens[\bigg]{ 1 + \frac{2 \tr \parens{\bS}}{n}} \nonumber \\ 
+			= & \, \frac{1}{n} \sum_{i=1}^n \parens{y_i - \hat{f} \parens{\bx_i}}^2 + \frac{2 \tr \parens{\bS}}{n} \parens[\bigg]{\frac{1}{n} \sum_{i=1}^n \parens{y_i - \hat{f} \parens{\bx_i}}^2}. \label{eq-gcv2}
+		\end{align}
+		In \eqref{eq-gcv2}, the first term $\frac{1}{n} \sum_{i=1}^n \parens{y_i - \hat{f} \parens{\bx_i}}^2$ is the training error, $\overline{\mathrm{err}}$, when the squared-error loss function is used. In the second term, $\hat{\sigma}_{\varepsilon}^2 \approx \frac{1}{n} \sum_{i=1}^n \parens{y_i - \hat{f} \parens{\bx_i}}^2$, and $\tr \parens{\bS} = p$. Combining all pieces together, we see 
+		\begin{align*}
+			\mathrm{GCV} \approx C_p. 
+		\end{align*}
+		Assume the random error term has a Gaussian distribution and $\var \bracks{\varepsilon} = \sigma_{\varepsilon}^2$ is known, we have $\mathrm{GCV} \approx \sigma_{\varepsilon}^2 \times \mathrm{AIC}$. 
+	\end{enumerate}
+	
+	\item \textbf{Correct Way of Doing Cross-Validation in a Multistep Modeling Procedures:} In a multistep modeling procedure, cross-validation must be applied to the \emph{entire} sequence of modeling steps; in particular, samples must be ``left out'' \textbf{before} any selection or filtering steps are applied. 
+	
+%\item Consider a classification problem with a large number of predictors	
+%\begin{enumerate}
+% \item Divide the samples into $K$ cross-validation folds (groups) at random; 
+% \item For each fold $ k = 1, 2, \cdots, K$: 
+%  \begin{enumerate} 
+%    \item Find a subset of ``good'' predictors that show fairly strong (univariate) correlation with the class labels, using all of the samples except those in the fold $k$; 
+%    \item Using just this subset of predictors, build a multivariate classifier, using all of the samples except those in the fold $k$; 
+%    \item Use the classifier to predict the class labels for the samples in fold $k$. 
+%\end{enumerate}
+%\end{enumerate}
+\end{enumerate}
+
+
+\section*{VIII. Bootstrap Methods}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} \textit{Bootstrap method} is a general tool for assessing statistical accuracy, and can be use to estimate extra-sample prediction error. It can estimate well the \emph{expected prediction error}. 
+	
+	\item \textbf{Setup:} Let $\bZ := \sets{z_i}_{i=1}^n$ denote the training sets, where $z_i := \parens{\bx_i, y_i}$ for all $i = 1, \cdots, n$. 
+	
+	\item \textbf{Procedures:} 
+	\begin{enumerate}
+		\item \emph{Randomly} draw datasets \emph{with replacement} from $\bZ$, each sample the same size as the original training set; 
+		\item Repeat the preceding step for $B$ times, producing $B$ bootstrap datasets; 
+		\item Refit the model to each of the bootstrap datasets, and examine the behavior of the fits over the $B$ replications; 
+		\item Suppose $S \parens{\bZ}$ is some quantity of interest computed from the data $\bZ$. Compute $S \parens{\bZ^b}$ for all $b = 1, \cdots, B$, where $\bZ^b$ denotes the $b$-th bootstrapped sample. We can use $S \parens{\bZ^1}, S \parens{\bZ^2}, \cdots, S \parens{\bZ^B}$ to assess the statistical accuracy of $S \parens{\bZ}$. 
+	\end{enumerate}
+	
+	\item \textbf{Example:} Suppose we want to estimate the variance of $S \parens{\bZ}$ using the bootstrap. The bootstrap estimate of the variance of $S \parens{\bZ}$ is 
+	\begin{align*}
+		\widehat{\var} \bracks{S \parens{\bZ}} = \frac{1}{B-1} \sum_{b=1}^B \parens[\big]{S \parens{\bZ^b} - \bar{S}^*}^2, 
+	\end{align*}
+	where $\bar{S}^* := \frac{1}{B} \sum_{b=1}^B S \parens{\bZ^b}$. 
+	
+	\textit{Remark.} The quantity $\widehat{\var} \bracks{S \parens{\bZ}}$ can be thought of as a \textit{Monte-Carlo estimate} of the variance of $S \parens{\bZ}$ under sampling from the empirical distribution function $\widehat{F}$ for the data $\parens{z_1, \cdots, z_n}$. 
+	
+	\item \textbf{Estimation of Prediction Error Using the Bootstrap --- Method 1:} Fit the model in question on a set of bootstrap samples. Let $\hat{f}^{*b} \parens{\bx_i}$ be the predicted value at $\bx_i$, from the model fitted to the $b$-th bootstrapped dataset. The estimate of the prediction error is 
+	\begin{align}
+		\widehat{\mathrm{Err}}_{\mathrm{boot}} := \frac{1}{B} \frac{1}{n} \sum_{b=1}^B \sum_{i=1}^n L \parens{y_i, \hat{f}^{*b} \parens{\bx_i}}. 
+	\end{align}
+	
+	\textit{Comments:} This is a \emph{bad} estimate. Note that the training samples (the bootstrapped datasets) and the test samples (the original training dataset) have observations in common. This overlap can make overfit predictions look unrealistically good. 
+	
+	\item \textbf{Estimation of Prediction Error Using the Bootstrap --- Method 2:} For each observation, we only keep track of predictions from bootstrapped samples \emph{not} containing that observation. The \textit{leave-one-out bootstrap estimate of prediction error} is 
+	\begin{align}\label{eq-bootstrap-2}
+		\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{1}} = \frac{1}{n} \sum_{i=1}^n \frac{1}{\abs{C^{-i}}} \sum_{b \in C^{-i}} L \parens{y_i, \hat{f}^{*b} \parens{\bx_i}}, 
+	\end{align}
+	where $C^{-i}$ is the set of indices of the bootstrap samples $b$ that do \emph{not} contain the observation $i$, and $\abs{C^{-i}}$ is the number of such samples. 
+	
+	\textit{Remark.} In computing $\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{1}}$, we either 
+	\begin{itemize}
+		\item have to choose $B$ large enough to ensure that all of the $\abs{C^{-i}}$ are greater than zero, or 
+		\item just leave out the terms in \eqref{eq-bootstrap-2} corresponding to $\abs{C^{-i}}$'s that are zero. 
+	\end{itemize}
+	
+	\item \textbf{``0.632 Estimator'':} 
+	\begin{enumerate}
+		\item \textit{Motivation:} The leave-one out bootstrap estimate of the prediction error $\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{1}}$ has the \textit{training-set-size bias} problem discussed in the cross-validation. The average number of distinct observations in each bootstrap sample is about $0.632 \times n$, where 
+		\begin{align*}
+			\Pr \parens[\Big]{\text{ observation $i \in $ bootstrap samples }} = & \, 1 - \parens[\bigg]{1 - \frac{1}{n}}^n \\ 
+			\approx & \, 1 - e^{-1} \\ 
+			\approx & \, 0.632. 
+		\end{align*}
+		If the learning curve has considerable slope at sample size roughly $n/2$, the leave-one out bootstrap estimate will be biased \textit{upward} as an estimate of the true error. 
+		
+		\item \textit{``0.632 Estimator'':} The ``\textit{0.632 estimator}'' is designed to alleviate this upward bias and is defined to be 
+		\begin{align}
+			\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{0.632}} = 0.368 \times \overline{\mathrm{err}} + 0.632 \times \widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{1}}. 
+		\end{align}
+		The \textit{main idea} is that the ``0.632 estimator'' pulls the leave-one out bootstrap estimate down toward the training error rate, and hence reduces its upward bias. 
+	\end{enumerate}
+	
+	\item \textbf{No-information Error Rate:} The \textit{no-information error rate} is defined to be the error rate of our prediction rule as if the inputs and the outputs were independent. We denote it by $\gamma$. 
+	
+	\begin{enumerate}
+		\item \textit{Estimation:} An estimate of $\gamma$ can be obtained by evaluating the prediction rule on \emph{all} possible combinations of targets $y_i$ and predictors $\bx_{i'}$ 
+		\begin{align}
+			\hat{\gamma} := \frac{1}{n^2} \sum_{i=1}^n \sum_{i'=1}^n L \parens{y_i, f \parens{\bx_{i'}}}. 
+		\end{align}
+		
+		\item \textit{Example --- Binary classification problem:} Consider a binary classification problem with class labels being $\sets{+1, -1}$ and the loss function being the 0-1 loss. Let $\hat{p}_1$ be the observed proportion of responses equaling 1, and $\hat{q}$ be the observed proportion of predictions $f \parens{\bx_{i'}}$ equal to 1. Then, we show 
+		\begin{align*}
+			\hat{\gamma} = \hat{p} \parens{1 - \hat{q}} + \parens{1 - \hat{p}} \hat{q}. 
+		\end{align*}
+		Note the following 
+		\begin{align*}
+			\hat{\gamma} = & \, \frac{1}{n^2} \sum_{i=1}^n \sum_{i'=1}^n L \parens[\big]{y_i, \hat{f} \parens{\bx_{i'}} } \\ 
+			= & \, \frac{1}{n^2} \sum_{i'=1}^n \sum_{\sets{i \,\vert\, y_i = +1}} \indic \parens[\big]{\hat{f} \parens{\bx_{i'}} \neq +1} + \frac{1}{n^2} \sum_{i'=1}^n \sum_{\sets{i \,\vert\, y_i = -1}} \indic \parens[\big]{\hat{f} \parens{\bx_{i'}} \neq -1} \\ 
+			= & \, \frac{1}{n^2} \abs[\big]{\sets{i \,\vert\, y_i = +1}} \sum_{i'=1}^n \indic \parens[\big]{\hat{f} \parens{\bx_{i'}} \neq +1} + \frac{1}{n^2} \abs[\big]{\sets{i \,\vert\, y_i = -1}} \sum_{i'=1}^n \indic \parens[\big]{\hat{f} \parens{\bx_{i'}} \neq -1} \\ 
+			= & \, \frac{1}{n^2} \abs[\big]{\sets{i \,\vert\, y_i = +1}} \cdot \abs[\big]{\sets{i' \,\vert\, \hat{f} \parens{\bx_{i'}} = -1}} + \frac{1}{n^2} \abs[\big]{\sets{i \,\vert\, y_i = -1}} \cdot \abs[\big]{\sets{i' \,\vert\, \hat{f} \parens{\bx_{i'}} = +1}} \\ 
+			= & \, \hat{p} \parens{1 - \hat{q}} + \parens{1 - \hat{p}} \hat{q}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Relative Overfitting Rate:} The \textit{relative overfitting rate} is defined to be 
+	\begin{align}
+		\widehat{R} := \frac{\widehat{\mathrm{Err}}^{\parens{1}}_{\mathrm{boot}} - \overline{\mathrm{err}} }{\hat{\gamma} - \overline{\mathrm{err}} }. 
+	\end{align}
+	Note that $\widehat{R}$ ranges from 
+	\begin{itemize}
+		\item 0, if there is no overfitting and $\widehat{\mathrm{Err}}^{\parens{1}}_{\mathrm{boot}} = \overline{\mathrm{err}}$, to 
+		\item 1, if the overfitting is equal to $\hat{\gamma} - \overline{\mathrm{err}}$. 
+	\end{itemize}
+	
+	\item \textbf{``0.632+ Estimator'':} The ``\textit{0.632+ estimator}'' is defined to be 
+	\begin{align}
+		\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{0.632+}} = \parens{1 - \hat{w}} \times \overline{\mathrm{err}} + \hat{w} \times \widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{1}}, 
+	\end{align}
+	where 
+	\begin{align*}
+		\hat{w} = \frac{0.632}{1 - 0.367 \widehat{R}}. 
+	\end{align*}
+
+	\begin{enumerate}
+		\item \textit{Analysis of $\hat{w}$ and $\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{0.632+}}$:} Note that the weight $\hat{w}$ ranges from 0.632 if $\widehat{R} = 0$ to 1 if $\widehat{R} = 1$; and $\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{0.632+}}$ ranges from $\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{0.632}}$ to $\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{1}}$. 
+		\item \textit{General Idea of $\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{0.632+}}$:} The quantity $\widehat{\mathrm{Err}}_{\mathrm{boot}}^{\parens{0.632+}}$ produces a compromise between the leave-one-out bootstrap and the training error rate that depends on the amount of overfitting. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

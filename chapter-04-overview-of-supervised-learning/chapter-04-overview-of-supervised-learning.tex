@@ -1,0 +1,496 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+%\usepackage[T1]{fontenc}
+%\usepackage{newpxtext,newpxmath}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 4, An Overview of Supervised Learning}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{An Overview of Supervised Learning}{4}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is produced based on \textit{Chapter 2, Overview of Supervised Learning} in \textcite{Friedman2001-np}. 
+
+\section*{I. Introduction}
+
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Regression and Classification Problems:} 
+	\begin{enumerate}
+		\item \textit{Similarities:} Both regression and classification problems
+		\begin{enumerate}
+			\item attempt to use the inputs to predict the outputs, and 
+			\item can be viewed as function approximation tasks. 
+		\end{enumerate}
+		\item \textit{Differences:} 
+		\begin{enumerate}
+			\item In \emph{regression} problems, the output variables are \underline{quantitative}, meaning that some measurements are bigger than others and measurements close in value are close in nature; 
+			\item In the \emph{classification} problems, the output variable are \underline{qualitative} or \underline{categorical} variables, meaning that the values belong to a finite set. There is no explicit ordering in these values. 
+		\end{enumerate}
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{II. Linear Regression and Least Squares}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Least Squares for Prediction:} Given a vector of inputs $\parens{X_1, X_2, \cdots, X_{p-1}}^\top \in \Real^{p-1}$, we predict the output $Y \in \Real$ via the model 
+	\begin{equation}\label{ls}
+		\widehat{Y} = \hat{\beta}_0 + \sum_{i=1}^{p-1} X_j \hat{\beta}_j, 
+	\end{equation}
+	where the term $\hat{\beta}_0$ is the \textit{intercept} in statistics or the \textit{bias} in machine learning. 
+	
+	Usually, we let $X := \parens{1, X_1, X_2, \cdots, X_{p-1}}^\top \in \Real^{p}$ and $\widehat{\bbeta} := \parens{\hat{\beta}_0, \hat{\beta}_1, \cdots, \hat{\beta}_{p-1}}^\top$, then \eqref{ls} can be written succinctly as 
+	\begin{equation}
+		\widehat{Y} = X^\top \widehat{\bbeta}. 
+	\end{equation}
+	
+	\textit{Remark.} Here, we assume the output $Y$ is a scalar; in general, $Y$ can be a multi-dimensional vector. 
+	
+	\item \textbf{Geometric Interpretation of Linear Model:} Notice that in the $\parens{p + 1}$-dimensional input-output space, $\parens{X^\top, \widehat{Y}}^{\top} \in \Real^{p+1}$ represents a \emph{hyperplane}: 
+	\begin{enumerate}
+		\item if the constant term is included in $X$, the hyperplane includes the origin and is a subspace; 
+		\item if the constant term is \emph{not} included in $X$, it is an affine space cutting the $Y$-axis at the point $\parens{0, \hat{\beta}_0}$. 
+	\end{enumerate}
+	
+	\item \textbf{Parameter Estimation of $\bbeta$:} To estimate the value of $\bbeta$ based on independent and identically distributed (i.i.d) samples, denoted by $\sets{\parens{\bx_i, y_i}}_{i=1}^n$, we use the \emph{least squares} method and minimize the \emph{residual sum of squares} 
+	\begin{equation}\label{mat-form}
+		\mathrm{RSS} \parens{\bbeta} := \sum_{i=1}^n \parens{y_i - \bx_i^\top \bbeta}^2 = \parens{\bY - \bX \bbeta}^\top \parens{\bY - \bX \bbeta}, 
+	\end{equation}
+	where $\bX \in \Real^{n \times p}$ is a matrix with each row being an input vector, $\bx_i \in \Real^p$ is the $i$-row of $\bX$, and $\bY := \parens{y_1, \cdots, y_n}^\top \in \Real^n$ is a vector of the response variables. 
+	
+	Differentiating \eqref{mat-form} with respect to $\bbeta$ and setting the resulting equation to $\boldzero_p$, the $p$-dimensional vector with all entries being 0, yield the \emph{normal equation} 
+	\begin{align}
+		\bX^\top \parens{\bY - \bX \bbeta} = \boldzero_p. 
+	\end{align}
+	If $\bX^\top \bX$ is nonsingular, then the \emph{unique} solution to the normal equation is given by 
+	\begin{equation}
+		\widehat{\bbeta} = \parens{\bX^\top \bX}^{-1} \bX^\top \bY, 
+	\end{equation}
+	and the \emph{fitted value} at the $i$-th input $\bx_i$ is $\widehat{Y}_i = \bx_i^\top \widehat{\bbeta}$. 
+	
+	At an arbitrary input $\bx_0$, the prediction is $\widehat{Y}_0 = \bx_0^\top \widehat{\bbeta}$. 
+	
+	\textit{Remark.} $\mathrm{RSS} \parens{\bbeta}$ is a quadratic function of $\bbeta$ and, hence, the minimum always exists but may \emph{not} be unique. 
+
+\end{enumerate}
+
+
+\section*{III. $\boldsymbol{k}$-Nearest Neighbor Method for Prediction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	\item \textbf{Idea of $k$-Nearest Neighbor Method:} Use observations in the training set $\calT$ closest in input space to $\bx$ to form $\widehat{Y}$. Mathematically, the $k$-nearest neighbor fit for $\widehat{Y}$ is 
+	\begin{equation}\label{knn}
+		\widehat{Y} \parens{\bx} = \frac{1}{k} \sum_{x_i \in \calN_k \parens{\bx}} y_i, 
+	\end{equation}
+	where $\calN_k \parens{\bx}$ is the neighborhood of $\bx$ defined by the $k$ closest points $\bx_i$ in $\calT$ to $\bx$. That is, we find the $k$ observations $\bx_i$ closest to $\bx$ in the input space and average their responses. 
+	
+	\textit{Remark.} One needs a measure of \emph{closeness} when applying this $k$-nearest neighbor method. One choice is the Euclidean distance. 
+	
+	\item \textbf{Relationship between Error and $k$:} For $k$-nearest neighbor method, the error on the \emph{training data} is approximately an \textit{increasing} function of $k$. 
+	
+	\textit{Remark.} This relationship does \emph{not} necessarily hold for the test data.  
+	
+	\item \textbf{Effective Number of Parameters:} The \textit{effective} number of parameters of the $k$-nearest neighbor method is $n/k$, and decreases with increasing $k$. This is because, if the neighborhoods are non-overlapping, there would be $n/k$ neighborhoods and we fit one parameter in each neighborhood. 
+	
+	\item \textbf{A Comparison between Least Squares and $k$-Nearest Neighbor Methods:} 
+	\begin{itemize}
+		\item \textit{Least Squares Method:} 
+		\begin{enumerate}
+			\item The decision boundary is linear, smooth and stable to fit; 
+			\item It relies on the stringent assumption that a linear decision boundary is appropriate; 
+			\item It has low variance and potentially high bias. 
+		\end{enumerate}
+		
+		\item \textit{$k$-Nearest Neighbor Method:}
+		\begin{enumerate}
+			\item It does \emph{not} rely on any stringent assumption and can adapt to any situation; 
+			\item The decision boundary can be wiggle and unstable; 
+			\item It has low bias but may have high variance. 
+		\end{enumerate}
+	\end{itemize}
+\end{enumerate}
+
+\section*{IV. Statistical Decision Theory}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	\item \textbf{General Setup:} Let 
+	\begin{enumerate}
+		\item $X \in \calX \subseteq \Real^p$ be a real-valued random \textit{input} vector, 
+		\item $Y \in \calY \subseteq \Real$ be real-valued random \textit{output} variable, 
+		\item $\Pr: \calX \times \calY \to \bracks{0, 1}$ be the joint distribution function of $X$ and $Y$, 
+		\item $f: \calX \to \calY$ be a function, and 
+		\item $L \parens{Y, f \parens{X}}$ be a loss function for penalizing errors between $Y$ and $f \parens{X}$. 
+	\end{enumerate}
+	
+	\item \textbf{Squared Error Loss Function:} The \emph{squared error loss function} is 
+	\begin{align}
+		L \parens{Y, f \parens{X}} := \parens{Y - f \parens{X}}^2. 
+	\end{align}
+	We search for a function $f^*$ that minimizes the \textit{expected squared prediction error} (EPE)
+	\begin{equation}
+		\mathrm{EPE} \parens{f} := \E \bracks[\big]{\parens{Y - f \parens{X}}^2} = \int_{\calX \times \calY} \parens{y - f \parens{\bx}}^2 \, \Pr \parens{\diff \bx, \diff y}; 
+	\end{equation}
+	that is, 
+	\begin{align*}
+		f^* := \argmin_f \mathrm{EPE} \parens{f}. 
+	\end{align*}
+	Since we can write the EPE as 
+	\begin{align*}
+		\mathrm{EPE} \parens{f} = \E \bracks[\big]{\parens{Y - f \parens{X}}^2} = \E_{X} \bracks[\big]{\E_{Y \,\vert\, X = \bx} \bracks{\parens{Y - f \parens{\bx}}^2 \,\vert\, X = \bx}}, 
+	\end{align*}
+	to obtain $f^*$, it is sufficient to minimize the inner expectation $\E_{Y \,\vert\, X = \bx} \bracks{\parens{Y - f \parens{\bx}}^2 \,\vert\, X = \bx}$, and the pointwise minimizer is 
+	\begin{equation}
+		f^* \parens{\bx} = \argmin_{c \in \Real} \E_{Y \vert X} \bracks[\big]{\parens{Y - c}^2 \,\vert\, X = \bx} = \E \bracks{Y \,\vert\, X = \bx}; 
+	\end{equation}
+	that is, the best prediction of $Y$ at any point $X = \bx$ under the squared error loss function is the \textit{conditional expectation}, also known as \textit{regression function}. 
+	
+	\item \textbf{Prediction Error at an Arbitrary Test Point:} Suppose that the relationship between $Y$ and $X$ is linear up to a random term, 
+	\begin{align}\label{eq-linear-model}
+		Y = X^\top \bbeta + \varepsilon, \qquad \text{ where } \varepsilon \sim \Normal \parens{0, \sigma^2}. 
+	\end{align}
+	We estimate $\bbeta$ using the least squares method with data $\sets{\parens{\bx_i, y_i}}_{i=1}^n \iid \Pr$. We calculate the prediction error at an arbitrary but \emph{fixed} point $\bx_0$. 
+	
+	Note that the fitted value at $\bx_0$ under the linear model \eqref{eq-linear-model} is 
+	\begin{align*}
+		\widehat{Y}_0 = \bx_0^\top \widehat{\bbeta} = \bx_0^\top \parens{\bX^\top \bX}^{-1} \bX^\top \bY. 
+	\end{align*}
+	We first show that $\widehat{Y}_0 = \bx_0^\top \bbeta + \sum_{i=1}^n \ell_i \parens{\bx_0} \varepsilon_i$, where $\ell_i \parens{\bx_0}$ is the $i$-th element of $\bX \parens{\bX^\top \bX}^{-1} \bx_0$. Since 
+	\begin{align*}
+		\widehat{\bbeta} = \parens{\bX^\top \bX}^{-1} \bX^\top \bY = \parens{\bX^\top \bX}^{-1} \bX^\top \parens{\bX \bbeta + \beps} = \bbeta + \parens{\bX^\top \bX}^{-1} \bX^\top \beps, 
+	\end{align*}
+	where $\beps := \parens{\varepsilon_1, \cdots, \varepsilon_n}^\top \in \Real^n$, we have 
+	\begin{align*}
+		\widehat{Y}_0 = \bx_0^\top \widehat{\bbeta} = \bx_0^\top \bbeta + \bx_0^\top \parens{\bX^\top \bX}^{-1} \bX^\top \beps = \bx_0^\top \bbeta + \sum_{i=1}^n \ell_i \parens{\bx_0} \varepsilon_i. 
+	\end{align*}
+	Then, we show the \emph{prediction error} at $\bx_0$ is 
+	\begin{align*}
+		\mathrm{EPE} \parens{\bx_0} := \E_{Y_0 \mid X = \bx_0} \bracks[\Big]{\E_{\calT} \bracks[\big]{ \parens{Y_0 - \widehat{Y}_0}^2 }} = \sigma^2 + \sigma^2 \E_{\calT} \bracks{ \bx_0^\top \parens{\bX^\top \bX}^{-1} \bx_0}, 
+	\end{align*}
+	where $\calT$ denotes the set of training data. We first note that 
+	\begin{align*}
+		\parens{Y_0 - \widehat{Y}_0}^2 = & \, \parens[\big]{Y_0 - \E_{Y_0 \vert X = \bx_0} \bracks{Y_0} + \E_{Y_0 \vert X = \bx_0} \bracks{Y_0} - \E_{\calT} \bracks{\widehat{Y}_0} + \E_{\calT} \bracks{\widehat{Y}_0} - \widehat{Y}_0}^2 \\ 
+		= & \, \parens[\big]{Y_0 - \E_{Y_0 \vert X = \bx_0} \bracks{Y_0} }^2 + \parens[\big]{\E_{Y_0 \vert X = \bx_0} \bracks{Y_0} - \E_{\calT} \bracks{\widehat{Y}_0}}^2 + \parens[\big]{\E_{\calT} \bracks{\widehat{Y}_0} - \widehat{Y}_0}^2 \\ 
+		& \qquad + 2 \parens[\big]{Y_0 - \E_{Y_0 \vert X = \bx_0} \bracks{Y_0}} \parens[\big]{\E_{Y_0 \vert X = \bx_0} \bracks{Y_0} - \E_{\calT} \bracks{\widehat{Y}_0}} \\ 
+		& \qquad \quad + 2 \parens[\big]{Y_0 - \E_{Y_0 \vert X = \bx_0} \bracks{Y_0}} \parens[\big]{\E_{\calT} \bracks{\widehat{Y}_0} - \widehat{Y}_0} \\ 
+		& \qquad \qquad + 2 \parens[\big]{\E_{Y_0 \vert X = \bx_0} \bracks{Y_0} - \E_{\calT} \bracks{\widehat{Y}_0}} \parens[\big]{\E_{\calT} \bracks{\widehat{Y}_0} - \widehat{Y}_0}. 
+	\end{align*}
+	Then, notice 
+	\begin{align}\label{eq-deriv1}
+		Y_0 = \bx_0^\top \bbeta + \varepsilon, \qquad
+		\E_{Y_0 \vert X = \bx_0} \bracks{Y_0} = \bx_0^\top \bbeta, \qquad
+		\E_{\calT} \bracks{\widehat{Y}_0} = \bx_0^\top \bbeta. 
+	\end{align}
+	It follows that all cross terms have zero expectations, and we obtain 
+	\begin{align*}
+		\mathrm{EPE} \parens{\bx_0} = & \, \E_{Y_0 \mid X = \bx_0} \bracks[\Big]{ \E_{\calT} \bracks[\big]{ \parens{Y_0 - \E_{Y_0 \vert X = \bx_0} \bracks{Y_0} }^2}} + \E_{Y_0 \mid X = \bx_0} \bracks[\Big]{ \E_{\calT} \bracks[\big]{ \parens{ \E_{Y_0 \vert X = \bx_0} \bracks{Y_0} - \E_{\calT} \bracks{\widehat{Y}_0} }^2 } } \\ 
+		& \qquad + \E_{Y_0 \mid X = \bx_0} \bracks[\Big]{\E_{\calT} \bracks[\big]{ \parens{ \E_{\calT} \bracks{\widehat{Y}_0} - \widehat{Y}_0}^2 } } \\ 
+		= & \, \E_{Y_0 \mid X = \bx_0} \bracks{ \varepsilon^2} + \parens[\big]{ \E_{Y_0 \vert X = \bx_0} \bracks{Y_0} - \E_{\calT} \bracks{\widehat{Y}_0} }^2 + \E_{\calT} \bracks[\big]{ \parens{ \E_{\calT} \bracks{\widehat{Y}_0} - \widehat{Y}_0}^2 }  \\ 
+		= & \, \sigma^2 + \bias^2 \parens{\widehat{Y}_0} + \var_{\calT} \bracks{\widehat{Y}_0}. 
+	\end{align*}
+	By \eqref{eq-deriv1}, we have 
+	\begin{align*}
+		\bias^2 \parens{\widehat{Y}_0} = \parens[\big]{ \E_{Y_0 \vert X = \bx_0} \bracks{Y_0} - \E_{\calT} \bracks{\widehat{Y}_0} }^2 = 0. 
+	\end{align*}
+	In addition, 
+	\begin{align*}
+		\var_{\calT} \bracks{\widehat{Y}_0} = & \, \E_{\calT} \bracks[\big]{ \parens{ \E_{\calT} \bracks{\widehat{Y}_0} - \widehat{Y}_0}^2 } \\ 
+		= & \,  \E_{\calT} \bracks[\big]{ \parens{ \bx_0^\top \parens{\bX^\top \bX}^{-1} \bX^\top \beps }^2 }  \\ 
+		= & \, \sigma^2 \E_{\calT} \bracks{ \bx_0^\top \parens{\bX^\top \bX}^{-1} \bx_0}. 
+	\end{align*}
+	Combining all pieces above, we have 
+	\begin{align*}
+		\mathrm{EPE} \parens{\bx_0} = & \, \sigma^2 + 0 + \sigma^2 \E_{\calT} \bracks{ \bx_0^\top \parens{\bX^\top \bX}^{-1} \bx_0}. 
+	\end{align*}
+	
+	\item \textbf{Prediction Function in $\boldsymbol{k}$-Nearest Neighbor Method:} By \eqref{knn}, the $k$-nearest neighbor method predicts at an arbitrary point $\bx$ by taking the average of $k$ $y_i$'s closest to $\bx$ in the training set, that is, 
+	\begin{equation}
+		\hat{f}_{k\mathrm{NN}} \parens{\bx} = \mathrm{Ave} \parens[\big]{y_i \,\vert\, \bx_i \in \calN_k \parens{\bx}}, 
+	\end{equation} 
+	where ``Ave'' denotes the \emph{average operator}, and $\calN_k \parens{\bx}$ is the neighborhood containing the $k$ points in the training set closest to $\bx$. 
+	
+	Note that there are two approximations going on: 
+	\begin{itemize}
+		\item expectation is approximated by averaging over sample data; 
+		\item conditioning at a point is relaxed to conditioning on some region ``close'' to the target point. 
+	\end{itemize}
+	For large training sample size $n$, as $k$ gets large, the average will get more stable. 
+	
+	\textit{Fact:} Under mild regularity conditions on $\Pr$, as $n, k \to \infty$ such that $k / n \to 0$, $\hat{f}_{k\mathrm{NN}} \parens{\bx} \to \E \bracks{Y \,\vert\, X = \bx}$. 
+	
+	\item \textbf{Comparing the Least Squares Method and $k$-Nearest Neighbor:} 
+	\begin{enumerate}
+		\item \textit{Similarities:} Both least squares and $k$-nearest neighbor approximate conditional expectations by averages. 
+		\item \textit{Differences:} 
+		\begin{itemize}
+			\item \textit{Least squares} 
+			\begin{itemize}
+				\item assumes the regression function $f$ is approximately linear in its argument and is well approximated by a globally linear function, i.e., $f \parens{\bx} \approx \bx^\top \bbeta$, and 
+				\item is a model-based approach; 
+			\end{itemize}
+			\item \textit{$k$-nearest neighbor method} assumes $f$ is well approximated by a locally constant function. 
+		\end{itemize}
+	\end{enumerate}
+	
+	\item \textbf{Using $L_1$ Loss Function:} If we use the $L_1$ loss function
+	\begin{align*}
+		L_1 \parens{Y, f \parens{X}} := \abs{Y - f \parens{X}}, 
+	\end{align*}
+	the solution in this case is the conditional median 
+	\begin{align*}
+		\hat{f} \parens{\bx} := \argmin_f \E \bracks[\big]{L_1 \parens{Y, f \parens{X}}} = \mathrm{Median} \parens{Y \,\vert\, X = \bx}. 
+	\end{align*}
+	The estimate from the $L_1$ loss function is more \emph{robust} than those for the conditional mean. 
+	
+	\item \textbf{Loss Function for Categorical Variable:} Let $G$ be a categorical variable taking values in $\calW := \sets{1, \cdots, W}$, the set of possible classes. The loss function can be represented by a $W \times W$ matrix $\bL$. The matrix $\bL$ is zero on the diagonal and is nonnegative everywhere else. The $\parens{w, \ell}$-entry of $\bL$, denoted by $L \parens{w, \ell}$, is the price paid for classifying an observation belonging to Class $w$ to Class $\ell$. 
+	
+	The expected prediction error in this setting is 
+	\begin{align*}
+		\mathrm{EPE} \parens{\widehat{G}} := \E \bracks[\big]{L \parens{G, \widehat{G} \parens{X}}}, 
+	\end{align*} 
+	where $\widehat{G}: \calX \to \calW$ and $\widehat{G} \parens{X}$ is an estimate of the class that $X$ belongs to. We can write 
+	\begin{align*}
+		\text{EPE} \parens{\widehat{G}} = \E_X \bracks[\Bigg]{\sum_{w=1}^W L \parens{w, \widehat{G}\parens{\bx}} \, \Pr \parens{G = w \mid X = \bx}}. 
+	\end{align*} 
+	It is sufficient to minimize EPE pointwise, i.e., 
+	\begin{align*}
+		\widehat{G} \parens{\bx} := \argmin_{g \in \calW} \sets[\Bigg]{\sum_{w=1}^W L \parens{w, g} \, \Pr \parens{G = w \,\vert\, X = \bx}}. 
+	\end{align*}
+	
+	\item \textbf{The Case of 0-1 Loss Function:} If all non-diagonal entries of the matrix $\bL$ is 1, we obtain the \emph{0-1 loss function}, where all misclassifications are charged a single unit. With this 0-1 loss function, we have 
+	\begin{align}
+		\widehat{G} \parens{\bx} = & \, \argmin_{g \in \calW} \sets[\Bigg]{ \sum_{w=1}^W \indic \parens{w \ne g} \, \Pr \parens{G = w \,\vert\, X = \bx }} \nonumber \\ 
+		= & \, \argmin_{g \in \calW} \sets[\Big]{ 1 - \Pr \parens{G = g \,\vert\, X = \bx}} \nonumber \\ 
+		= & \, \argmax_{g \in \calW} \, \sets[\Big]{\Pr \parens{G = g \,\vert\, X = \bx}}. \label{bayes-class}
+	\end{align}
+	The classifier \eqref{bayes-class} is known as the \textit{Bayes classifier}. It says we classify an observation $\bx$ to the most probable class using the conditional distribution $\Pr \parens{G \mid X = \bx}$. The error rate of the Bayes classifier is called \textit{Bayes rate}. 
+\end{enumerate}
+
+\section*{V. Statistical Models, Supervised Learning, and Function Approximation}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+%	\item \textbf{Principal Goal:} The goal is to find a useful approximation $\hat{f}$ to the function $f$ that underlies the predictive relationship between the inputs and the outputs. 
+
+	\item \textbf{Example of Statistical Models:} Assume the data arose from the statistical model 
+	\begin{align}\label{add.error}
+		Y = f \parens{X} + \varepsilon, 
+	\end{align} 
+	where the random error $\varepsilon$ satisfies $\E \bracks{\varepsilon} = 0$ and is independent of $X$. If we use the least squares loss, then 
+	\begin{align*}
+		f^* := \argmin_{f} \sets[\Big]{ \E \bracks[\big]{ \parens{Y - f \parens{X}}^2 }}
+	\end{align*}
+	is 
+	\begin{align*}
+		f^* \parens{\bx} = \E \bracks{Y \,\vert\, X = \bx}, \qquad \text{ for all } \bx \in \calX. 
+	\end{align*}
+	
+	\item \textbf{Supervised Learning:} In supervised learning, given the training samples $\sets{\parens{\bx_i, y_i}}_{i=1}^n$, the input values $\bx_i$'s are fed into an artificial system, called a \textit{learning algorithm}, to produce outputs $\hat{f} \parens{\bx_i}$. The learning algorithm can modify the relationship $\hat{f}$ in response to differences $y_i - \hat{f} \parens{\bx_i}$ between the original and generated outputs. This process is known as \textit{learning by examples}. 
+	
+	Upon the completion of the learning process, we hope that the artificial outputs $\hat{f} \parens{\bx_i}$ will be close enough to the real ones $y_i$. 
+	
+	\item \textbf{Perspective From Function Approximation:} Data pairs $\calT := \sets{\parens{\bx_i, y_i}}_{i=1}^n$ can be viewed as points in a $\parens{p+1}$-dimensional Euclidean space, where we assume $\bx_i \in \calX \subseteq \Real^p$ for all $i = 1, 2, \cdots, n$. The function $f$ has the domain $\calX$, and is related to the data via a model such as $y_i = f \parens{\bx_i} + \varepsilon_i$. The \emph{goal} is to obtain a useful approximation to $f$ for all $\bx \in \calX$, given the representations in $\calT$. 
+	
+	\item \textbf{From Function Approximation to Parameter Estimation:} Many approximations assume a certain functional form of $f$ and have associated a set of parameters $\theta$ that are \emph{unknown}. With the presence of training data, we only need to estimate $\theta$. 
+	
+	Examples include: 
+	\begin{itemize}
+		\item \textit{Linear Models:} Assume $f_{\theta} \parens{\bx} = \bx^\top \theta$; 
+		\item \textit{Linear Basis Expansions:} Assume 
+		\begin{align*}
+			f_{\theta} \parens{\bx} = \sum_{k=1}^K \theta_k h_k \parens{\bx}, 
+		\end{align*}
+		where $h_k$'s are a suitable set of functions or transformations of the input vector $\bx$, and $\theta := \parens{\theta_1, \theta_2, \cdots, \theta_K}^\top \in \Real^K$. 
+	\end{itemize}
+	
+	\item \textbf{Parameter Estimation (I) --- Least Squares Method:} We estimate $\theta$ by minimizing the residual sum-of-squares 
+	\begin{align}
+		\mathrm{RSS} \parens{\theta} := \sum_{i=1}^n \parens[\big]{y_i - f_{\theta} \parens{\bx_i}}^2. 
+	\end{align} 
+	
+	\item \textbf{Parameter Estimation (II) --- Principle of Maximum Likelihood:} Suppose we have a random sample $y_i$, $i = 1, \cdots, n$, from a density $\Pr_{\theta} \parens{y}$ indexed by $\theta$. The log-probability of the observed sample is
+	\begin{align}
+		L \parens{\theta} := \sum_{i=1}^n \log \Pr_{\theta} \parens{y_i}
+	\end{align}	The principle of maximum likelihood assumes that the most reasonable values for $\theta$ are those for which the probability of the observed sample is the largest. 
+	
+	\item \textbf{Equivalence of Least Squares Method and the Principle of Maximum Likelihood:} Suppose the output random variable $Y$ and the input (fixed) variable $X$ are related by the additive error model $Y = f_{\theta} \parens{X} + \varepsilon$, with $\varepsilon \sim \Normal \parens{0, \sigma^2}$. Here, we assume $\sigma^2$ is known. Under this setting, $Y$ is a random variable following $\Normal \parens{f_{\theta} \parens{X}, \sigma^2}$ distribution. 
+	
+	We estimate $\theta$ using the principle of maximum likelihood. The log-likelihood function is 
+	\begin{align*}
+		L \parens{\theta} = & \, - \frac{n}{2} \log \parens{2 \pi} - n \log \sigma - \frac{1}{2\sigma^2} \sum_{i=1}^n \parens[\big]{y_i - f_{\theta}\parens{\bx_i}}^2 \\ 
+		= & \, - \frac{n}{2} \log \parens{2 \pi} - n \log \sigma - \frac{1}{2\sigma^2} \mathrm{RSS} \parens{\theta}. 
+	\end{align*}
+	Therefore, in this case, maximizing the log-likelihood function $L$ is equivalent to the least squares method. 
+	
+	\item \textbf{Principle of Maximum Likelihood for Categorical Output Variable:} Assume that the output variable $G \in \calW := \sets{1, \cdots, W}$ is categorical, and that the conditional probability for the $w$-th category is 
+	\begin{align*}
+		\Pr \parens{G = w \,\vert\, X = \bx} = p_{w, \theta} \parens{\bx}, \qquad \text{ for all } w = 1, \cdots, W, 
+	\end{align*}
+	where $p_{w, \theta}$ is indexed by some parameter $\theta$. Then, with data $\sets{\parens{\bx_i, y_i}}_{i=1}^n$, the log-likelihood function is 
+	\begin{align*}
+		L \parens{\theta} = \sum_{i=1}^n \log p_{y_i, \theta} \parens{\bx_i}. 
+	\end{align*}
+	We can estimate $\theta$ by maximizing $L$. 
+	
+\end{enumerate}
+
+\section*{VI. Structured Regression Models}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Problem:} Consider the problem of minimizing the RSS criterion 
+	\begin{align}\label{rss.sample}
+		\mathrm{RSS} \parens{f} = \sum_{i=1}^n \parens[\big]{y_i - f \parens{\bx_i}}^2
+	\end{align}
+	over the class of all functions. Any function $\hat{f}$ passing through all training points $\sets{\parens{\bx_i, y_i}}_{i=1}^n$ is a solution and there are infinitely many solutions. In order to obtain useful results for a finite sample size $n$, we must restrict the eligible solutions to \eqref{rss.sample} to a smaller set of functions. 
+
+	\item \textbf{Imposing Constraints:} The constraints imposed by most learning methods can be described as \textit{complexity restrictions}, meaning some kind of \textit{regular behavior} in small neighborhoods of the input space. 
+
+	The \textit{strength} of the constraints is dictated by the \textit{neighborhood size}. The larger the size of the neighborhood, the stronger the constraint, and the more sensitive the solution is to the particular choice of constraint. 
+	%The nature of the constraint depends on the \textit{metric} used. 
+\end{enumerate}
+
+\section*{VII. Classes of Restricted Estimators}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Roughness Penalty:} Rather than minimizing the RSS alone, we minimize the $\text{RSS}$ plus a roughness penalty, called the penalized RSS, 
+	\begin{align}\label{eq-prss}
+		\mathrm{PRSS}_{\lambda} \parens{f} = \mathrm{RSS} \parens{f} + \lambda J \parens{f}, 
+	\end{align} 
+	where $J$ is the penalty functional and is large for functions $f$ that vary too rapidly over small regions of input space. 
+	
+	Minimizing $\mathrm{PRSS}_{\lambda}$ is a trade-off of two conflicting goals: 
+	\begin{enumerate}
+		\item requiring the function $f$ to have a goodness of fit to data, measured by $\mathrm{RSS} \parens{f}$, and 
+		\item requiring it is \emph{not} too complex, measured by $J \parens{f}$. 
+	\end{enumerate}	
+	The value of $\lambda$ controls the strength of this trade-off. 
+	
+	\textit{Remark.} Penalty functionals $J$ can be constructed for functions in any dimension, and special versions can be created to impose special structure. 
+	
+	\item \textbf{Example of Roughness Penalty --- Cubic Smoothing Spline:} The cubic smoothing spline for one-dimensional input is the solution to 
+	\begin{align}
+		\mathrm{PRSS}_{\lambda} \parens{f} = \sum_{i=1}^n \parens[\big]{y_i - f \parens{x_i}}^2 + \lambda \int \bracks{f'' \parens{x}}^2 \diff x. 
+	\end{align}
+	The roughness penalty functional $J$ here controls large values of the second derivative of $f$, i.e., the curvature of $f$. The \emph{amount} of penalty is dictated by $\lambda \ge 0$; more specifically, 
+	\begin{itemize}
+		\item for $\lambda = 0$, no penalty is imposed, and any interpolating function is a solution; and 
+		\item for $\lambda = \infty$, only functions linear in $x$ are permitted. 
+	\end{itemize}
+	
+	\item \textbf{Bayesian Interpretation of Roughness Penalty:} Penalty functionals $J$ express our \textit{prior} belief that the type of functions we seek exhibit a certain type of \emph{smooth} behavior. 
+	
+	The penalty functional $J$ corresponds to a log-prior, and $\mathrm{PRSS}_{\lambda} \parens{f}$ corresponds to the log-posterior distribution, and minimizing $\mathrm{PRSS}_{\lambda}$ amounts to finding the \textit{posterior mode}. 
+	
+	\item \textbf{Kernel Methods and Local Regression:} Local regression explicitly specifies the nature of the local neighborhood and the class of regular functions fitted locally. 
+	
+	The nature of the local neighborhood is specified through a \emph{kernel function} $K_{\lambda}: \calX \times \calX \to \Real$, and $K_{\lambda} \parens{\bx_0, \bx}$ can be regarded as the weight to the point $\bx$ in a region around $\bx_0$. The parameter $\lambda$ controls the width of the neighborhood. One example of the kernel function is the \emph{Gaussian kernel} 
+	\begin{align*}
+		K_{\lambda} \parens{\bx_0, \bx} = \exp \parens[\bigg]{\frac{\norm{\bx_0 - \bx}_2^2}{2 \lambda}}. 
+	\end{align*}
+	
+	\begin{itemize}
+	\item \textit{Example of Kernel Estimator --- Nadaraya-Watson Weighted Average:} 
+	\begin{align}
+		\hat{f} \parens{x_0} = \frac{\sum_{i=1}^n K_{\lambda} \parens{\bx_0, \bx_i} y_i}{\sum_{i=1}^n K_{\lambda} \parens{\bx_0, \bx_i}}. 
+	\end{align}
+	
+	\item \textit{Local Regression Estimate:} Define the local regression estimate of $f \parens{\bx_0}$ as $f_{\hat{\theta}} \parens{\bx_0}$, where 
+	\begin{align}
+		\hat{\theta} := \argmin_{\theta} \sum_{i=1}^n K_{\lambda} \parens{\bx_0, \bx_i} \parens[\big]{y_i - f_{\theta} \parens{\bx_i}}^2, 
+	\end{align}
+	and $f_{\theta}$ is some parametrized function. 
+	
+	\item \textit{Nearest-Neighbor Method:} Nearest-neighbor methods can be thought of as kernel methods having a more data-dependent metric. The kernel function for the $k$-nearest neighbor method is 
+	\begin{align}
+		K_{k} \parens{\bx, \bx_0} = \indic \parens[\big]{ \sets{\bx \,\vert\, \norm{\bx - \bx_0} \le \norm{\bx_{ \parens{k} } - \bx_0}}}, 
+	\end{align}
+	where $\bx_{\parens{k}}$ is the training observation ranked the $k$-th in distance from $\bx_0$, $\indic \parens{S}$ is the indicator of the set $S$, and $\norm{}$ is a metric we choose.  
+	\end{itemize}
+	
+	\item \textbf{Basis Functions and Dictionary Methods:} Suppose $f$ is a linear expansion of basis functions 
+	\begin{align}
+		f_{\theta} \parens{x} = \sum_{m=1}^M \theta_m h_m \parens{\bx}. 
+	\end{align}
+	Examples include 
+	\begin{itemize}
+		\item linear regression and polynomial regression; 
+		\item smoothing spline regression; and 
+		\item single-layer feed-forward neural network model with linear output weights. 
+	\end{itemize}
+\end{enumerate}
+
+
+\section*{VIII. Model Selection and the Bias-Variance Tradeoff}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Example -- $k$-Nearest Neighbor Method:} Suppose the data arise from a model $Y = f \parens{X} + \varepsilon$, with $\E \bracks{\varepsilon} = 0$ and $\var \bracks{\varepsilon} = \sigma^2$. Assume the values of $\bx_i$'s are fixed. The expected prediction error at $\bx_0$, which is not present in the data and is fixed, using the $k$-nearest neighbor method is 
+	\begin{align}
+		\mathrm{EPE}_k \parens{\bx_0} = & \, \E \bracks[\big]{\parens{Y - \hat{f}_k \parens{\bx_0} }^2 \,\vert\, X = \bx_0} \nonumber \\ 
+		= & \, \sigma^2 + \bias^2 \bracks{\hat{f}_k \parens{\bx_0}} + \var_{\calT} \bracks{\hat{f}_k \parens{\bx_0} } \nonumber \\ 
+		= & \, \sigma^2 + \bracks[\bigg]{f \parens{\bx_0} - \frac{1}{k} \sum_{\ell=1}^k f \parens{ \bx_{ \parens{\ell}} } }^2 + \frac{\sigma^2}{k}, \label{eq-decom-knn}
+	\end{align}
+	where the subscript ``$\bx_{(\ell)}$'' indicates the $\ell$-th nearest neighbor to $\bx_0$. Then, note the three terms in \eqref{eq-decom-knn}: 
+	\begin{itemize}
+		\item The first term $\sigma^2 = \E \bracks{\parens{Y - f \parens{\bx_0}}^2}$ is the variance of the new test target and is irreducible; 
+		\item The second term is the squared bias, where 
+		\begin{align}
+			\bias \bracks{\hat{f}_k \parens{\bx_0}} := \E_{\calT} \bracks{\hat{f}_k \parens{\bx_0}} - f \parens{\bx_0}
+		\end{align}
+		and the expectation averages the randomness in the training data. This term is likely to increase with $k$; 
+		\item The variance term $\var_{\calT} \bracks{\hat{f}_k \parens{\bx_0}}$ is the variance of an average and decreases with $k$. 
+	\end{itemize}
+	The sum of the second term (the squared bias) and the third term (the variance) is the \textit{mean squared error} of $\hat{f}_k \parens{\bx_0}$ in estimating $f \parens{\bx_0}$ and is under our control. As $k$ varies, there is a bias-variance tradeoff between these two terms. 
+	
+	\item \textbf{Bias-Variance Tradeoff vs. Model Complexity:} 
+	\begin{itemize}
+		\item As the model complexity is increased, the variance tends to increase and the squared bias tends to decrease; and 
+		\item as the model complexity is decreased, the variance tends to decrease and the squared bias tends to increase. 
+	\end{itemize}
+	Typically, we choose the model complexity to trade bias off with variance in such a way as to minimize the test error. 
+
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

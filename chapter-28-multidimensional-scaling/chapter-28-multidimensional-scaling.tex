@@ -1,0 +1,174 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 28, Multidimensional Scaling}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Multidimensional Scaling}{28}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 14, Unsupervised Learning} in \textcite{Friedman2001-np}, and 
+	\item \textit{Chapter 13, Multidimensional Scaling and Distance Geometry} in \textcite{Izenman2009-jk}. 
+\end{itemize}
+
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} Given only a two-way table of proximities of data points, the problem of multidimensional scaling (MDS) attempts to find a lower-dimensional representation of data that preserves the pairwise distances as well as possible. 
+	
+	\item \textbf{Setup:} We are given 
+	\begin{enumerate}
+		\item the distances $d_{i,j}$ between the $i$-th and the $j$-th observations, or 
+		\item the similarity measurements $s_{i,j}$ between the $i$-th and the $j$-th observations, 
+	\end{enumerate}
+	for all $i, j = 1, 2, \cdots, n$. In particular, we do \emph{not} have the values of the original observations. 
+	
+	\item \textbf{Categories of Multidimensional Scaling:} There are two broad categories of approaches to multidimensional scaling: 
+	\begin{enumerate}
+		\item \textit{Metric Scaling:} Utilizes the actual similarity or dissimilarity measurements are used; 
+		
+		\textit{Examples.} Least squares scaling, Sammon scaling, and classical scaling. 
+		
+		\item \textit{Non-metric Scaling:} Only utilizes the ranks of dissimilarity measurements. 
+		
+		\textit{Example.} Shephard-Kruskal non-metric scaling. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{II. Metric Scaling}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Least Squares Scaling:} 
+	\begin{enumerate}
+		\item \textit{Main Idea:} The main idea here is that to find a lower-dimensional representation of the data that preserves the pairwise distances as well as possible. 
+		
+		\item \textit{Formulation:} The \emph{least squares scaling} seeks values $\bz_1, \bz_2, \cdots, \bz_n \in \Real^k$ to minimize the following objective function 
+		\begin{align}
+			S_{\mathrm{ls}} \parens{\bz_1, \bz_2, \cdots, \bz_n} := \sum_{i \neq j} \parens{d_{i,j} - \norm{\bz_i - \bz_j}_2}^2. 
+		\end{align}
+		The function $S_{\mathrm{ls}}$ is known as the \emph{stress function}. 
+	\end{enumerate}
+	
+	\textit{Remark.} This approach to multidimensional scaling is also called Kruskal-Shephard scaling. 
+	
+	\item \textbf{Sammon Mapping:} A variation of the least squares scaling is the \emph{Sammon mapping} which minimizes 
+	\begin{align}
+		S_{\mathrm{Sammon}} \parens{\bz_1, \bz_2, \cdots, \bz_n} := \sum_{i \neq j} \frac{\parens{d_{i,j} - \norm{\bz_i - \bz_j}_2}^2}{d_{i,j}}, 
+	\end{align}
+	where more emphasis is put on preserving smaller pairwise distances. 
+	
+	\item \textbf{Classical Scaling:} 
+	\begin{enumerate}
+		\item \textit{Formulation:} Suppose we are given the \emph{similarity measurements} as the inner product of centered data, i.e., 
+		\begin{align*}
+			s_{i,j} := \innerp{\bx_i - \bar{\bx}}{\bx_j - \bar{\bx}}, \qquad \text{ for all } i, j = 1, 2, \cdots, n, 
+		\end{align*}
+		where $\bar{\bx} := \frac{1}{n} \sum_{i=1}^n \bx_i$. The \emph{classical scaling} problem attempts to minimize 
+		\begin{align}\label{eq-classical-scaling}
+			S_{\mathrm{cs}} \parens{\bz_1, \bz_2, \cdots, \bz_n} := \sum_{i,j=1}^n \parens{s_{i,j} - \innerp{\bz_i - \bar{\bz}}{\bz_j - \bar{\bz}}}^2, 
+		\end{align}
+		where $\bz_i \in \Real^k$ for all $i = 1, 2, \cdots, n$. 
+		
+		\item \textit{Alternative Formulation:} Let $\bM \in \Real^{n \times n}$ with the $\parens{i, j}$-th entry being $\innerp{\bz_i}{\bz_j}$, where we assume each $\bz_i$ has already been centered so that $\sum_{i=1}^n \bz_i = \boldzero_k$. We can then write $\bM$ as 
+		\begin{align*}
+			\bM = \begin{pmatrix}
+				\bz_1^\top \\ 
+				\bz_2^\top \\ 
+				\vdots \\ 
+				\bz_n^\top \\
+			\end{pmatrix} \begin{pmatrix}
+				\bz_1  \ 
+				\bz_2 \ 
+				\cdots \ 
+				\bz_n
+			\end{pmatrix}. 
+		\end{align*}
+		We can write the criterion \eqref{eq-classical-scaling} as 
+		\begin{align*}
+			S_{\mathrm{cs}} \parens{\bz_1, \bz_2, \cdots, \bz_n} = \tr \parens{\parens{\bS - \bM}^\top \parens{\bS - \bM}} = \norm{\bS - \bM}_F^2. 
+		\end{align*}
+		Since $\bz_i \in \Real^k$ for all $i = 1, 2, \cdots, n$, the classical scaling problem reduces to the best rank-$k$ approximation problem for $\bS$. 
+		
+		\item \textit{Derivation of Solution:} Using Eckart-Young theorem, the solution is given by the eigen-decomposition of $\bS$. Let $\bS = \bE \bD^2 \bE^\top$, where $\bD^2 := \diag \parens{\lambda_1, \lambda_2, \cdots, \lambda_n} \in \Real^{n \times n}$ is a diagonal matrix with eigenvalues of $\bS$ on the diagonal, columns of $\bE$ are the eigenvectors of $\bS$. Let $\be_i$ be the eigenvector associated with the $i$-th largest eigenvalue of $\bS$. The minimizer to $S_{\mathrm{cs}}$ is 
+		\begin{align*}
+			\widehat{\bM} := & \, \argmin S_{\mathrm{cs}} \parens{\bz_1, \bz_2, \cdots, \bz_n} \\ 
+			= & \, \sum_{\ell=1}^k \lambda_{\ell} \be_{\ell} \be_{\ell}^\top \\ 
+			= & \, \parens{\bE_k \bD_k} \parens{\bE_k \bD_k}^\top, 
+		\end{align*}
+		where $\bD_k := \diag \parens{\sqrt{\lambda_1}, \sqrt{\lambda_2}, \cdots, \sqrt{\lambda_k}}$ and $\bE_k := \parens{\be_1, \be_2, \cdots, \be_k} \in \Real^{n \times k}$. 
+		
+		In particular, if we let $\parens{\hat{\bz}_1, \hat{\bz}_2, \cdots, \hat{\bz}_n} := \argmin S_{\mathrm{cs}} \parens{\bz_1, \bz_2, \cdots, \bz_n}$, then $\hat{\bz}_i^\top$ is given by the $i$-th row of $\bE_k \bD_k$. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Connection with PCA:} If the similarities are in fact centered inner-products, classical scaling is exactly equivalent to principal components, an inherently linear dimension- reduction technique. 
+	
+	% https://esl.hohoweiya.xyz/14-Unsupervised-Learning/14.8-Multidimensional-Scaling/index.html
+
+\end{enumerate}
+
+
+\section*{III. Non-Metric Scaling}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Non-metric Scaling:} \emph{Shephard-Kruskal non-metric scaling} uses only ranks and seeks to minimize the stress function 
+	\begin{align*}
+		S_{\mathrm{NM}} \parens{\bz_1, \bz_2, \cdots, \bz_n, \theta} := \frac{\sum_{i \neq j} \parens{\norm{\bz_i - \bz_j}_2 - \theta \parens{d_{i,j}}}^2}{\sum_{i \neq j} \norm{\bz_i - \bz_j}_2^2}
+	\end{align*}
+	over $\bz_i$'s and an arbitrary increasing function $\theta$. 
+	
+	Minimizing $S_{\mathrm{NM}} \parens{\bz_1, \bz_2, \cdots, \bz_n, \theta}$ involves the following two steps: 
+	\begin{enumerate}[label=(\arabic*)]
+		\item With the function $\theta$ fixed, we minimize over $\bz_i$ by gradient descent; 
+		\item With $\bz_i$'s fixed, we use the method of isotonic regression to find the best monotonic approximation $\theta \parens{d_{i,j}}$ to $\norm{\bz_i - \bz_{j}}_2$. 
+	\end{enumerate}
+	These two steps are iterated until the solutions stabilize. 
+
+\end{enumerate}
+
+
+\printbibliography
+
+\end{document}

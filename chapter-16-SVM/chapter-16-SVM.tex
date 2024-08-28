@@ -1,0 +1,823 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+%\usepackage{tgpagella}
+
+\usepackage[red]{zhoucx-notation}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 16, Support Vector Machines}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{\text{#4}} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Support Vector Machines}{16}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 12, Support Vector Machines and Flexible Discriminants} in \textcites{Friedman2001-np}, 
+	\item \textit{Chapter 11, Support Vector Machines} in \textcites{Izenman2009-jk}, and 
+	\item \textit{Chapter 9, Regression Estimation} in \textcite{Scholkopf2002}. 
+\end{itemize}
+
+
+\section*{I. Review of Support Vector Machines in Linearly Separable Case} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} The training data consists of $n$ pairs $\parens{\bx_1, y_1}, \cdots, \parens{\bx_n, y_n}$, where $\bx_i \in \Real^p$ and $y_i \in \sets{-1, +1}$ for all $i = 1, 2, \cdots, n$. Define a hyperplane by 
+	\begin{align*}
+		\braces[\Big]{\bx \,\big\vert\, f \parens{\bx} := \bx^\top \bbeta + \beta_0 = 0}, 
+	\end{align*}
+	where $\bbeta$ is a unit vector, i.e., $\norm{\bbeta}_2 = 1$. A classification rule induced by $f$ is 
+	\begin{align*}
+		G \parens{\bx} = \mathrm{sign} \parens{\bx^\top \bbeta + \beta_0}, 
+	\end{align*}
+	where $G: \Real^p \to \sets{-1, 1}$; in other words, $G$ outputs the class of the point $\bx$. 
+	
+	\item \textbf{Linearly Separable Case:} If the two classes are linearly separable, we can find a function $f \parens{\bx} = \bx^\top \bbeta + \beta_0 $ with $y_i f_i \parens{\bx_i} > 0 $ for all $i$. In this case, we can find the hyperplane that creates the \emph{biggest} margin between the training points for Class $+1$ and $-1$. The associated optimization problem is of the following form 
+	\begin{equation}\label{orig}
+		\begin{aligned}
+			\maximize_{\bbeta, \beta_0} \hspace{10pt} & M  \\
+			\text{subject to } & \, y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge M \text{ for all } i = 1, \cdots, n, \\ 
+			& \, \norm{\bbeta}_2 = 1
+		\end{aligned}
+	\end{equation}
+	We can get rid of the constraint $\norm{\bbeta}_2 = 1$ by modifying the constraint as 
+	\begin{equation}\label{eq-con-1}
+		\frac{1}{\norm{\bbeta}_2} y_i \parens{\bx_i^\top \bbeta + \widetilde{\beta}_0} \ge M, 
+	\end{equation}
+	where $\widetilde{\beta}_0 = \norm{\bbeta}_2 \beta_0$. Note that \eqref{eq-con-1} is equivalent to 
+	\begin{equation}
+		y_i \parens{\bx_i^\top \bbeta + \widetilde{\beta}_0} \ge \norm{\bbeta}_2 M.  
+	\end{equation}
+	Since any positively scaled multiple of $\bbeta$ and $\beta_0$ satisfies the constraint as well, we can arbitrarily set $M = 1/\norm{\bbeta}_2$ and  reformulate the original optimization problem as 
+	\begin{equation}
+		\begin{aligned}
+			\min_{\bbeta, \beta_0} \hspace{10pt} & \frac{1}{2} \norm{\bbeta}_2^2 \\
+		\text{subject to } & \, y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge 1 \text{ for all } i = 1, \cdots, n. 
+		\end{aligned}
+	\end{equation}
+	This resulting optimization problem is a convex problem with a quadratic objective function and linear inequality constraints. 
+	
+\end{enumerate}
+
+
+\section*{II. Support Vector Machines in Linearly Non-separable Case}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Introducing the Slack Variables:} Suppose the classes can \emph{overlap} in feature space. We still maximize $M$ and allow some points to reside on the \emph{wrong} side via defining the slack variables 
+	\begin{equation*}
+		\bxi := \parens{\xi_1, \cdots, \xi_n}^\top. 
+	\end{equation*}
+	We can include the constraints in \eqref{orig} of the following form: 
+	\begin{align*}
+		\xi_i \ge 0 \text{ for all } i = 1, 2, \cdots, n, \qquad \text{ and } \qquad \sum_{i=1}^n \xi_i \le \text{some constant}. 
+	\end{align*}
+	There are two natural ways of specifying these constraints: 
+	\begin{enumerate}
+		\item $y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge M - \xi_i$: this is a natural choice as it measures the overlap in \emph{actual} distance from the margin; but this leads to a \underline{non-convex} optimization problem; 
+		\item $y_i \parens{\bx_i^\top \bbeta + \beta_0 } \ge M \parens{1 - \xi_i}$: this measures the \underline{relative distance}, which changes the width of the margin $M$; the resulting optimization problem is convex. 
+	\end{enumerate}
+	Of the two choices, we use the second one. 
+	
+	Notice that the value $\xi_i$ in $y_i \parens{\bx_i^\top \bbeta + \beta_0 } \ge M \parens{1-\xi_i}$ is the \underline{proportional} amount by which the prediction $ f \parens{\bx_i} = \bx_i^\top \bbeta + \beta_0$ is on the wrong side of its margin. By bounding $\sum_{i=1}^n \xi_i$, we bound the \underline{total proportional amount} by which predictions fall on the wrong side of their margin. 
+	
+	In this setup, the misclassification of the $i$-th observation occurs when $\xi_i > 1$, so bounding $\sum_{i=1}^n \xi_i$ at a value $K$ bounds the total number of training misclassifications at $K$. 
+	
+	\item \textbf{Problem Formulation:} We drop the constraint $\norm{\bbeta}_2 = 1$ by defining $M = 1/\norm{\bbeta}_2$ and obtain the following formulation of the problem in linearly inseparable case as 
+	\begin{equation}\label{eq-nonsep}
+		\begin{aligned}
+			\minimize_{\bbeta, \beta_0} \hspace{10pt} & \norm{\bbeta}_2 \\
+			\text{subject to } & \, y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge 1 - \xi_i, \qquad \text{ for all } i = 1, \cdots, n, \\ 
+			& \, \xi_i \ge 0, \qquad \text{ for all } i = 1, \cdots, n \\ 
+			& \, \sum_{i=1}^n \xi_i \le K, 
+		\end{aligned}
+	\end{equation}
+	where $K > 0$ is some constant to be specified. 
+	
+	\item \textbf{Computing the Support Vector Machine:} Notice that \eqref{eq-nonsep} is a \emph{convex} optimization problem with a quadratic objective function and linear constraints. We can write it in the following equivalent form 
+	\begin{equation}\label{eqnonsep}
+		\begin{aligned}
+			\minimize_{\bbeta, \beta_0} \hspace{10pt} & \frac{1}{2} \norm{\bbeta}_2^2 + C \sum_{i=1}^n \xi_i \\
+			\text{subject to } & \, y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge 1 - \xi_i, \qquad \text{ for all } i = 1, \cdots, n, \\ 
+			& \, \xi_i \ge 0, \qquad \text{ for all } i = 1, \cdots, n, 
+		\end{aligned}
+	\end{equation}
+	where $C$ is the ``cost'' parameter. In this formulation, the linearly separable case corresponds to $C = \infty$. 
+	
+	The primal Lagrangian function of minimizing with respect to $\bbeta$, $\beta_0$ and $\xi$ is 
+	\begin{equation*}
+		L_P \parens{\beta_0, \bbeta, \bxi} := \frac{1}{2} \norm{\bbeta}_2^2 + C \sum_{i=1}^n \xi_i - \sum_{i=1}^n \alpha_i \bracks{ y_i \parens{\bx_i^\top \bbeta + \beta_0} - \parens{1 - \xi_i}} - \sum_{i=1}^n \mu_i \xi_i, 
+	\end{equation*}
+	which we minimize with respect to $\beta_0$, $\bbeta$ and $\bxi$. 
+	
+	Differentiating $L_P$ with respect to $\beta_0$, $\bbeta$ and $\bxi$ and setting the derivatives to 0 yield 
+	\begin{align*}
+		& \, \frac{\partial L_P \parens{\beta_0, \bbeta, \bxi}}{\partial \beta_0} \stackrel{\mathrm{set}}{=} - \sum_{i=1}^n \alpha_i y_i = 0 && \, \iff && \, 0 = \sum_{i=1}^n \alpha_i y_i, \\
+		& \, \frac{\partial L_P \parens{\beta_0, \bbeta, \bxi}}{\partial \bbeta} \stackrel{\mathrm{set}}{=} \bbeta - \sum_{i=1}^n \alpha_i y_i \bx_i = 0 && \, \iff && \, \bbeta = \sum_{i=1}^n \alpha_i y_i \bx_i, \\
+		& \, \frac{\partial L_P \parens{\beta_0, \bbeta, \bxi}}{\partial \xi_i} \stackrel{\mathrm{set}}{=} C - \alpha_i - \mu_i = 0 && \, \iff && \, \alpha_i = C - \mu_i \text{ for all } i = 1, \cdots, n, 
+	\end{align*} 
+	with constraints $\alpha_i \ge 0$, $\mu_i \ge 0$ and $\xi_i \ge 0$ for all $i = 1, \cdots, n$. 
+	
+	Substituting the constraints back to the Lagrangian primal function yields the \textit{dual function} 
+	\begin{align*}
+		L_D \parens{\alpha_1, \cdots, \alpha_n} := \sum_{i=1}^n \alpha_i - \frac{1}{2} \sum_{i=1}^n \sum_{i'=1}^n \alpha_i \alpha_{i'} y_i y_{i'} \bx_i^\top \bx_{i'}, 
+	\end{align*}
+	which gives a \emph{lower bound} on the objective function in \eqref{eqnonsep} for any feasible point. We maximize the dual function with the constraints $0 \le \alpha_i \le C$ for all $i = 1, \cdots, n$ and $\sum_{i=1}^n \alpha_i y_i = 0$. 
+	
+	\item \textbf{Karush-Kuhn-Tucker Conditions:} The complete set of Karush-Kuhn-Tucker (KKT) conditions is 
+	\begin{enumerate}[label=(\alph*)]
+		\item \label{kkt-a} Stationarity: 
+		\begin{align*}
+			\bbeta = \sum_{i=1}^n \alpha_i y_i \bx_i, \qquad 0 = \sum_{i=1}^n \alpha_i y_i, \qquad \alpha_i = C - \mu_i \text{ for all } i = 1, \cdots, n; 
+		\end{align*}
+		\item \label{kkt-b} Complementary slackness: for all $i = 1, \cdots, n$, 
+		\begin{align*}
+			\alpha_i \bracks[\big]{ y_i \parens{\bx_i^\top \bbeta + \beta_0} - \parens{1 - \xi_i}} = 0, \qquad \text{ and } \qquad \mu_i \xi_i = 0; 
+		\end{align*}
+		\item \label{kkt-c} Primal feasibility: for all $i = 1, \cdots, n$, 
+		\begin{align*}
+			y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge 1 - \xi_i, \qquad \text{ and } \qquad \xi_i \ge 0; 
+		\end{align*}
+		\item \label{kkt-d} Dual feasibility: for all $i = 1, \cdots, n$, 
+		\begin{align*}
+			\alpha_i \ge 0, \qquad \text{ and } \qquad \mu_i \ge 0. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Support Vectors:} By condition \ref{kkt-a} in KKT conditions, we see that 
+	\begin{align*}
+		\widehat{\bbeta} = \sum_{i=1}^n \hat{\alpha}_i y_i \bx_i, 
+	\end{align*} 
+	where $\widehat{\bbeta}$ is the solution to $\bbeta$ in \eqref{eqnonsep}, and $\parens{\hat{\alpha}_1, \hat{\alpha}_2, \cdots, \hat{\alpha}_n}^\top$ is the solution to $\parens{\alpha_1, \alpha_2, \cdots, \alpha_n}$ in \eqref{eq-svm-reg-dual}. 
+	
+	From \ref{kkt-b}, $\hat{\alpha}_i \ne 0$ only when $y_i \parens{\bx_i^\top \widehat{\bbeta} + \hat{\beta}_0} - \parens{1 - \xi_i} = 0$. These observations $\bx_i$'s are called the \textit{support vectors}. Among these support vectors, 
+	\begin{itemize}
+		\item some of them lie \emph{on} the edge of the margin, i.e., $\hat{\xi}_i = 0$, and then $ 0 < \hat{\alpha}_i < C$; 
+		\item the remainders have $\hat{\xi}_i > 0$ and $\hat{\alpha}_i = C$. 
+	\end{itemize}
+	
+	\item \textbf{Computing $\beta_0$:} To solve for $\beta_0$, we choose the margin points with $\hat{\alpha}_i \ge 0$ and $\hat{\xi}_i = 0$ and utilize the condition \ref{kkt-b} above. It is better to take the average over all observations to numerical stability instead of using just a single observation. 
+	
+	\item \textbf{Decision Boundary:} Given $\widehat{\bbeta}$ and $\hat{\beta}_0$, the decision function can be written as 
+	\begin{align*}
+		\widehat{G} \parens{\bx} = \mathrm{sign} \parens{\hat{f} \parens{\bx}} = \mathrm{sign} \parens{\widehat{\bbeta}^\top \bx + \hat{\beta}_0}. 
+	\end{align*}
+	
+	\item \textbf{Parameter Tuning:} In \eqref{eqnonsep}, we have the cost parameter $C > 0$ as the tuning parameter, the optimal choice of which can be determined by $K$-fold cross-validation. 
+	
+	\textit{Remark.} Notice that leaving one observation that is \emph{not} a support vector out will \emph{not} change the solution. 
+	
+	\item \textbf{Three States of Labeled Points $\sets{\parens{\bx_i, y_i}}_{i=1}^n$:} By the KKT conditions, all labeled points $\sets{\parens{\bx_i, y_i}}_{i=1}^n$ fall into exactly one of three distinct groups: 
+	\begin{enumerate}
+		\item Observations \textit{correctly} classified and outside their margins with $y_i f \parens{\bx_i} > 1 $ and Lagrange multipliers $\alpha_i = 0$; 
+		\item Observations \textit{sitting on} their margins with $y_i f \parens{\bx_i} = 1$ and Lagrange multipliers $\alpha_i \in \bracks{0, C}$; 
+		\item Observations \textit{inside} their margins have $y_i f \parens{\bx_i} < 1$ with $ \alpha_i = C$. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{III. Support Vector Machines and Kernels}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Introduction:} Note the support vector classifiers lead to linear boundaries in the input feature space. By enlarging the feature space using \emph{basis expansions}, we can obtain \underline{non-linear} boundaries in the original feature space. 
+	
+	The \textit{support vector machine classifier} is an extension of the idea above, and the dimension of the enlarged space is allowed to become \textit{very large}, or even infinite. However, with sufficiently many basis functions, the data would be \emph{linearly separable} and overfitting may occur. 
+	
+	\item \textbf{Main Idea:} Suppose that we choose basis functions $h_m$, for $m = 1, \cdots, M$, and fit the support vector classifier using input features 
+	\begin{equation*}
+		\bh \parens{\bx_i} = \parens[\big]{h_1 \parens{\bx_i}, \cdots, h_M \parens{\bx_i}}^\top \in \Real^{M}, 
+	\end{equation*}
+	for all $i = 1, \cdots, n$. Then, we produce the (nonlinear) function $f \parens{\bx} = h \parens{\bx}^\top \bbeta + \beta_0$, and the classifier is $\widehat{G} \parens{\bx} = \mathrm{sign} \parens{\hat{f}\parens{\bx}}$ as before. 
+	
+	\item \textbf{Computing the SVM for Classification:} We work with the transformed feature vectors $\bh$ directly, and the resulting Lagrangian dual function is 
+	\begin{equation}\label{dualsvm}
+		L_D \parens{\alpha_1, \cdots, \alpha_n} := \sum_{i=1}^n \alpha_i - \frac{1}{2} \sum_{i=1}^n \sum_{i'=1}^n \alpha_i \alpha_{i'} y_{i} y_{i'} \innerp{\bh \parens{\bx_i}}{\bh \parens{\bx_{i'}}}. 
+	\end{equation}
+	Then, the solution function $f$ is of the form 
+	\begin{align}\label{solsvm}
+		f \parens{\bx} = \bh \parens{\bx}^\top \bbeta + \beta_0 = \sum_{i=1}^n \alpha_i y_{i} \innerp{\bh \parens{\bx}}{\bh \parens{\bx_{i}}} + \beta_0. 
+	\end{align}
+	As before, given $\alpha_i$, $\beta_0$ can be determined by solving $y_i \cdot f \parens{\bx_i} = 1$ for any or all $\bx_i$ for which $\alpha_i \in \parens{0, C}$. 
+	
+	\item \textbf{Introducing Kernels:} Notice that the dual function \eqref{dualsvm} and the solution function \eqref{solsvm} both involve $\bh$ \emph{only} through the inner products. As a consequence, we do \emph{not} need to specify the transformation $\bh$ and \emph{only} require the kernel function defined by 
+	\begin{equation*}
+		K \parens{\bx, \bx'} = \innerp{\bh \parens{\bx}}{\bh \parens{\bx'}}, 
+	\end{equation*}
+	that is, the inner product in the \emph{transformed} space. Here, the kernel function $K \parens{\,\cdot\,, \,\cdot\,}$ is a symmetric, positive (semi-)definite function. 
+	
+	Some popular choices of the kernel functions in support vector machines include 
+	\begin{enumerate}
+		\item \textit{$d$-th Degree Polynomial:} $K \parens{\bx, \bx'} = \parens{1 + \innerp{\bx}{\bx'}}^d$; 
+		\item \textit{Radial Basis:} $K \parens{\bx, \bx'} = \exp \parens{-\gamma \norm{\bx - \bx'}_2^2}$; 
+		\item \textit{Neural Network:} $K \parens{\bx, \bx'} = \tanh \parens{\kappa_1 \innerp{\bx}{\bx'} + \kappa_2}$. 
+	\end{enumerate}
+	
+	\item \textbf{Example of Kernel:} We show an example of polynomial kernel function with degree of 2 and two inputs, $x_1$ and $x_2$, that is, letting $\bx = \parens{x_1, x_2}$ and $\bx' = \parens{x'_1, x'_2}$, 
+	\begin{align*}
+			K \parens{\bx, \bx'} = & \, \parens{1 + \innerp{\bx}{\bx'}}^2 \\ 
+			= & \, \parens{1 + x_1x_1' + x_2x_2'}^2 \\ 
+			= & \, 1 + 2x_1x_1' + 2x_2x_2' + \parens{x_1 x_1'}^2 + \parens{x_2 x_2'}^2 + 2 x_1 x_1' x_2 x_2' \\
+			= & \, \innerp[\big]{ \parens{1, \sqrt{2} x_1, \sqrt{2} x_2, x_1^2, x_2^2, \sqrt{2} x_1 x_2}}{ \parens{1, \sqrt{2} x'_1, \sqrt{2}x'_2, {x'_1}^2, {x'_2}^2, \sqrt{2} x'_1 x'_2}}, 
+	\end{align*}
+	where $\bh \parens{\bx} = \bh \parens{x_1, x_2} = \parens{1, \sqrt{2} x_1, \sqrt{2} x_2, x_1^2, x_2^2, \sqrt{2}x_1 x_2}^{\top} \in \Real^6$. 
+	
+	\item \textbf{Effects of Cost Parameter $C$:} 
+	\begin{enumerate}
+		\item A \textit{large} value of $C > 0$ will discourage any positive $\xi_i$, leading to an overfit \emph{wiggly} boundary in the original feature space; and 
+		\item A \textit{small} value of $C$ will encourage a small value of $\norm{\bbeta}_2$, leading to a \emph{smoother} boundary. 
+	\end{enumerate}
+	
+	\item \textbf{Support Vector Machines as a Penalized Method:} With $f \parens{\bx} = h \parens{\bx}^\top \bbeta + \beta_0$, consider the following optimization problem 
+	\begin{equation}\label{hingeloss}
+		\minimize_{\bbeta, \beta_0} \ \sum_{i=1}^n \bracks{ 1 - y_i f \parens{\bx_i}}_+ + \frac{\lambda}{2} \norm{\bbeta}_2^2, 
+	\end{equation}
+	where $\bracks{x}_+ = \max \sets{x, 0}$. This has the form of a loss function plus a penalty term. We show that the optimization problem \eqref{hingeloss}, with $\lambda = 1/C$, is the same as \eqref{eqnonsep} as below 
+	\begin{align*}
+		& \argmin_{\bbeta, \beta_0} \braces[\Bigg]{\frac{1}{2} \norm{\bbeta}_2^2 + C \sum_{i=1}^n \xi_i, \text{ s.t } \xi_i \ge 0, y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge 1 - \xi_i, i = 1, \cdots, n} \\ 
+		= & \argmin_{\bbeta, \beta_0} \braces[\Bigg]{\frac{1}{2} \norm{\bbeta}^2 + C \sum_{i=1}^n \xi_i, \text{ s.t } \xi_i \ge 0, \xi_i \ge 1 - y_i \parens{\bx_i^\top \bbeta + \beta_0}, i = 1, \cdots, n} \\ 
+		= & \argmin_{\bbeta, \beta_0} \braces[\Bigg]{\frac{1}{2} \norm{\bbeta}^2 + C\sum_{i=1}^n \xi_i, \text{ s.t } \xi_i = \max \braces[\big]{0, 1 - y_i \parens{\bx_i^\top \bbeta + \beta_0}}, i = 1, \cdots, n} \\ 
+		= & \argmin_{\bbeta, \beta_0} \braces[\Bigg]{\frac{1}{2} \norm{\bbeta}^2 + C\sum_{i=1}^n \max \braces[\big]{0, 1 - y_i \parens{\bx_i^\top \bbeta + \beta_0}}} \\ 
+		= & \argmin_{\bbeta, \beta_0} \braces[\Bigg]{\frac{1}{2} \norm{\bbeta}^2 + C\sum_{i=1}^n \bracks{ 1 - y_i \parens{\bx_i^\top \bbeta + \beta_0}}_+ } \\ 
+		= & \argmin_{\bbeta, \beta_0} \braces[\Bigg]{\frac{\lambda}{2} \norm{\bbeta}^2 + \sum_{i=1}^n \bracks{ 1 - y_i \parens{ \bx_i^\top \bbeta + \beta_0}}_+ }. 
+	\end{align*}
+	Here, 
+	\begin{align*}
+		L \parens{y, f} = \bracks{1 - yf}_+
+	\end{align*}
+	is called the \textit{hinge loss function} and is reasonable for two-class classification problem. The formulation \eqref{hingeloss} exhibits the SVM as a regularized function estimation problem, where the coefficients of the linear expansion $f \parens{\bx} = \beta_0 + \bh \parens{\bx}^\top \bbeta $ are shrunk to zero. 
+	
+	\item \textbf{A Comparison of Different Loss Functions Used in Classification:} A table of comparing different loss functions and the corresponding minimizing functions are given below: 
+	
+	\begin{table}
+		\begin{center}
+			\begin{tabular}{ccc}  
+				\toprule
+				Loss Function & $L \parens{y, f \parens{\bx}}$ & Minimizing Function \\ 
+				\toprule
+				Binomial Deviance & $\log \parens{1 + \exp \parens{-yf \parens{\bx}}}$ & $f \parens{\bx} = \log \parens[\big]{\frac{\Pr \parens{Y = +1 \,\vert\, \bx}}{\Pr \parens{Y = -1 \,\vert\, \bx}}}$ \\
+				\midrule
+				SVM Hinge Loss & $\bracks{1 - y f \parens{\bx}}_+$ & $f \parens{\bx} = \mathrm{sign} \bracks{\Pr \parens{Y = +1 \,\vert\, \bx} - \frac{1}{2}}$ \\ 
+				\midrule 
+				Squared Error & $\parens{y - f(x)}^2 = \parens{1 - yf(x)}^2$ & $f(x) = 2 \Pr \parens{Y = +1 \,\vert\, \bx} - 1$\\
+				\midrule
+				``Huberized'' Square & $-4yf \parens{\bx}, \text{ if } yf \parens{\bx} < -1$ & $f \parens{\bx} = 2 \Pr \parens{Y = +1 \,\vert\, \bx} - 1$ \\ 
+				Hinge Loss & $\bracks{1-yf \parens{\bx}}_+^2, \text{ otherwise} $ &  \\
+				\bottomrule
+			\end{tabular}
+		\caption{Different loss functions used for the binary classification problem. }
+		\label{table-1}
+		\end{center}
+	\end{table}
+	
+	
+	\begin{enumerate}
+		\item The \textit{negative log-likelihood loss} has similar tails as the hinge loss, giving zero penalty to points well inside the margin and a linear penalty to points on the wrong side and far away; 
+		\item Squared-error loss give quadratic penalty to points both well inside their margin and outside; 
+		\item The squared hinge loss $\bracks{1 - yf \parens{\bx}}_+^2$ is like the squared-error loss, except it is zero for points inside the margin; 
+		\item The ``Huberized'' squared hinge loss is a squared version of hinge loss but converts smoothly to a linear loss at $yf = -1$. 
+	\end{enumerate}
+	
+	\item \textbf{Margin Maximizing Loss-function:} All the loss functions listed in Table \ref{table-1} except the squared-error loss are so-called \textit{margin maximizing loss-function}, meaning that if the data are separable, then the limit of $\widehat{\bbeta}_{\lambda}$ in \eqref{hingeloss} as $\lambda \to 0$ defines the optimal separating hyperplane. 
+	
+	\item \textbf{Function Estimation and Reproducing Kernels:} Suppose that the basis $\bh$ arises from the eigen-expansion of a positive definite kernel $K$, 
+	\begin{equation*}
+		K \parens{\bx, \bx'} = \sum_{m=1}^\infty \delta_m \phi_m \parens{\bx} \phi_m \parens{\bx'}, 
+	\end{equation*}
+	and 
+	\begin{equation*}
+		h_m \parens{\bx} = \sqrt{\delta_m} \phi_m \parens{\bx}. 
+	\end{equation*}
+	Then, letting $\theta_m = \sqrt{\delta_m} \beta_m$, we can re-write \eqref{hingeloss} as 
+	\begin{equation*}
+		\minimize_{\beta_0, \btheta} \sum_{i=1}^n \bracks[\Bigg]{1 - y_i \parens[\bigg]{\beta_0 + \sum_{m=1}^\infty \theta_m \phi_m \parens{\bx_i}} }_+ + \frac{\lambda}{2} \sum_{m=1}^\infty \frac{\theta_m^2}{\delta_m}, 
+	\end{equation*}
+	where $\btheta := \parens{\theta_1, \theta_2, \cdots}^{\top}$. 
+	
+	By the theory of reproducing kernel Hilbert spaces, the solution is of \emph{finite dimensions} and takes on the following form 
+	\begin{equation*}
+		f \parens{\bx} = \beta_0 + \sum_{i=1}^n \alpha_i K \parens{\bx, \bx_i}. 
+	\end{equation*}
+	In this sense, we can rewrite the optimization problem \eqref{hingeloss} as 
+	\begin{equation*}
+		\minimize_{\beta_0, \balpha} \  \sum_{i=1}^n \bracks{1 - y_i f \parens{\bx_i}}_+ + \frac{\lambda}{2} \balpha^\top \bK \balpha, 
+	\end{equation*}
+	where $\balpha := \parens{\alpha_1, \cdots, \alpha_n}^\top \in \Real^n$ and $\bK$ is the $n \times n$ matrix of kernel evaluations for all pairs of training features. 
+	
+	\item \textbf{Relationship Between Loss Function and Function Space:} Consider the optimization problem 
+	\begin{equation*}
+		\minimize_{f \in \hil} \ \sum_{i=1}^n \bracks{1 - y_i f \parens{\bx_i}}_+ + \lambda J \parens{f}, 
+	\end{equation*}
+	where $\hil$ is the structured space of functions and $J$ is an appropriate regularizer on $\calH$. With a specified $\calH$ and an appropriate $J$, we can characterize the solution. 
+	
+	\textit{Example:} Let $\hil$ be the space of additive functions $f \parens{\bx} = \sum_{j=1}^p f_j \parens{x_j}$ and $J \parens{f} = \sum_{j=1}^p \int \braces{f''_j \parens{x_j}}^2 \diff x_j$. The solution is an additive cubic spline with the kernel $K \parens{\bx, \bx'} = \sum_{j=1}^p K_j \parens{x_j, x_j'}$, where each $K_j$ is the kernel appropriate for the univariate smoothing spline in $x_j$, for all $j = 1, 2, \cdots, p$. 
+	
+	Conversely, any kernel functions can be used with any convex loss function and will lead to a finite-dimensional representation of solution. 
+	
+	\textit{Example:} Suppose we use the binomial log-likelihood as the loss function, and the fitted function is of the form 
+	\begin{align*}
+		\hat{f} \parens{\bx} = \log \parens[\Bigg]{\frac{\widehat{\Pr} \parens{Y = +1 \,\vert\, \bx}}{\widehat{\Pr} \parens{Y = -1 \,\vert\, \bx}}} = \hat{\beta}_0 + \sum_{i=1}^n \hat{\alpha}_i K \parens{\bx, \bx_i}, 
+	\end{align*}
+	and therefore, 
+	\begin{equation*}
+		\widehat{\Pr} \parens{Y = +1 \,\vert\, \bx} = \frac{1}{1 + \exp \parens[\big]{ - \hat{\beta}_0 - \sum_{i=1}^n \hat{\alpha}_i K \parens{\bx, \bx_i}}}. 
+	\end{equation*}
+		
+	\item \textbf{A Path Algorithm for the SVM Classifier:} Consider the problem \eqref{hingeloss} and the solution for $\bbeta$ at a given value of $\lambda$ is 
+	\begin{align*}
+		\bbeta_{\lambda} = \frac{1}{\lambda} \sum_{i=1}^n \alpha_i y_i \bx_i. 
+	\end{align*}
+	The following is the path algorithm. 
+	\begin{enumerate}
+		\item Initially, set $\lambda$ large, and the margin $\frac{1}{\norm{\bbeta_{\lambda}}_2}$ is wide. All points are inside the margin with $\alpha_i = C$; 
+		\item Decrease $\lambda$, and correspondingly, $\frac{1}{\norm{\bbeta_{\lambda}}_2}$ also decreases, and the margin becomes narrower. Consequently, some points move from inside of the margin to outside of the margin, and their $\alpha_i \parens{\lambda}$ values will change from $C$ to 0. 
+	\end{enumerate}
+	
+	As $\lambda$ decreases, all that changes are $\alpha_i \in \bracks{0, C}$ of those of points on the margin. Since all these points have $y_i f \parens{\bx_i} = 1$, this results in a small set of linear equations that prescribe how $\alpha_i \parens{\lambda}$ and, hence, $\bbeta_{\lambda}$ changes during these transitions. 
+
+\end{enumerate}
+
+
+\section*{IV. Multi-class Support Vector Machines}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} We consider the multi-class support vector machines, and let $y_i \in \sets{1, 2, \cdots, W}$, for all $i = 1, \cdots, n$. 
+	
+	\item \textbf{Multi-class SVM as a Series of Binary Problems:} 
+	\begin{enumerate}
+		\item \textit{One-versus-rest:} Divide the $W$-class problem into $W$ binary classification subproblems of the type ``$w$-th class'' vs. ``not $w$-th class'', for all $w = 1, 2, \cdots, W$. 
+		
+		A new observation $\bx_0$ is then assigned to the class with the largest value of $\hat{f}_w \parens{\bx_0}$, for all $w = 1, 2, \cdots, W$, where $\hat{f}_w$ is the optimal SVM solution for the binary problem of the $w$-th class versus the rest; 
+		
+		\item \textit{One-versus-one:} Divide the $W$-class problem into ${W \choose 2}$ comparisons of all 2 pairs of classes. A classifier $\hat{f}_w$ is constructed by coding the $w$-th class as positive and the $u$-th class as negative, for all $w, u = 1, 2, \cdots, W$, $w \neq u$. Then, for a new $\bx_0$, aggregate the votes for each class and assign $\bx_0$ to the class having the most votes. 
+	\end{enumerate}
+	
+	\item \textbf{A True Multi-class SVM:} This part is based on \textcite{Lee2012-lw} and \textit{Section 11.4, Multiclass Support Vector Machines} in \textcite{Izenman2009-jk}. 
+
+	\begin{enumerate}
+	
+		\item \textit{Main Idea:} We need to consider all $W$ classes \emph{simultaneously}, and the classifier has to reduce to the binary SVM classifier if $W = 2$. 
+		
+		\item \textit{Relabeling:} Let $\bv_1, \cdots, \bv_W$ be a sequence of $W$-vectors, where $\bv_w$ has the entry 1 in the $w$-th position and whose elements sum to zero, $w = 1, 2, \cdots, W$, i.e., 
+		\begin{align*}
+			\bv_1 = & \, \parens[\bigg]{1, -\frac{1}{W-1}, -\frac{1}{W-1}, \cdots, -\frac{1}{W-1}}, \\ 
+			\bv_2 = & \, \parens[\bigg]{-\frac{1}{W-1}, 1, -\frac{1}{W-1}, \cdots, -\frac{1}{W-1}}, \\ 
+			\vdots & \, \\ 
+			\bv_W = & \, \parens[\bigg]{-\frac{1}{W-1}, -\frac{1}{W-1}, -\frac{1}{W-1}, \cdots, 1}. 
+		\end{align*}
+		We let $\bx_i$ has the label $\by_i = \bv_w$ if $\bx_i$ belongs to Class $w$, for all $i = 1, \cdots, n$ and all $w = 1, \cdots, W$. 
+		
+		\item \textit{Separating Hyperplane:} We generalize the separating function $f$ to a $W$-vector of separating functions, i.e., 
+		\begin{align*}
+			\boldf \parens{\bx} = \parens{f_1 \parens{\bx}, f_2 \parens{\bx}, \cdots, f_W \parens{\bx}}^\top \in \Real^W, 
+		\end{align*}
+		where 
+		\begin{align*}
+			f_w \parens{\bx} = \beta_{w,0} + h_w \parens{\bx}, \qquad \text{ for all } w = 1, 2, \cdots, W, 
+		\end{align*}
+		and $h_w$ belongs to a reproducing kernel Hilbert space (RKHS) $\calH$. 
+		
+		In order to ensure the uniqueness of the solution, we require 
+		\begin{align}\label{eq-side-constraint}
+			\sum_{w=1}^W f_w \parens{\bx} = 0. 
+		\end{align}
+		
+		\item \textit{Optimization Problem Formulation:} We find the function 
+		\begin{align*}
+			\boldf \parens{\bx} := \parens{f_1 \parens{\bx}, f_2 \parens{\bx}, \cdots, f_W \parens{\bx}}^\top \in \Real^W
+		\end{align*}
+		that minimizes 
+		\begin{align}\label{eq-multiclass-svm-opt}
+			L_{\lambda} \parens{\boldf} := \frac{1}{n} \sum_{i=1}^n \bracks{\bL \parens{\by_i}}^\top \parens{\boldf \parens{\bx_i} - \by_i}_+ + \frac{\lambda}{2} \sum_{w=1}^W \norm{h_w}_{\calH}^2, 
+		\end{align}
+		where $\norm{}_{\calH}$ denotes the RKHS norm, 
+		\begin{align*}
+			\bracks{ f \parens{\bx_i} - \by_i }_+ = \parens[\big]{ \bracks{f_1 \parens{\bx_i} - y_{i, 1}}_+, \cdots, \bracks{f_G \parens{\bx_i} - y_{i, G}}_+}^\top, 
+		\end{align*}
+		and 
+		$\bL \parens{\by_i}$ is a $W$-vector with 0 in the $w$-th component if $\bx_i$ belongs to the $w$-th class, and 1 in all other components. In particular, the vector $\bL \parens{\by_i}$ represents no cost if it is correctly classified and has a cost of 1 if it is misclassified. 
+		
+		\textit{Remark.} We can also use an unequal misclassification cost structure if appropriate. 
+		
+		\item \textit{Example:} Let $W=2$. Then, we have $\bv_1 = \parens{1, -1}^\top$ and $\bv_2 = \parens{-1, 1}^\top$. If $\bx_i$ belongs to Class 1, then 
+		\begin{align*}
+			\bracks{\bL \parens{\by_i}}^\top \parens{\boldf \parens{\bx_i} - \by_i}_+ = & \, \begin{pmatrix}
+				0 \\ 1
+			\end{pmatrix}^\top \begin{pmatrix}
+				\bracks{f_1 \parens{\bx_i} - 1}_+ \\ 
+				\bracks{f_2 \parens{\bx_i} - \parens{-1}}_+ 
+			\end{pmatrix} \\ 
+			= & \, \bracks{f_2 \parens{\bx_i} - \parens{-1}}_+ \\ 
+			= & \, \bracks{1 - f_1 \parens{\bx_i}}_+. 
+		\end{align*}
+		Similarly, if $\bx_i$ belongs to Class 2, then 
+		\begin{align*}
+			\bracks{\bL \parens{\by_i}}^\top \parens{\boldf \parens{\bx_i} - \by_i}_+ = & \, \begin{pmatrix}
+				1 \\ 0
+			\end{pmatrix}^\top \begin{pmatrix}
+				\bracks{f_1 \parens{\bx_i} - \parens{-1}}_+ \\ 
+				\bracks{f_2 \parens{\bx_i} - 1}_+ 
+			\end{pmatrix} \\ 
+			= & \, \bracks{f_1 \parens{\bx_i} - \parens{-1}}_+ \\ 
+			= & \, \bracks{f_1 \parens{\bx_i} + 1}_+. 
+		\end{align*}
+		
+		\item \textit{Characterization of the Solution to \eqref{eq-multiclass-svm-opt}:} We now characterize the solution to \eqref{eq-multiclass-svm-opt}. Since $h_w \in \calH$, we can write it as 
+		\begin{align*}
+			h_w = \sum_{\ell=1}^n \beta_{w, \ell} K \parens{\bx_{\ell}, \,\cdot\,} + h_w^{\perp}, 
+		\end{align*}
+		where $\sets{\beta_{w, \ell}}$ are constants and $h_w^{\perp}$ is an element in $\calH$ that is orthogonal to the linear span of $\sets{K \parens{\bx_1, \,\cdot\,}, K \parens{\bx_2, \,\cdot\,}, \cdots, K \parens{\bx_n, \,\cdot\,}}$. 
+		
+		Due to \eqref{eq-side-constraint}, we must have 
+		\begin{align*}
+			f_W = - \sum_{w=1}^{W-1} \beta_{w,0} - \sum_{w=1}^{W-1} \sum_{\ell=1}^n \beta_{w, \ell} K \parens{\bx_i, \,\cdot\,} + \sum_{w=1}^{W-1} h_w^{\perp}. 
+		\end{align*}
+		In addition, by the reproducing property of $K$, we have 
+		\begin{align*}
+			\innerp{h_w}{ K \parens{\bx_i, \,\cdot\,}}_{\calH} = h_w \parens{\bx_i}, \qquad \text{ for all } i = 1, 2, \cdots, n, 
+		\end{align*}
+		and, hence, 
+		\begin{align*}
+			f_w \parens{\bx_i} = & \, \beta_{w, 0} + h_w \parens{\bx_i} \\ 
+			= & \, \beta_{w, 0} + \innerp{h_w}{K \parens{\bx_i, \,\cdot\,}}_{\calH} \\ 
+			= & \, \beta_{w, 0} + \innerp[\bigg]{\sum_{\ell=1}^n \beta_{w, \ell} K \parens{\bx_{\ell}, \,\cdot\,} + h_w^{\perp}}{K \parens{\bx_i, \,\cdot\,}}_{\calH} \\ 
+			= & \, \beta_{w, 0} + \sum_{\ell=1}^n \bracks[\bigg]{\beta_{w, \ell} \innerp{ K \parens{\bx_{\ell}, \,\cdot\,}}{K \parens{\bx_i, \,\cdot\,}}_{\calH} + \innerp{h_w^{\perp}}{K \parens{\bx_i, \,\cdot\,}}_{\calH} } \\ 
+			= & \, \beta_{w, 0} + \sum_{\ell=1}^n \beta_{w, \ell} \innerp{ K \parens{\bx_{\ell}, \,\cdot\,}}{K \parens{\bx_i, \,\cdot\,}}_{\calH} \\ 
+			= & \, \beta_{w, 0} + \sum_{\ell=1}^n \beta_{w, \ell} K \parens{\bx_{\ell}, \bx_i}. 
+		\end{align*}
+		Thus, for all $w = 1, 2, \cdots, W-1$, we have 
+		\begin{align*}
+			\norm{h_w}_{\calH}^2 = & \, \norm[\Bigg]{\sum_{\ell=1}^n \beta_{w, \ell} K \parens{\bx_{\ell}, \,\cdot\,} + h_w^{\perp}}_{\calH}^2 \\ 
+			= & \, \sum_{\ell=1}^n \sum_{\ell'=1}^n \beta_{w, \ell} \beta_{w, \ell'} K \parens{\bx_{\ell}, \bx_{\ell'}} + \norm{h_w^{\perp}}_{\calH}^2, 
+		\end{align*}
+		and for $w = W$, we have 
+		\begin{align*}
+			\norm{h_W}_{\calH}^2 = \norm[\Bigg]{\sum_{w=1}^{W-1} \sum_{\ell=1}^n \beta_{W, \ell} K \parens{\bx_{\ell}, \,\cdot\,} }_{\calH}^2 + \norm[\Bigg]{\sum_{w=1}^{W-1} h_w^{\perp}}_{\calH}^2. 
+		\end{align*}
+		Therefore, in order to minimize \eqref{eq-multiclass-svm-opt}, we must set $h_w^{\perp} = 0$ and 
+		\begin{align*}
+			f_w = \beta_{w, 0} + \sum_{\ell=1}^n \beta_{w,\ell} K \parens{\bx_i, \,\cdot\,}, 
+		\end{align*}
+		for all $w = 1, \cdots, W$. 
+		
+		\item \textit{Notation:} We adopt the following notation 
+		\begin{enumerate}
+			\item $\bbeta_{w} := \parens{\beta_{w, 1}, \beta_{w, 2}, \cdots, \beta_{w, n}}^\top \in \Real^n$, 
+			\item $\bZ = \parens{\bzeta_1, \bzeta_2, \cdots, \bzeta_n}^\top = \parens{\bzeta_{\bullet, 1}, \bzeta_{\bullet, 2}, \cdots, \bzeta_{\bullet, W}} \in \Real^{n \times W}$, where 
+			\begin{align*}
+				\bzeta_i = \parens{\zeta_{i,1}, \zeta_{i,2}, \cdots, \zeta_{i,W}}^\top \in \Real^W
+			\end{align*}
+			is the $i$-th row of $\bZ$, $\zeta_{i, w} = \bracks{f \parens{\bx_i} - y_{i, w}}_+$ and $y_{i, w}$ is the $w$-th component of the $W$-vector $\by_i$, and $\bzeta_{\bullet, w}$ is the $w$-th column of $\bZ$, for all $i = 1, \cdots, n$ and $w = 1, \cdots, W$,  
+			\item $\bL = \parens{\bL_1, \bL_2, \cdots, \bL_{W}} = \parens{\bL \parens{\by_1}, \bL \parens{\by_2}, \cdots, \bL \parens{\by_n}}^\top \in \Real^{n \times W}$, where $\bL_w \in \Real^n$ denotes the $w$-th column of $\bL$ and $\bL \parens{\by_i} \in \Real^W$ is the $i$-th row of $\bL$, for all $i = 1, \cdots, n$ and all $w = 1, \cdots, W$, 
+			\item $\parens{\by_{1}, \by_2, \cdots, \by_n}^\top = \parens{\by_{\bullet, 1}, \by_{\bullet, 2}, \cdots, \by_{\bullet, W}} \in \Real^{n \times W}$ be the matrix whose $i$-th row is $\by_i$ and $w$-th column is $\by_{\bullet, w}$, for all $i = 1, \cdots, n$ and $w = 1, \cdots, W$, and 
+			\item $\bK = \bracks{K \parens{\bx_i, \bx_j}} \in \Real^{n \times n}$ is the Gram matrix. 
+		\end{enumerate}
+		\item \textit{Equivalent Condition to \eqref{eq-side-constraint}:} First note that \eqref{eq-side-constraint} can be written as 
+		\begin{align*}
+			\bar{\beta}_0 + \sum_{i=1}^n \bar{\beta}_{i} K \parens{\bx_{i}, \,\cdot\,} = 0, 
+		\end{align*}
+		where $\bar{\beta}_0 = \frac{1}{W} \sum_{w=1}^W \beta_{w,0}$ and $\bar{\beta}_{\ell} = \frac{1}{W} \sum_{w=1}^W \beta_{w,\ell}$. 
+		
+		At the $n$ data points, \eqref{eq-side-constraint} becomes 
+		\begin{align*}
+			\parens[\Bigg]{\sum_{w=1}^W \beta_{w,0} } \boldone_n + \bK \parens[\Bigg]{\sum_{w=1}^W \bbeta_w} = \boldzero_n. 
+		\end{align*}
+		If we let 
+		\begin{align*}
+			\beta_{w,0}^* = \beta_{w,0} - \bar{\beta}_0, \qquad \text{ and } \qquad \beta_{w,\ell}^* = \beta_{w,\ell} - \bar{\beta}_{\ell}, 
+		\end{align*}
+		then, we have 
+		\begin{align*}
+			f^*_{w} \parens{\bx_i} := & \, \beta_{w,0}^* + \sum_{\ell=1}^n \beta_{w,\ell}^* K \parens{\bx_{\ell}, \bx_{i}} \\ 
+			= & \, \parens{\beta_{w,0} - \bar{\beta}_0} + \sum_{\ell=1}^n \parens{\beta_{w,\ell} - \bar{\beta}_{\ell}} K \parens{\bx_{\ell}, \bx_{i}} \\ 
+			= & \, \beta_{w,0} + \sum_{\ell=1}^n \beta_{w,\ell} K \parens{\bx_{\ell}, \bx_{i}} - \parens[\bigg]{\bar{\beta}_0 + \sum_{\ell=1}^n \bar{\beta}_{\ell} K \parens{\bx_{\ell}, \bx_{i}}} \\ 
+			= & \, f_{w} \parens{\bx_i}. 
+		\end{align*}
+		In addition, if we let $h^*_w = \sum_{\ell=1}^n \beta_{w,\ell}^* K \parens{\bx_i, \,\cdot\,} = \sum_{\ell=1}^n \parens{\beta_{w,\ell} - \bar{\beta}_{\ell}} K \parens{\bx_i, \,\cdot\,}$, we have 
+		\begin{align*}
+			\sum_{w=1}^W \norm{h^*_w}_{\calH}^2 = \sum_{w=1}^W \bbeta_w^\top \bK \bbeta_w - W \bar{\bbeta}^\top \bK \bar{\bbeta} \le \sum_{w=1}^W \bbeta_w^\top \bK \bbeta_w = \sum_{w=1}^W \norm{h_w}_{\calH}^2, 
+		\end{align*}
+		where $\bar{\bbeta} := \parens{\bar{\beta}_1, \bar{\beta}_2, \cdots, \bar{\beta}_n}^\top \in \Real^n$. If $\bK \bar{\bbeta} = \boldzero_n$, we must have 
+		\begin{align*}
+			\sum_{w=1}^W \norm{h^*_w}_{\calH}^2 = \sum_{w=1}^W \bbeta_w^\top \bK \bbeta_w - W \bar{\bbeta}^\top \bK \bar{\bbeta} = \sum_{w=1}^W \bbeta_w^\top \bK \bbeta_w = \sum_{w=1}^W \norm{h_w}_{\calH}^2, 
+		\end{align*}
+		and $\sum_{w=1}^W \beta_{w, 0} = 0$. Therefore, 
+		\begin{align*}
+			0 = W^2 \bar{\bbeta}^\top \bK \bar{\bbeta} = \norm[\Bigg]{\sum_{\ell=1}^n \parens[\bigg]{\sum_{w=1}^W \beta_{w, \ell}} K \parens{\bx_{\ell}, \,\cdot\,}}_{\calH}^2 = \norm[\Bigg]{\sum_{w=1}^W \sum_{\ell=1}^n \beta_{w, \ell} K \parens{\bx_{\ell}, \,\cdot\,}}_{\calH}^2, 
+		\end{align*}
+		and, hence, 
+		\begin{align*}
+			\sum_{w=1}^W \sum_{\ell=1}^n \beta_{w, \ell} K \parens{\bx_{\ell}, \bx} = 0, \qquad \text{ for all } \bx, 
+		\end{align*}
+		and 
+		\begin{align*}
+			\sum_{w=1}^W \parens[\bigg]{\beta_{w, 0} + \sum_{\ell=1}^n \beta_{w, \ell} K \parens{\bx_{\ell}, \bx}} = 0, \qquad \text{ for all } \bx. 
+		\end{align*}
+		As a conclusion, minimizing \eqref{eq-multiclass-svm-opt} under the constraint \eqref{eq-side-constraint} \emph{only} at the $n$ data points is equivalent to minimizing it under \eqref{eq-side-constraint} for every $\bx$. 
+		
+		\item \textit{Primal Optimization Problem:} The primal problem is 
+		\begin{equation}
+			\begin{aligned}
+				\minimize \hspace{10pt} & \frac{1}{n} \sum_{w=1}^W \bL_w^\top \bzeta_{\bullet, w} + \frac{\lambda}{2} \sum_{w=1}^W \bbeta_{w}^\top \bK \bbeta_{w} \\ 
+				\text{subject to } \  & \, \beta_{w,0} \boldone_{n} + \bK \bbeta_{w} - \by_{\bullet, w} \le \bzeta_{\bullet, w}, \text{ for all } w = 1, 2, \cdots, W, \\
+				& \, \bzeta_{\bullet, w} \ge \boldzero_{n}, \text{ for all } w = 1, \cdots, W, \\ 
+				& \, \parens[\bigg]{\sum_{w=1}^W \beta_{w,0} } \boldone_n + \bK \parens[\bigg]{\sum_{w=1}^W \bbeta_w} = \boldzero_n. 
+			\end{aligned}
+		\end{equation}
+		The corresponding primal Lagrangian function is 
+		\begin{align*}
+			& \, L_P \parens{\sets{\beta_{w,0}, \bbeta_{w}, \bzeta_{\bullet w}, \balpha_w, \bgamma_w}_{w=1}^W, \bdelta} \\ 
+			& \qquad \qquad = \frac{1}{n} \sum_{w=1}^W \bL_w^\top \bzeta_{\bullet, w} + \frac{\lambda}{2} \sum_{w=1}^W \bbeta_{w}^\top \bK \bbeta_{w} \\ 
+			& \qquad \qquad \qquad + \sum_{w=1}^W \balpha_{w}^\top \parens[\big]{\beta_{w,0} \boldone_{n} + \bK \bbeta_{w} - \by_{\bullet, w} - \bzeta_{\bullet, w}} - \sum_{w=1}^W \bgamma_w^\top \bzeta_{\bullet,w} \\ 
+			& \qquad \qquad \qquad \qquad + \bdelta^\top \parens[\Bigg]{\parens[\bigg]{\sum_{w=1}^W \beta_{w,0} } \boldone_n + \bK \parens[\bigg]{\sum_{w=1}^W \bbeta_w} }, 
+		\end{align*}
+		where $\balpha_w \in \Real^n$, $\bgamma_w \in \Real^n$ and $\bdelta \in \Real^{n}$ are the nonnegative Lagrangian multipliers. 
+		
+		\item \textit{KKT Conditions:} The complete set of the Karush-Kuhn-Tucker conditions are 
+		\begin{enumerate}
+			\item \underline{Stationarity:} for all $w = 1, \cdots, W$, 
+			\begin{align*}
+				\frac{\partial L_P}{\partial \beta_{w,0}} = & \, \parens{\balpha_w + \bdelta}^\top \boldone_n = \boldzero_n, \\ 
+				\frac{\partial L_P}{\partial \bbeta_{w}} = & \, \lambda \bK \bbeta_w + \bK \balpha_w + \bK \bdelta = \boldzero_n, \\ 
+				\frac{\partial L_P}{\partial \bzeta_{\bullet, w}} = & \, \frac{1}{n} \bL_w - \balpha_w - \bgamma_w = \boldzero_n; 
+			\end{align*}
+			\item \underline{Primal feasibility:} 
+			\begin{align*}
+				\beta_{w,0} \boldone_{n} + \bK \bbeta_{w} - \by_{\bullet, w} \le & \, \bzeta_{\bullet, w}, \text{ for all } w = 1, 2, \cdots, W, \\
+				\bzeta_{\bullet, w} \ge & \, \boldzero_{n}, \text{ for all } w = 1, \cdots, W, \\ 
+				\parens[\bigg]{\sum_{w=1}^W \beta_{w,0} } \boldone_n + \bK \parens[\bigg]{\sum_{w=1}^W \bbeta_w} = & \, \boldzero_n; 
+			\end{align*}
+			\item \underline{Dual feasibility:} 
+			\begin{align*}
+				\balpha_{w} \ge \boldzero_n, \qquad \text{ and } \qquad \gamma_w \ge \boldzero_n, \qquad \text{ for all } w = 1, \cdots, W; 
+			\end{align*}
+			\item \underline{Complementary slackness:} 
+			\begin{align*}
+				\balpha_{w}^\top \parens[\big]{\beta_{w,0} \boldone_{n} + \bK \bbeta_{w} - \by_{\bullet, w} - \bzeta_{\bullet, w}} = & \, 0, \qquad \text{ for all } w = 1, \cdots, W, \\ 
+				\bgamma_w^\top \bzeta_{\bullet,w} = & \, 0, \qquad \text{ for all } w = 1, \cdots, W. 
+			\end{align*}
+		\end{enumerate}
+		From the KKT conditions above, we have the following 
+		\begin{enumerate}
+			\item $\boldzero_n \le \balpha_{w} \le \frac{1}{n} \bL_{w}$, for all $w = 1, 2, \cdots, W$; 
+			\item $\bdelta = - \frac{1}{W} \sum_{w=1}^W \balpha_w =: -\bar{\balpha}$, and $\parens{\balpha_w - \bar{\balpha}}^\top \boldone_n = 0$; 
+			\item If $\bK$ is positive definite, $\bbeta_w = -\lambda^{-1} \parens{\balpha_w - \bar{\balpha}}$. If $\bK$ is \emph{not} positive definite, $\bbeta_w$ is \emph{not} uniquely determined. 
+		\end{enumerate}
+		
+		\item \textit{Dual Problem:} The dual problem is 
+		\begin{equation}
+			\begin{aligned}
+				\minimize & \ L_D \parens{\balpha_1, \cdots, \balpha_W} := \frac{1}{2\lambda} \sum_{w=1}^W \parens{\balpha_w - \bar{\balpha}}^\top \bK \parens{\balpha_w - \bar{\balpha}} + \sum_{w=1}^W \balpha_w^\top \by_{\bullet, w} \\ 
+				\text{subject to } & \, \boldzero_n \le \balpha_w \le \frac{1}{n} \bL_w \text{ for all } w = 1, 2, \cdots, W \\ 
+				& \, \parens{\balpha_w - \bar{\balpha}}^\top \boldone_n = 0 \text{ for all } w = 1, 2, \cdots, W. 
+			\end{aligned}
+		\end{equation}
+		
+		\item \textit{Solution to $\sets{\bbeta_w}_{w=1}^W$:} Let $\parens{\widehat{\balpha}_1, \widehat{\balpha}_2, \cdots, \widehat{\balpha}_W}$ be the minimizer of $L_D$. Then, we have 
+		\begin{align*}
+			\widehat{\bbeta}_w = - \frac{1}{\lambda} \parens{\widehat{\balpha}_w - \widehat{\bar{\balpha}}}, 
+		\end{align*}
+		where $\widehat{\bar{\balpha}} := \frac{1}{W} \sum_{w=1}^W \widehat{\balpha}_w$. 
+		
+		\item \textit{Classifying a New Observation:} The multi-class classification of a new observation $\bx_0$ is 
+		\begin{align*}
+			\argmax_{w = 1, 2, \cdots, W} \sets{\hat{f}_w \parens{\bx}}, 
+		\end{align*}
+		where 
+		\begin{align*}
+			\hat{f}_w = \hat{\beta}_{w,0} + \sum_{\ell=1}^n \hat{\beta}_{w,\ell} K \parens{\bx_{\ell}, \,\cdot\,}, \qquad \text{ for all } w = 1, \cdots, W. 
+		\end{align*}
+		
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{V. Support Vector Machines for Regression}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Generalizing the Concept of ``Margin'':}
+	\begin{enumerate}
+		\item In SVM classification, the ``margin'' is used to determine the amount of separation between two non-overlapping classes of points: the bigger the margin, the more confident we are that the optimal separating hyperplane is a superior classifier;
+		\item A regression analogue for the margin would entail forming a ``band'' around the true regression function that contains \emph{most} of the points. Points \emph{not} contained within the tube would be described through slack variables. 
+	\end{enumerate}
+	
+	\item \textbf{$\varepsilon$-Insensitive Loss Function:} Let $\mu \parens{\bx} = \beta_0 + \bx^\top \bbeta$ be the true regression function. We consider a loss function that \emph{ignores} errors associated with points falling within a certain distance of $\mu$, denoted by $\varepsilon > 0$: for a point $\parens{\bx, y}$, 
+	\begin{enumerate}
+		\item if $\abs{y - \mu \parens{\bx}} \le \varepsilon$, then the loss is taken to be zero; 
+		\item if $\abs{y - \mu \parens{\bx}} > \varepsilon$, then the loss is $\abs{y - \mu \parens{\bx}} - \varepsilon$. 
+	\end{enumerate}
+	In particular, we consider the following \textit{linear $\varepsilon$-insensitive loss function}
+	\begin{align*}
+		V_{\varepsilon} \parens{y, \mu \parens{\bx}} := & \, \max \sets[\big]{0, \abs{y - \mu \parens{\bx}} - \varepsilon} \\ 
+		= & \, \begin{cases}
+			0, & \, \text{ if } \abs{y - \mu \parens{\bx}} < \varepsilon \\ 
+			\abs{y - \mu \parens{\bx}} - \varepsilon, & \, \text{ otherwise}
+		\end{cases}. 
+	\end{align*}
+	
+	\textit{Remark.} An alternative choice is the \textit{quadratic $\varepsilon$-insensitive loss function} defined as 
+	\begin{align*}
+		V_{\varepsilon} \parens{y, \mu \parens{\bx}} = & \, \max \sets[\big]{0, \parens{y - \mu \parens{\bx}}^2 - \varepsilon} \\ 
+		= & \, \begin{cases}
+			0, & \, \text{ if } \abs{y - \mu \parens{\bx}} < \varepsilon \\ 
+			\parens{y - \mu \parens{\bx}}^2 - \varepsilon, & \, \text{ otherwise}
+		\end{cases}. 
+	\end{align*}
+	
+	\item \textbf{Optimization Problem for SVM Regression:} 
+	\begin{enumerate}
+		\item \textit{Introducing the Slackness Variables:} Define the slack variables $\xi_i$ and $\xi_i'$ in the following way: 
+		\begin{enumerate}
+			\item If the point $\parens{\bx_i, y_i}$ lies above the $\varepsilon$-tube, then 
+			\begin{align*}
+				\xi_i' := y_i - \mu \parens{\bx_i} - \varepsilon \ge 0; 
+			\end{align*}
+			\item if the point $\parens{\bx_i, y_i}$ lies below the $\varepsilon$-tube, then 
+			\begin{align*}
+				\xi_i := \mu \parens{\bx_j} - y_i - \varepsilon \ge 0. 
+			\end{align*}
+		\end{enumerate}
+		
+		\item \textit{Problem Formulation:} The primal optimization problem is 
+		\begin{equation}\label{eq-svm-reg}
+			\begin{aligned}
+				\minimize_{\beta_0, \bbeta, \bxi, \bxi'} & \ \frac{1}{2} \norm{\bbeta}_2^2 + C \sum_{i=1}^n \parens{\xi_i + \xi_i'} \\ 
+				\text{subject to } & \, y_i - \parens{\beta_0 + \bx_i^\top \bbeta} \le \varepsilon + \xi_i', \\ 
+				& \, \parens{\beta_0 + \bx_i^\top \bbeta} - y_i \le \varepsilon + \xi_i, \\ 
+				& \, \xi_i' \ge 0, \xi_i \ge 0, \qquad \text{ for all } i = 1, \cdots, n. 
+			\end{aligned}
+		\end{equation}
+		The hyper-parameter $C > 0$ is used to balance the flatness of the function $\mu$ against our tolerance of deviations larger than $\varepsilon$.  
+		
+		\item \textit{Primal Lagrangian Function:} Let $\bxi := \parens{\xi_1, \xi_2, \cdots, \xi_n}^\top$ and $\bxi' := \parens{\xi_1', \xi_2', \cdots, \xi_n'}^\top$. The primal Lagrangian function is 
+		\begin{align*}
+			L_P \parens{\beta_0, \bbeta, \bxi, \bxi'} := & \, \frac{1}{2} \norm{\bbeta}_2^2 + C \sum_{i=1}^n \parens{\xi_i + \xi_i'} - \sum_{i=1}^n \alpha_i \parens{ y_i - \parens{\beta_0 + \bx_i^\top \bbeta} - \varepsilon - \xi_i'} \\ 
+				& \qquad - \sum_{i=1}^n \gamma_i \parens{\beta_0 + \bx_i^\top \bbeta - y_i - \varepsilon - \xi_i} \\ 
+				& \qquad \qquad - \sum_{i=1}^n \nu_i \xi_i' - \sum_{i=1}^n \zeta_i \xi_i, 
+		\end{align*}
+		where $\sets{\alpha_i}_{i=1}^n$, $\sets{\gamma_i}_{i=1}^n$, $\sets{\nu_i}_{i=1}^n$ and $\sets{\zeta_i}_{i=1}^n$ are Lagrangian multipliers and are all nonnegative. 
+		
+		Differentiating $L_P$ with respect to $\beta_0$, $\bbeta$, $\xi_i$ and $\xi_i'$ and setting the results to 0 yield 
+		\begin{align}
+			\frac{\partial L_P}{\partial \beta_0} = & \, \sum_{i=1}^n \parens{\alpha_i - \gamma_i} = 0, \label{eq-svm-reg-kkt-1} \\ 
+			\frac{\partial L_P}{\partial \bbeta} = & \, \bbeta + \sum_{i=1}^n \parens{\alpha_i - \gamma_i} \bx_i = \boldzero_p, \\ 
+			\frac{\partial L_P}{\partial \xi_i'} = & \, C + \alpha_i - \nu_i = 0, \qquad \text{ for all } i = 1, 2, \cdots, n, \\
+			\frac{\partial L_P}{\partial \xi_i} = & \, C + \gamma_i - \zeta_i = 0, \qquad \text{ for all } i = 1, 2, \cdots, n. \label{eq-svm-reg-kkt-4}
+		\end{align}
+		
+		\item \textit{KKT Conditions:} The full set of KKT conditions for \eqref{eq-svm-reg} is the following: 
+		\begin{enumerate}
+			\item Stationarity: see \eqref{eq-svm-reg-kkt-1}	 - \eqref{eq-svm-reg-kkt-4}; 
+			
+			\item Primal feasibility: 
+			\begin{align*}
+				y_i - \parens{\beta_0 + \bx_i^\top \bbeta} \le & \, \varepsilon + \xi_i', \qquad \text{ for all } i = 1, 2, \cdots, n, \\ 
+				\parens{\beta_0 + \bx_i^\top \bbeta} - y_i \le & \,  \varepsilon + \xi_i, \qquad \text{ for all } i = 1, 2, \cdots, n, \\ 
+				\xi_i' \ge 0, \xi_i \ge & \, 0, \qquad \qquad \text{ for all } i = 1, \cdots, n; 
+			\end{align*}
+			
+			\item Dual feasibility: 
+			\begin{align*}
+				\alpha_i \ge 0, \quad \nu_i \ge 0, \quad \gamma_i \ge 0, \quad \zeta_i \ge 0, \qquad \text{ for all } i = 1, \cdots, n; 
+			\end{align*}
+			
+			\item Complementary Slackness: 
+			\begin{align*}
+				\alpha_i \parens{y_i - \parens{\beta_0 + \bx_i^\top \bbeta} - \varepsilon - \xi_i'} = & \, 0, \qquad \text{ for all } i = 1, 2, \cdots, n, \\ 
+				\gamma_i \parens{\parens{\beta_0 + \bx_i^\top \bbeta} - y_i - \varepsilon - \xi_i} = & \, 0, \qquad \text{ for all } i = 1, 2, \cdots, n, \\ 
+				\nu_i \xi_i' = & \, 0, \qquad \text{ for all } i = 1, \cdots, n, \\ 
+				\zeta_i \xi_i = & \, 0, \qquad \text{ for all } i = 1, \cdots, n. 
+			\end{align*}
+		
+		\end{enumerate}
+		
+		\item \textit{Dual Problem:} The corresponding dual problem is 
+		\begin{align}\label{eq-svm-reg-dual}
+			\maximize_{\balpha_i, \bgamma_i} \ L_D \parens{\balpha, \bgamma} 
+		\end{align}
+		where 
+		\begin{align*}
+			L_D \parens{\balpha, \bgamma} := \sum_{i=1}^n y_i \parens{\alpha_i - \gamma_i} - \varepsilon \sum_{i=1}^n \parens{\alpha_i + \gamma_i} - \frac{1}{2} \sum_{i, i'=1}^n \parens{\alpha_i - \gamma_i} \parens{\alpha_{i'} - \gamma_{i'}} \innerp{\bx_i}{\bx_{i'}}, 
+		\end{align*}
+		subject to the constraints
+		\begin{align*}
+			& \, 0 \le \alpha_i, \, \gamma_i \le C \text{ for all } i = 1, \cdots, n, \\ 
+			& \, \sum_{i=1}^n \parens{\alpha_i - \gamma_i} = 0, \\ 
+			& \, \alpha_i \gamma_i = 0 \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align*}
+		
+		\textit{Remark.} Since $\alpha_i \gamma_i = 0$ for all $i = 1, 2, \cdots, n$, we can never have a set of dual variables $\alpha_i, \gamma_i$ which are both simultaneously nonzero. 
+		
+		\item \textit{SVM Regression Function:} If we let $\parens{\widehat{\balpha}^\top, \widehat{\bgamma}^\top}^\top$ be the maximizer of $L_D$ in \eqref{eq-svm-reg-dual}, the coefficient vector in the SVM regression function is 
+		\begin{align*}
+			\widehat{\bbeta} = & \, \sum_{i=1}^n \parens{\hat{\gamma}_i - \hat{\alpha}_i} \bx_i, 
+		\end{align*}
+		$\hat{\beta}_0$ can be obtained using the complementary slackness conditions above, and the resulting regression function is 
+		\begin{align*} 
+			\hat{f} \parens{\bx} = & \, \sum_{i=1}^n \parens{\hat{\gamma}_i - \hat{\alpha}_i} \innerp{\bx_i}{\bx} + \hat{\beta}_0, 
+		\end{align*}
+		Typically, in $\widehat{\bbeta}$, there is only a subset of the solution values $\parens{\hat{\gamma}_i^* - \hat{\alpha}_i}$ are nonzero, and the associated data values are called the \textit{support vectors}. 
+	\end{enumerate}
+	
+%	\item \textbf{Main Idea:} We adapt the SVM for regression with a quantitative response. Consider minimizing 
+%	\begin{align}
+%		H \parens{\bbeta, \beta_0} = \sum_{i=1}^n V_{\varepsilon} \parens{y_i - \beta_0 - \bbeta^\top \bx_i} + \frac{\lambda}{2} \norm{\bbeta}_2^2, 
+%	\end{align}
+%	where 
+%	\begin{align}
+%		V_{\varepsilon} \parens{r} = \begin{cases}
+%			0, & \, \text{ if } \abs{r} < \varepsilon \\ 
+%			\abs{r} - \varepsilon, & \, \text{otherwise}
+%		\end{cases}. 
+%	\end{align}
+%	This $V_{\varepsilon}$ is an ``$\varepsilon$-insensitive'' measure, ignoring errors of size less than $\varepsilon$. 
+
+	\textit{Remark 1.} The solution depends on the input values only through the inner products $\innerp{\bx_i}{\bx_{i'}}$. Hence, we can generalize the methods to richer function spaces by defining an appropriate inner product. 
+	
+	\textit{Remark 2.} There are two parameters in support vector machine for regression, namely, $\varepsilon$ and $\lambda$. 
+	\begin{enumerate}
+		\item $\varepsilon$ is a parameter in the loss $V_{\varepsilon}$, and depends on the scales of $y$ and $r$. One suggestion is to scale the response and use preset values of $\varepsilon$. 
+		\item $\lambda$ can be chosen by cross validation. 
+	\end{enumerate}
+	
+	\item \textbf{Regression and Kernels:} Consider approximating the regression function in terms of a set of basis function $\sets{h_m}_{m=1}^M$, 
+	\begin{align*}
+		f \parens{\bx} = \sum_{m=1}^M \beta_m h_m \parens{\bx} + \beta_0. 
+	\end{align*} 
+	To estimate $\bbeta := \parens{\beta_1, \cdots, \beta_M}^\top$ and $\beta_0$, we minimize 
+	\begin{align*}
+		H \parens{f} := \sum_{i=1}^n V\parens{y_i - f \parens{\bx_i}} + \frac{\lambda}{2} \sum_{m=1}^M \beta_m^2 
+	\end{align*}
+	for some general error measure $V$. For any choice of $V$, the solution $\hat{f} := \argmin_f H \parens{f}$ has the form 
+	\begin{align*}
+		\hat{f} \parens{\bx} = \sum_{i=1}^n \hat{\alpha}_i K \parens{\bx, \bx_i}, 
+	\end{align*}
+	where $K \parens{\bx, \by} = \sum_{m=1}^M h_m \parens{\bx} h_m \parens{\by}$. 
+	
+	\item \textbf{Example:} Let $V(r) = r^2$ and assume $\beta_0 = 0$. Estimate $\bbeta$ by the penalized least squares criterion 
+	\begin{align*}
+		H \parens{\bbeta} = \parens{\bY - \bH \bbeta}^{\top} \parens{\bY - \bH \bbeta} + \lambda \norm{\bbeta}_2^2. 
+	\end{align*}
+	The solution $\widehat{\bbeta}$ satisfies the equation 
+	\begin{align*}
+		-\bH^\top \parens{\bY - \bH \widehat{\bbeta}} + \lambda \widehat{\bbeta} = \boldzero_{M}
+	\end{align*}
+	and the fitted values are 
+	\begin{align*}
+		\hat{\bY} = \bH \widehat{\bbeta}. 
+	\end{align*}
+	Note that 
+	\begin{align*}
+		\bH \widehat{\bbeta} = \parens{\bH \bH^\top + \lambda \bI}^{-1} \bH \bH^\top \bY, 
+	\end{align*}
+	and the matrix $\bH \bH^\top \in \Real^{n \times n}$ consists of inner products between pairs of observations $i, i'$, i.e., 
+	\begin{align*}
+		\bracks{\bH \bH^\top}_{i, i'} = K \parens{\bx_{i}, \bx_{i'}}. 
+	\end{align*}
+	It follows that the predicted value at an arbitrary $\bx_0$ satisfy 
+	\begin{align*}
+		\hat{f} \parens{\bx_0} = \bh \parens{\bx_0}^\top \widehat{\bbeta} = \sum_{i=1}^n \hat{\alpha}_i K \parens{\bx_0, \bx_i}, 
+	\end{align*}
+	where $\widehat{\balpha} := \parens{\hat{\alpha}_1, \hat{\alpha}_2, \cdots, \hat{\alpha}_n}^\top = \parens{\bH \bH^\top + \lambda \bI}^{-1} \bY$. 
+	
+	\textit{Remark.} Similar to the support vector machine for classification, we don't need to specify or evaluate the large set of functions $h_1 \parens{\bx_i}, \cdots, h_M \parens{\bx_i}$ for all $i = 1, \cdots, n$. We \emph{only} need to evaluate the inner product kernel $K \parens{\bx, \bx_{i'}}$ at $n$ training data points. 
+
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

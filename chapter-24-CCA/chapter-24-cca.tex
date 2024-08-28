@@ -1,0 +1,611 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+\usepackage[red]{zhoucx-notation}
+
+% \usepackage{subcaption}
+\usepackage{lipsum}
+
+\geometry{letterpaper, top = 1in, bottom = 1in, left = 1in, right = 1in}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 24, Canonical Correlation Analysis}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{\text{#4}} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\thispagestyle{plain}
+\titlebox{Notes on Statistical and Machine Learning}{}{Canonical Correlation Analysis}{24}
+
+\vspace{10pt} 
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 7, Linear Dimensionality Reduction} in \textcite{Izenman2009-jk}, 
+	\item \textit{Chapter 15, Latent Variable Models for Blind Source Separation} in \textcite{Izenman2009-jk}, and 
+	\item \textit{Chapter 8, Sparse Multivariate Methods} in \textcite{Hastie2015-rm}. 
+\end{itemize}
+
+
+\section*{I. Canonical Variates and Canonical Correlations}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Introduction:} \textit{Canonical correlation analysis} (CCA) is a method for studying linear relationships between two vector variates, $X = \parens{X_1, \cdots, X_p}^\top$ and $Y = \parens{Y_1, \cdots, Y_s}^\top$. 
+	
+	\item \textbf{Basic Setup:} Let 
+	\begin{align*}
+		\begin{pmatrix}
+			X \\ Y
+		\end{pmatrix}
+	\end{align*}
+	be a collection of $p + s$ variables partitioned to two disjoint sub-collections. Furthermore, assume $X$ and $Y$ are jointly distributed with mean 
+	\begin{align*}
+		\E \bracks[\bigg]{\begin{pmatrix}
+			X \\ Y
+		\end{pmatrix}} = \begin{pmatrix}
+			\bmu_X \\ \bmu_Y
+		\end{pmatrix}
+	\end{align*}
+	and the covariance matrix 
+	\begin{align*}
+		\cov \bracks[\bigg]{\begin{pmatrix}
+			X \\ Y
+		\end{pmatrix}} = 
+		\E \bracks[\bigg]{\begin{pmatrix}
+			X - \bmu_X \\ Y - \bmu_Y
+		\end{pmatrix} \begin{pmatrix}
+			X - \mu_X \\ Y - \mu_Y
+		\end{pmatrix}^\top}
+		= \begin{pmatrix}
+			\bSigma_{XX} & \bSigma_{XY} \\ \bSigma_{YX} & \bSigma_{YY}
+		\end{pmatrix}. 
+	\end{align*}
+	We assume $\bSigma_{XX}$ and $\bSigma_{YY}$ are nonsingular. 
+	
+	\item \textbf{Main Idea of CCA:} CCA seeks to replace the two sets of correlated variables, $X$ and $Y$, by $t$ pairs of new variables 
+	\begin{align*}
+		\parens{\xi_j, \omega_j}, \qquad \text{ for } j = 1, \cdots, t, \, \text{ with } t \le \min \sets{p, s}.  
+	\end{align*}
+	Here, for all $j = 1, \cdots, t$, 
+	\begin{align*}
+		\xi_j := & \, \bg_j^\top X = g_{j,1} X_1 + g_{j,2} X_2 + \cdots + g_{j,p} X_p, \\
+		\omega_j := & \, \bh_j^\top Y = h_{j,1} Y_1 + h_{j,2} Y_2 + \cdots + h_{j,s} Y_s, 
+	\end{align*}
+	are linear projections of $X$ and $Y$, respectively. The $j$-th pair of coefficient vectors, $\bg_j := \parens{g_{j,1}, \cdots, g_{j,p}}^\top \in \Real^p$ and $\bh_j := \parens{h_{j,1}, \cdots, h_{j,s}}^\top \in \Real^s$ are chosen so that 
+	\begin{enumerate}
+		\item the pairs $\sets{\parens{\xi_j, \omega_j}}_{j=1}^t$ are ranked in importance through their correlations
+		\begin{align}\label{corr}
+			\rho_j := \cor \parens{\xi_j, \omega_j} = \frac{\cov \parens{\xi_j, \omega_j}}{\sqrt{\var \bracks{\xi_j}} \cdot \sqrt{\var \bracks{\omega_j}}} = \frac{\bg_j^\top \bSigma_{XY} \bh_j}{\sqrt{\bg_j^\top \bSigma_{XX} \bg_j} \cdot \sqrt{\bh_j^\top \bSigma_{YY} \bh_j}}, 
+		\end{align}
+		which are listed in the descending order of magnitude, i.e., $\rho_1 \ge \rho_2 \ge \cdots \ge \rho_t$; 
+		\item $\xi_j$ is uncorrelated with all previously derived $\xi_i$'s, that is, 
+		\begin{align}
+			\cov \parens{\xi_j, \xi_i} = g_j^\top \bSigma_{XX} g_i = 0, \qquad \text{ for all } i < j; 
+		\end{align}
+		\item $\omega_j$ is uncorrelated with all previously derived $\omega_i$'s, that is, 
+		\begin{align}
+			\cov \parens{\omega_j, \omega_i} = h_j^\top \bSigma_{YY} h_i = 0, \qquad \text{ for all } i < j. 
+		\end{align}
+	\end{enumerate}
+	The pairs $\sets{\parens{\xi_j, \omega_j}}_{j=1}^t$ are called the \textit{first $t$ pairs of canonical variates of $X$ and $Y$} and their correlations \eqref{corr} are called the \textit{$t$ largest canonical correlations}. 
+	
+	\textit{Remark.} If the correlation is regarded as the primary determinant of information in the system of variables, then CCA is a major tool for reducing the dimensionality of the original two sets of variables. 
+
+\end{enumerate}
+
+
+\section*{II. Least-Squares Optimality of CCA}
+
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup and Goal:} Let $\bG \in \Real^{t \times p}$ and $\bH \in \Real^{t \times s}$, where $1 \le t \le \min \sets{p, s}$, be the matrices of weights such that $X$ and $Y$ are linear projected into new vector variates, that is, 
+	\begin{align}
+		\bxi = \bG X, \qquad \text{ and } \qquad \bome = \bH Y, 
+	\end{align}
+	respectively, where $\bxi := \parens{\xi_1, \xi_2, \cdots, \xi_t}^\top$ and $\bome := \parens{\omega_1, \omega_2, \cdots, \omega_t}^\top$. Consider the problem of finding $\bnu \in \Real^{t}$, $\bG$ and $\bH$ to minimize 
+	\begin{align}\label{ls.cca}
+		\tr \braces[\Bigg]{\E \bracks[\Big]{\parens[\big]{\bH Y - \bnu - \bG X} \parens[\big]{\bH Y - \bnu - \bG X}^\top}}, 
+	\end{align}
+	where we assume that the covariance matrix of $\bH Y$ is $\bSigma_{\bome \bome} := \bH \bSigma_{YY} \bH^\top = \bI_t$. In other words, we are trying to find $\bnu \in \Real^{t}$, $\bG$ and $\bH$ such that 
+	\begin{align*}
+		\bH Y \approx \bnu + \bG X. 
+	\end{align*}
+	
+	\item \textbf{Derivation of the Minimizer:} Note that 
+	\begin{align}
+		f \parens{\bnu, \bG, \bH} := & \, \E \bracks[\Big]{\parens[\big]{\bH Y - \bnu - \bG X} \parens[\big]{\bH Y - \bnu - \bG X}^\top} \nonumber \\ 
+		= & \, \bH \parens{\bSigma_{YY} + \bmu_Y \bmu_Y^\top} \bH^\top - \bH \bmu_Y \bnu^\top - \bH \parens{\bSigma_{YX} + \bmu_Y \bmu_X^\top} \bG^\top \nonumber \\
+		\qquad \qquad &\, - \bnu \bmu_Y \bH^\top + \bnu \bnu^\top + \bnu \bmu_X \bG^\top \nonumber \\ 
+		\qquad \qquad & \, - \bG \parens{\bSigma_{XY} + \bmu_X \bmu_Y^\top} \bH^\top + \bG \bmu_X \bnu^\top + \bG \parens{\bSigma_{XX} + \bmu_X \bmu_X^\top} \bG^\top. 
+	\end{align}
+	We first fix $\bG$ and $\bH$ and minimize over $\bnu$: 
+	\begin{align*}
+		\tr \braces[\big]{f \parens{\bnu, \bG, \bH}} = & \, \tr \Big\{ \parens[\big]{\bnu - \parens{\bH \bmu_Y - \bG \bmu_X}} \parens[\big]{\bnu - \parens{\bH \bmu_Y - \bG \bmu_X}}^\top \\ 
+		& \, \qquad - \parens{\bH \bmu_Y - \bG \bmu_X} \parens{\bH \bmu_Y - \bG \bmu_X}^\top \\ 
+		& \, \qquad + \bH \parens{\bSigma_{YY} + \bmu_Y \bmu_Y^\top} \bH^\top - \bH \parens{\bSigma_{YX} + \bmu_Y \bmu_X^\top} \bG^\top \\ 
+		& \, \qquad - \bG \parens{\bSigma_{XY} + \bmu_X \bmu_Y^\top} \bH^\top + \bG \parens{\bSigma_{XX} + \bmu_X \bmu_X^\top} \bG^\top \Big\} \\
+		\ge & \, \tr \Big\{ - \parens{\bH \bmu_Y^\top - \bG \bmu_X^\top} \parens{\bH \bmu_Y^\top - \bG \bmu_X^\top}^\top \\ 
+		& \, \qquad + \bH \parens{\bSigma_{YY} + \bmu_Y \bmu_Y^\top} \bH^\top - \bH \parens{\bSigma_{YX} + \bmu_Y \bmu_X^\top} \bG^\top \\ 
+		& \, \qquad - \bG \parens{\bSigma_{XY} + \bmu_X \bmu_Y^\top} \bH^\top + \bG \parens{\bSigma_{XX} + \bmu_X \bmu_X^\top} \bG^\top \Big\} \\
+		= & \, \tr \braces[\Big]{\bH \bSigma_{YY} \bH^\top - \bH \bSigma_{YX} \bG^\top - \bG \bSigma_{XY} \bH^\top + \bG \bSigma_{XX} \bG^\top},  
+	\end{align*}
+	where the inequality becomes an equality if and only if 
+	\begin{align}
+		\bnu = \bH \bmu_Y - \bG \bmu_X. 
+	\end{align}
+	We next minimizer over the matrix $\bG$ by noticing that 
+	\begin{align*}
+		& \, \tr \braces[\Big]{\bH \bSigma_{YY} \bH^\top - \bH \bSigma_{YX} \bG^\top - \bG \bSigma_{XY} \bH^\top + \bG \bSigma_{XX} \bG^\top} \\ 
+		= & \, \tr \Big\{ \parens[\big]{\bG \bSigma_{XX}^{1/2} - \bH \bSigma_{YX} \bSigma_{XX}^{-\frac{1}{2}}} \parens[\big]{\bG \bSigma_{XX}^{1/2} - \bH \bSigma_{YX} \bSigma_{XX}^{-\frac{1}{2}}}  \\ 
+		& \, \qquad \qquad - \bH \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bH^\top + \bH \bSigma_{YY} \bH^\top \Big\} \\ 
+		\ge & \, \trace \braces[\big]{\bH \bSigma_{YY} \bH^\top - \bH \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bH^\top} \\ 
+		= & \, t - \sum_{j=1}^t \lambda_j \parens[\big]{\bH \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bH^\top},  
+	\end{align*}
+	where the inequality becomes an equality if and only if 
+	\begin{align}
+		\bG = \bH \bSigma_{YX} \bSigma_{XX}^{-1}. 
+	\end{align}
+	
+	Finally, we minimize over the matrix $\bH$. Let $\bU^\top := \bH \bSigma_{YY}^{\frac{1}{2}}$ so that $\bU^\top \bU = \bI_t$. By the Poincar{\'e} Separation Theorem\footnote{The \textit{Poincar{\'e} Separation Theorem} says the following: if $\bA$ is an $\parens{n \times n}$-matrix and $\bU$ is an $\parens{n \times k}$-matrix, where $k \le n$, such that $\bU^\top \bU = \bI_k$. Then, 
+	\begin{align*}
+		\lambda_j \parens{\bU^\top \bA \bU} \le \lambda_j \parens{\bA}, 
+	\end{align*}
+	with equality if the columns of $\bU$ are the first $k$ eigenvectors of $\bA$.}, we have 
+	\begin{align}
+		t - \sum_{j=1}^t \lambda_j \parens{\bU^\top \bR \bU} \ge t - \sum_{j=1}^t \lambda_j \parens{\bR}, 
+	\end{align}
+	where 
+	\begin{align}
+		\bR := \bSigma_{YY}^{-\frac{1}{2}} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}}, 
+	\end{align}
+	with equality being held if and only if the columns of $\bU$ are the eigenvectors associated with the first $t$ eigenvalues of $\bR$. 
+	
+	Therefore, the $\bnu$, $\bG$ and $\bH$ that minimize \eqref{ls.cca} are given by
+	\begin{align*}
+		\bnu^{(t)} := & \, \bH^{(t)} \bmu_Y - \bG^{(t)} \bmu_X, \\ 
+		\bG^{(t)} := & \, \bV^{(t)} \bSigma_{YY}^{-\frac{1}{2}} \bSigma_{YX} \bSigma_{XX}^{-1}, \\ 
+		\bH^{(t)} := & \, \bV^{(t)} \bSigma_{YY}^{-\frac{1}{2}}, 
+	\end{align*} 
+	where 
+	\begin{align*}
+		\bV^{(t)} := & \, \begin{pmatrix}
+		\bv_1^\top  \\ \vdots \\ \bv_t^\top
+		\end{pmatrix} 
+	\end{align*}
+	is a $\parens{t \times s}$-matrix with the $j$-th row $\bv_j$ being the eigenvector associated with the $j$-th largest eigenvalue of $\bR$, for all $j = 1, \cdots, t$. 
+	
+	\item \textbf{Canonical Variate Score:} Let $\bg_j := \parens{g_{j,1}, \cdots, g_{j,p}}^\top \in \Real^p$ and $\bh_j := \parens{h_{j,1}, \cdots, h_{j,s}}^\top \in \Real^s$ be the $j$-th rows of $\bG^{(t)}$ and $\bH^{(t)}$, respectively, for all $j = 1, 2, \cdots, t$. The \textit{$j$-th pair of canonical variate score}, $\parens{\xi_j, \omega_j}$, is given by 
+	\begin{align}
+		\xi_j = \bg_j^\top X, \qquad \omega_j = \bh_j^\top Y, 
+	\end{align}
+	where 
+	\begin{align}
+		\bg_j = \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}} \bv_j, \qquad \text{ and } \qquad \bh_j = \bSigma_{YY}^{-\frac{1}{2}} \bv_j, 
+	\end{align}
+	for all $j = 1, \cdots, t$. 
+	
+	\item \textbf{Covariance Matrix of Canonical Variate Scores:} Consider the vector of the canonical variate scores
+	\begin{align}
+		\bxi^{(t)} = \bG^{(t)} X, \qquad \text{ and } \qquad \bome^{(t)} = \bH^{(t)} Y. 
+	\end{align}
+	Then, the covariance matrix between $\bxi^{(t)}$ and $\bome^{(t)}$ is 
+	\begin{align}
+		\cov \parens{\bxi^{(t)}, \bome^{(t)}} = & \, \cov \parens{\bG^{(t)} X, \bH^{(t)} Y} = \bG^{(t)} \cov \parens{X, Y} {\bH^{(t)}}^\top \nonumber \\ 
+		= & \, \bV^{(t)} \bSigma_{YY}^{-\frac{1}{2}} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}} {\bV^{(t)}}^\top \nonumber \\ 
+		= & \, \bV^{(t)} \bR {\bV^{(t)}}^\top \nonumber \\ 
+		= & \, \bLambda^{(t)} \nonumber \\ 
+		= & \, \diag \parens{\lambda_1 (\bR), \cdots, \lambda_t (\bR)}. 
+	\end{align}
+	The covariance matrix of $\bxi^{(t)}$ is 
+	\begin{align}
+		\cov \parens{\bxi^{(t)}, \bxi^{(t)}} = & \, \bG^{(t)} \cov \parens{X, X} {\bG^{(t)}}^\top \nonumber \\ 
+		= & \, \bV^{(t)} \bSigma_{YY}^{-\frac{1}{2}} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XX} \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}} {\bV^{(t)}}^\top \nonumber \\ 
+		= & \, \bV^{(t)} \bSigma_{YY}^{-\frac{1}{2}} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}} {\bV^{(t)}}^\top \nonumber \\ 
+		= & \, \bLambda^{(t)}. 
+	\end{align}
+	And, finally, the covariance matrix of $\bome^{(t)}$ is 
+	\begin{align*}
+		\cov \parens{\omega^{(t)}, \omega^{(t)}} = & \, \bH^{(t)} \cov \parens{Y, Y} {\bH^{(t)}}^\top \nonumber \\ 
+		= & \, \bH^{(t)} \bSigma_{YY} {\bH^{(t)}}^\top \nonumber \\ 
+		= & \, \bI_t. 
+	\end{align*}
+	It follows that the correlation matrix between $\bxi^{(t)}$ and $\bome^{(t)}$ is 
+	\begin{align}
+		\cor \parens{\bxi^{(t)}, \bome^{(t)}} = \bLambda^{\frac{1}{2}}. 
+	\end{align}
+	Consequently, we have 
+	\begin{align}
+		\cor \parens{\xi_j^{\parens{t}}, \xi_k^{\parens{t}}} = \cor \parens{\omega_j^{\parens{t}}, \omega_k^{\parens{t}}} = \delta_{j,k}, \qquad \cor \parens{\xi_j^{\parens{t}}, \omega_k^{\parens{t}}} = \rho_{j} \cdot \delta_{j,k}, 
+	\end{align}
+	where $\rho_j := \sqrt{\lambda_j (\bR)}$ and $\delta_{j,k}$ is the Kronecker delta, for all $j, k = 1, \cdots, t$. 
+	
+	\item \textbf{Interpretation of the Coefficients $\sets{g_{i,j}}$ and $\sets{h_{i,j}}$:} We choose the coefficients $\sets{g_{i,j}}_{i \in \sets{1, \cdots, t}, j \in \sets{1, \cdots, p}}$ and $\sets{h_{i,j}}_{i \in \sets{1, \cdots, t}, j \in \sets{1, \cdots, s}}$ so that 
+	\begin{enumerate}
+		\item the first pair $\parens{\xi_1, \omega_1}$ has the largest possible correlation among all linear combinations of $X$ and $Y$; 
+		\item For $j = 2, \cdots, t$, the $j$-th pair $\parens{\xi_j, \omega_j}$ has the largest possible correlation $\rho_j$ among all linear combinations of $X$ and $Y$ in which $\xi_j$ is uncorrelated with $\xi_1, \xi_2, \cdots, \xi_{j-1}$ and $\omega_j$ is uncorrelated with $\omega_1, \omega_2, \cdots, \omega_{j-1}$. 
+	\end{enumerate}
+	It follows that 
+	\begin{align}
+		1 > \rho_1 > \rho_2 > \cdots > \rho_t > 0. 
+	\end{align}
+	Here, the correlation coefficient, $\rho_j$, between $\xi_j$ and $\omega_j$, is called the \textit{canonical correlation coefficient} associated with the $j$-th pair of canonical variates for all $j = 1, \cdots, t$. 
+	
+	\item \textbf{Special Case --- when $s = 1$:} When $s = 1$, the matrix $\bR$ reduces to the squared multiple correlation coefficient of $Y$ with the best linear predictor of $Y$ using $X_1, \cdots, X_p$: 
+	\begin{align*}
+		R = \frac{\boldsymbol{\sigma}^\top_{YX} \bSigma_{XX}^{-1} \boldsymbol{\sigma}_{XY}}{\sigma_Y^2}, 
+	\end{align*}
+	where $\sigma^2_Y$ is the variance of $Y$ and $\boldsymbol{\sigma}_{XY} \in \Real^p$ is the covariance between $X$ and $Y$. 
+	
+	The $j$-th canonical correlation coefficient, $\rho_j$, can be interpreted as the multiple correlation coefficient of either $\xi_j = \bg_j^\top X$ with $Y$ or $\omega_j = \bh_j^\top Y$ with $X$. 
+	
+	\item \textbf{Special Case --- when $s = p = 1$:} When $s = p = 1$, $\bR$ is the \emph{squared correlation coefficient} between $Y$ and $X$, 
+	\begin{align*}
+		\bR = \rho^2 = \frac{\sigma_{XY}^2}{\sigma_{X}^2 \sigma_{Y}^2}, 
+	\end{align*}
+	where $\sigma_{X}^2$ and $\sigma_{Y}^2$ are the variances of $X$ and $Y$, respectively, and $\sigma_{XY}$ is the covariance between $X$ and $Y$. 
+	
+	\item \textbf{Invariance:} Canonical correlations are \textit{invariant} under simultaneous nonsingular linear transformation of the random vectors $X$ and $Y$. Let $\bD \in \Real^{p \times p}$ and $\bF \in \Real^{s \times s}$ be two nonsingular matrices and let
+	\begin{align*}
+		X' = \bD X, \qquad Y' = \bF Y. 
+	\end{align*}
+	Then, the canonical correlations of $\bD X$ and $\bF Y$ are identical to those of $X$ and $Y$. 
+	
+	\textit{Remark.} One consequence of this invariance property is that the canonical correlations obtained from the \emph{covariance} matrix and those from the \emph{correlation} matrix are identical. 
+	
+\end{enumerate}
+
+
+\section*{III. CCA as a Correlation-Maximization Technique}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Goal:} We derive CCA by maximizing the correlation between linear combinations of $X$ and those of $Y$. 
+	
+	\item \textbf{Assumption:} Assume $\E \bracks{X} = \boldzero_p$ and $\E \bracks{Y} = \boldzero_s$. Consequently, all $\xi_j$'s and $\omega_j$'s, for $j = 1, 2, \cdots, t$, have zero mean. 
+
+	\item \textbf{Derivation of $\parens{\xi_1, \omega_1}$:} Consider an arbitrary linear projections $\xi = \bg^\top X$ and $\omega = \bh^\top Y$, and assume that they both have unit variances 
+	\begin{align}
+		\var \parens{\xi} = \bg^\top \bSigma_{XX} \bg = 1, \qquad \text{ and } \qquad \var \parens{\omega} = \bh^\top \bSigma_{YY} \bh = 1. 
+	\end{align}
+	Then, we find vectors $\bg$ and $\bh$ such that the random variables $\xi$ and $\omega$ have maximal correlations 
+	\begin{align}
+		\cor \parens{\xi, \omega} = \bg^\top \bSigma_{XY} \bh
+	\end{align}
+	among all linear functions of $X$ and $Y$. 
+	
+	In other words, we solve the following optimization problem 
+	\begin{equation}
+		\begin{aligned}
+			\maximize_{\bg, \bh} & \ \bg^\top \bSigma_{XY} \bh \\ 
+			\text{subject to } & \, \bg^\top \bSigma_{XX} \bg = \bh^\top \bSigma_{YY} \bh = 1. 
+		\end{aligned}
+	\end{equation}
+	The Lagrangian function of this problem is 
+	\begin{align}
+		L_1 \parens{\bg, \bh, \lambda, \mu} := \bg^\top \bSigma_{XY} \bh - \frac{\lambda}{2}  \parens{\bg^\top \bSigma_{XX} \bg - 1} - \frac{\mu}{2} \parens{\bh^\top \bSigma_{YY} \bh - 1}, 
+	\end{align}
+	where $\lambda > 0$ and $\mu > 0$ are the Lagrangian multipliers. We differentiate $L_1$ with respect to $\bg$ and $\bh$ and set derivatives to zero, and obtain 
+	\begin{align}
+		\frac{\partial L_1}{\partial \bg} = & \, \bSigma_{XY} \bh - \lambda \bSigma_{XX} \bg = \boldzero_p, \label{cca.lag1} \\ 
+		\frac{\partial L_1}{\partial \bh} = & \, \bSigma_{YX} \bg - \mu \bSigma_{YY} \bh = \boldzero_s. \label{cca.lag2}
+	\end{align}
+	Two observations: 
+	\begin{itemize}
+		\item If we multiply \eqref{cca.lag1} on the left by $\bg^\top$ and \eqref{cca.lag2} on the left by $\bh^\top$, we have 
+		\begin{align*}
+			\bg^\top \bSigma_{XY} \bh - \lambda \, \bg^\top \bSigma_{XX} \bg = 0, \\ 
+			\bh^\top \bSigma_{YX} \bg - \mu \, \bh^\top \bSigma_{YY} \bh = 0; 
+		\end{align*}
+		that is, 
+		\begin{align}
+			\bg^\top \bSigma_{XY} \bh = \lambda = \mu. 
+		\end{align}
+		\item Since \eqref{cca.lag1} and \eqref{cca.lag2} can be written equivalently as 
+		\begin{align*}
+			-\lambda \bSigma_{XX} \bg + \bSigma_{XY} \bh = \boldzero_p, \qquad \text{ and } \qquad \bSigma_{YX} \bg - \lambda \bSigma_{YY} \bh = \boldzero_s. 
+		\end{align*}
+		Pre-multiplying the first equation by $\bSigma_{YX} \bSigma_{XX}^{-1}$ and substitute into the second one, we have 
+		\begin{align}
+			\parens{\bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} - \lambda^2 \bSigma_{YY}} \bh = \boldzero_s, 
+		\end{align}
+		or equivalently, we have 
+		\begin{align}
+			\parens[\big]{\bSigma_{YY}^{-\frac{1}{2}} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}} - \lambda^2 \bI_s} \bSigma_{YY}^{\frac{1}{2}} \bh = \boldzero_s. 
+		\end{align}
+		It follows that, at the optimality, we must have 
+		\begin{align}
+			\bg_1 := \frac{1}{\lambda} \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}} \bv_1, \qquad \text{ and } \qquad \bh_1 := \bSigma_{YY}^{-\frac{1}{2}} \bv_1, 
+		\end{align}
+		where $\bv_1$ is the eigenvector of the matrix 
+		\begin{align*}
+			\bR = \bSigma_{YY}^{-\frac{1}{2}} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}}
+		\end{align*}
+		associated with the largest eigenvalue. 
+	\end{itemize}
+	Hence, the first pair of canonical variates is $\parens{\xi_1, \omega_1} = \parens{\bg_1^\top X, \bh_1^\top Y}$ and the maximal correlation is the square root of the largest eigenvalue of $\bR$, i.e., 
+	\begin{align}
+		\cor \parens{\xi_1, \omega_1} = \bg_1^\top \bSigma_{XY} \bh_1 = \sqrt{\lambda_1 (\bR)}. 
+	\end{align}
+	Here, note the largest eigenvalue of $\bR$, $\lambda_1 \parens{\bR}$, and the optimal Lagrangian multipliers, $\lambda^*$ and $\mu^*$, are related by $\lambda_1 \parens{\bR} = {\lambda^*}^2 = {\mu^*}^2$. 
+	
+	\item \textbf{Derivation of $\parens{\xi_2, \omega_2}$:} Given $\parens{\xi_1, \omega_1}$, let $\xi = \bg^\top X$ and $\omega = \bh^\top Y$ be a second pair of arbitrary linear projections. We require 
+	\begin{itemize}
+		\item $\xi$ and $\omega$ have the largest correlation among all such linear combinations of $X$ and $Y$; 
+		\item $\xi$ is uncorrelated with $\xi_1$ and $\omega$ is uncorrelated with $\omega_1$: 
+		\begin{align}
+			\bg^\top \bSigma_{XX} \bg_1 = 0, \qquad \bh^\top \bSigma_{YY} \bh_1 = 0; 
+		\end{align}
+		\item $\xi$ and $\omega$ have unit variance: 
+		\begin{align}
+			\bg^\top \bSigma_{XX} \bg = 1, \qquad \bh^\top \bSigma_{YY} \bh = 1;   
+		\end{align}
+		\item $\xi$ is uncorrelated with $\omega_1$ and $\omega$ is uncorrelated with $\xi_1$: 
+		\begin{align}
+			\cor \parens{\xi, \omega_1} = \bg^\top \bSigma_{XY} \bh_1 \stackrel{\parens{*}}{=} \lambda_1 \bg^\top \bSigma_{XX} \bg_1 = 0, \\ 
+			\cor \parens{\omega, \xi_1} = \bh^\top \bSigma_{YX} \bg_1 \stackrel{\parens{**}}{=} \lambda_1 \bh^\top \bSigma_{YY} \bh_1 = 0, 
+		\end{align}
+		where $\parens{*}$ and $\parens{**}$ follow from \eqref{cca.lag1} and \eqref{cca.lag2}, respectively. 
+	\end{itemize}
+	Then, we solve the following optimization problem 
+	\begin{equation}
+		\begin{aligned}
+		\maximize_{\bg, \bh} & \, \cor \parens{\bg^\top X, \bh^\top Y} = \bg^\top \bSigma_{XY} \bh \\ 
+		\text{ subject to } & \, \bg^\top \bSigma_{XX} \bg = 1, \\
+		& \, \bh^\top \bSigma_{YY} \bh = 1, \\
+		& \, \bg^\top \bSigma_{XX} \bg_1 = 0, \\
+		& \, \bh^\top \bSigma_{YY} \bh_1 = 0. 
+	\end{aligned} 
+	\end{equation}
+	The Lagrangian function of this preceding optimization problem is 
+	\begin{align}
+		L_2 \parens{\bg, \bh, \lambda, \mu, \eta, \nu} := & \, \bg^\top \bSigma_{XY} \bh - \frac{\lambda}{2} \parens{\bg^\top \bSigma_{XX} \bg - 1} - \frac{\mu}{2} \parens{\bh^\top \bSigma_{YY} \bh - 1} \nonumber \\ & \, \qquad - \frac{\eta}{2} \bg^\top \bSigma_{XX} \bg_1 - \frac{\nu}{2} \bh^\top \bSigma_{YY} \bh_1, 
+	\end{align}
+	where $\lambda > 0$, $\mu > 0$, $\eta > 0$ and $\nu > 0$ are the Lagrangian multipliers. 
+	
+	Differentiating $L_2$ with respect to $\bg$ and $\bh$ and setting the derivatives to 0 yields 
+	\begin{align}
+		\frac{\partial L_2}{\partial \bg} = & \, \bSigma_{XY} \bh - \lambda \bSigma_{XX} \bg - \eta \bSigma_{XX} \bg_1 = \boldzero_p, \\ 
+		\frac{\partial L_2}{\partial \bh} = & \, \bSigma_{YX} \bg - \mu \bSigma_{YY} \bh - \mu \bSigma_{YY} \bh_1 = \boldzero_s. 
+	\end{align}
+	By solving this linear system, we have that the second pair of the canonical variate is $\parens{\xi_2, \omega_2} = \parens{\bg_2^\top X, \bh_2^\top Y}$ is 
+	\begin{align}
+		\bg_2 = \bSigma_{XX}^{-1} \bSigma_{XY} \bSigma_{YY}^{-\frac{1}{2}} \bv_2, \qquad \bh_2 = \bSigma_{YY}^{-\frac{1}{2}} \bv_2, 
+	\end{align}
+	where $\bv_2$ is the eigenvector of $\bR$ associated with the second largest eigenvalue of $\bR$, and their correlation is 
+	\begin{align}
+		\cor \parens{\xi_2, \omega_2} = \bg_2^\top \bSigma_{XY} \bh_2 = \sqrt{\lambda_2 \parens{\bR}}. 
+	\end{align}
+	
+	\item \textbf{Derivation of $\parens{\xi_j, \omega_j}$ for $j \ge 3$:} The remaining canonical variates $\parens{\xi_j, \omega_j}$, for $j \ge 3$, can be obtained by choosing coefficients $\bg_j$ and $\bh_j$ such that $\parens{\xi_j, \omega_j}$ has the largest correlation among all pairs of linear combinations of $X$ and $Y$ that are also uncorrelated with all previously derived pairs, $\sets{\parens{\xi_i, \omega_i}}_{i=1}^{j-1}$, until no further solution can be found.  
+
+\end{enumerate}
+
+
+\section*{IV. Sample Estimates}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Let $\sets{\parens{\bx_i, \by_i}}_{i=1}^n$ be i.i.d observations from $\parens{X, Y}$. Let 
+	\begin{align*}
+		\bX = \begin{pmatrix}
+			\ \bx_1 \ \bx_2 \ \cdots \ \bx_n \ 
+		\end{pmatrix} \in \Real^{p \times n} \qquad \text{ and } \qquad
+		\bY = \begin{pmatrix}
+			\ \by_1 \ \by_2 \ \cdots \ \by_n \ 
+		\end{pmatrix} \in \Real^{s \times n}. 
+	\end{align*}
+	
+	\item \textbf{Estimation of Coefficient Matrix:} We estimate $\bG$ and $\bH$ by 
+	\begin{align}
+		\widehat{\bG}^{(t)} := & \, \widehat{\bV}^{(t)} \widehat{\bSigma}_{YY}^{-\frac{1}{2}} \widehat{\bSigma}_{YX} \widehat{\bSigma}_{XX}^{-1}, \\ 
+		\widehat{\bH}^{(t)} := & \, \widehat{\bV}^{(t)} \widehat{\bSigma}_{YY}^{-\frac{1}{2}}, 
+	\end{align}
+	respectively, and 
+	\begin{align}
+		\widehat{\bV}^{(t)} := \begin{pmatrix}
+			\hat{\bv}_1^\top \\ \vdots \\ \hat{\bv}_t^\top
+		\end{pmatrix} 
+	\end{align}
+	where $\hat{\bv}_j$ is the eigenvector associated with the $j$-th largest eigenvalue of 
+	\begin{align}
+		\widehat{\bR} = \widehat{\bSigma}_{YY}^{-\frac{1}{2}} \widehat{\bSigma}_{YX} \widehat{\bSigma}_{XX}^{-1} \widehat{\bSigma}_{XY} \widehat{\bSigma}_{YY}^{-\frac{1}{2}}, 
+	\end{align}
+	for $j = 1, \cdots, t$. 
+	
+	\item \textbf{Estimation of Canonical Variates:} The $j$-th row of $\hat{\bxi} := \widehat{\bG}^{(t)} \bX$ and $\hat{\bome} := \widehat{\bH}^{(t)} \bY$ together form the $j$-th pair of \textit{sample canonical variates} $\parens{\hat{\bxi}_j, \hat{\bome}_j}$, where 
+	\begin{align}
+		\hat{\bxi}_j = \hat{\bg}_j^\top \bX, \qquad \text{ and } \qquad \hat{\bome}_j = \hat{\bh}_j^\top \bY
+	\end{align}
+	with \textit{canonical variate scores} of 
+	\begin{align}
+		\hat{\xi}_{i,j} = \hat{\bg}_j^\top \bx_i, \qquad \text{ and } \qquad \hat{\omega}_{i,j} = \hat{\bh}_j^\top \by_i, 
+	\end{align}
+	for $i = 1, \cdots, n$, where 
+	\begin{align}
+		\hat{\bg}_j^\top = \hat{\bv}_j^\top \widehat{\bSigma}_{YY}^{-\frac{1}{2}} \widehat{\bSigma}_{YX} \widehat{\bSigma}_{XX}^{-1}
+	\end{align}
+	is the $j$-th row of $\widehat{\bG}^{(t)}$, and 
+	\begin{align}
+		\hat{\bh}_j^\top = & \, \hat{\bv}_j^\top \widehat{\bSigma}_{YY}^{-\frac{1}{2}}
+	\end{align}
+	is the $j$-row of $\widehat{\bH}^{(t)}$. 
+	
+	\item \textbf{Estimation of Sample Canonical Correlation Coefficient:} The \textit{sample canonical correlation coefficient} for the $j$-th pair of sample canonical variates $\parens{\hat{\bxi}_j, \hat{\bome}_j}$ is 
+	\begin{align}
+		\hat{\rho}_j = \frac{\hat{\bg}_j^\top \widehat{\bSigma}_{XY} \hat{\bh}_j}{\sqrt{\hat{\bg}_j^\top \widehat{\bSigma}_{XX} \hat{\bg}_j} \cdot \sqrt{\hat{\bh}_j^\top \widehat{\bSigma}_{YY} \hat{\bh}_j}}, 
+	\end{align}
+	for all $j = 1, \cdots, t$. 
+	
+\end{enumerate}
+
+
+\section*{V. Kernel CCA}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} The kernel CCA uses 
+	\begin{enumerate}
+		\item a \emph{nonlinear} transformation, $\Phi_1: \Real^p \to \calH_1$, of one set of input data, $\bx_i \in \Real^p$, for all $i = 1, 2, \cdots, n$, and 
+		\item another nonlinear transformation, $\Phi_2: \Real^s \to \calH_2$, of a second set of input data, $\by_i \in \Real^s$, for all $j = 1, 2, \cdots, n$. 
+	\end{enumerate}
+	Here, for each $j = 1, 2$, $\calH_j$ is a reproducing kernel Hilbert space (RKHS). 
+	
+	Then, we carry out CCA between two transformed sets of input data $\sets{\Phi_1 \parens{\bx_i}}_{i=1}^n$ and $\sets{\Phi_2 \parens{\by_i}}_{i=1}^n$, where we assume that both sets of transformed data have been centered. 
+	
+	\item \textbf{Goal:} We wish to find $f_1 \in \calH_1$ and $f_2 \in \calH_2$ such that the features $f_1 \parens{X} = \innerp{\Phi_1 \parens{X}}{f_1}_{\calH}$ and $f_2 \parens{Y} = \innerp{\Phi_2 \parens{Y}}{f_2}_{\calH}$ have the maximal correlation. 
+	
+	\item \textbf{Naive Kernel CCA:} We consider to maximize the correlation of transformed $X$ and $Y$, i.e., we maximize 
+	\begin{align}\label{eq-kernel-cca-problem}
+		\hat{\rho}_{\mathrm{kernel}} \parens{f_1, f_2} := \frac{\widehat{\cov} \parens{f_1 \parens{X}, f_2 \parens{Y}}}{\sqrt{\widehat{\var} \bracks{f_1 \parens{X}}} \cdot \sqrt{\widehat{\var} \bracks{f_2 \parens{Y}}}}, 
+	\end{align}
+	subject to 
+	\begin{align*}
+		f_1 \in & \, \mathrm{Span} \parens[\big]{\Phi_1 \parens{\bx_1}, \Phi_1 \parens{\bx_2}, \cdots, \Phi_1 \parens{\bx_n}}  \\ 
+		f_2 \in & \, \mathrm{Span} \parens[\big]{\Phi_2 \parens{\by_1}, \Phi_2 \parens{\by_2}, \cdots, \Phi_2 \parens{\by_n}}, 
+	\end{align*}
+	where 
+	\begin{align}
+		\widehat{\cov} \parens{f_1 \parens{X}, f_2 \parens{Y}} = & \, \frac{1}{n} \sum_{i=1}^n f_1 \parens{\bx_i} f_2 \parens{\by_i} \nonumber \\ 
+		= & \, \frac{1}{n} \sum_{i=1}^n \innerp{f_1}{\Phi_1 \parens{\bx_i}}_{\calH_1} \innerp{f_2}{\Phi_2 \parens{\by_i}}_{\calH_2} \nonumber \\ 
+		= & \, \frac{1}{n} \balpha_1^\top \bK_1 \bK_2 \balpha_2, \\
+		\widehat{\var} \bracks{f_1 \parens{X}} = & \, \frac{1}{n} \balpha_1^\top \bK_1^2 \balpha_1, \\ 
+		\widehat{\var} \bracks{f_2 \parens{Y}} = & \, \frac{1}{n} \balpha_2^\top \bK_2^2 \balpha_2. 
+	\end{align}
+	In the equations above, $\balpha_1 \in \Real^n$, $\balpha_2 \in \Real^n$, the matrices $\bK_1$ and $\bK_2$ are the $n \times n$ Gram matrices associated with $\sets{\bx_1, \bx_2, \cdots, \bx_n}$ and $\sets{\by_1, \by_2, \cdots, \by_n}$, respectively. In other words, the $\parens{i, j}$-th entry of $\bK_1$ is 
+	\begin{align*}
+		\innerp{\Phi_1 \parens{\bx_i}}{\Phi_1 \parens{\bx_j}}_{\calH_1}, 
+	\end{align*}
+	and 
+	the $\parens{i, j}$-th entry of $\bK_2$ is 
+	\begin{align*}
+		\innerp{\Phi_2 \parens{\by_i}}{\Phi_2 \parens{\by_j}}_{\calH_2}. 
+	\end{align*}
+	
+	It follows that \eqref{eq-kernel-cca-problem} becomes 
+	\begin{align}\label{eq-kernel-cca-problem2}
+		\hat{\rho}_{\mathrm{kernel}} \parens{f_1, f_2} = \frac{\balpha_1^\top \bK_1 \bK_2 \balpha_2}{\sqrt{\parens{\balpha_1^\top \bK_1^2 \balpha_1} \cdot \parens{\balpha_2^\top \bK_2^2 \balpha_2}}}, 
+	\end{align}
+	and we maximize over $\balpha_1 \in \Real^n$ and $\balpha_2 \in \Real^n$. 
+	
+	\item \textbf{Solution to \eqref{eq-kernel-cca-problem2}:} Differentiating \eqref{eq-kernel-cca-problem2} with respect to $\balpha_1$ and $\balpha_2$ and setting the results to zero yield the generalized eigen-equations 
+	\begin{align*}
+		\bK \balpha = \lambda \bD \balpha, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\bK = \begin{pmatrix}
+			\boldzero & \bK_1 \bK_2 \\ \bK_2 \bK_1 & \boldzero
+		\end{pmatrix}, \qquad 
+		\bD = \begin{pmatrix}
+			\bK_1^2 & \boldzero \\ \boldzero & \bK_2^2
+		\end{pmatrix}, \qquad \balpha = \begin{pmatrix}
+			\balpha_1 \\ 
+			\balpha_2
+		\end{pmatrix}. 
+	\end{align*}
+	It turns out that all pairs of ``kernel canonical variates'' in feature space are \emph{perfectly correlated}. The reason is essentially due to overfitting. 
+	
+	\item \textbf{Regularized Kernel CCA:} We apply the regularization to solve the kernel CCA problem. More precisely, we penalize the $\calH_1$-norm of $f_1$ and the $\calH_2$-norm of $f_2$ each by the same small constant value $\kappa > 0$, and replace $\bK_{1}^2$ by $\parens{\bK_1 + \kappa \bI_n}^2$ and $\bK_2^2$ by $\parens{\bK_2 + \kappa \bI_n}^2$ in $\bD$. 
+	
+	\begin{enumerate}
+		\item \textit{Justification:} suppose $\theta > 0$ is the regularization parameter, then 
+		\begin{align*}
+			\widehat{\var} \bracks{f_1 \parens{X}} + \theta \norm{f_1}_{\calH_1}^2 = & \, \frac{1}{n} \balpha_1^\top \bK_1^2 \balpha_1 + \theta \balpha_1^\top \bK_1 \balpha_1 \approx \frac{1}{n} \balpha_1^\top \parens{\bK_1 + \kappa \bI_n}^2 \balpha_1, \\
+			\widehat{\var} \bracks{f_2 \parens{Y}} + \theta \norm{f_2}_{\calH_2}^2 = & \, \frac{1}{n} \balpha_2^\top \bK_2^2 \balpha_2 + \theta \balpha_2^\top \bK_2 \balpha_2 \approx \frac{1}{n} \balpha_2^\top \parens{\bK_2 + \kappa \bI_n}^2 \balpha_2, 
+		\end{align*}
+		where we can see $\kappa = \frac{1}{2} n \theta$. 
+		
+		\item \textit{Optimization Problem:} The regularized optimization problem \eqref{eq-kernel-cca-problem2} becomes 
+		\begin{align}\label{eq-kernel-cca-reg-2}
+			\tilde{\rho}_{\mathrm{kernel}} \parens{f_1, f_2; \kappa} = \frac{\balpha_1^\top \bK_1 \bK_2 \balpha_2}{\sqrt{\parens{\balpha_1^\top \parens{\bK_1 + \kappa \bI_n}^2 \balpha_1} \cdot \parens{\balpha_2^\top \parens{\bK_2 + \kappa \bI_n}^2 \balpha_2}}}, 
+		\end{align}
+		
+		\item \textit{Effects of $\kappa$:} The value of $\kappa$ determines the weight to be placed upon the penalty terms compared with the variance terms. In particular, 
+		\begin{enumerate}
+			\item as $\kappa$ gets close to zero, the variance term dominates, whereas 
+			\item as $\kappa$ gets larger, the variance term becomes more affected by the amount of roughness allowed by the penalty term. 
+		\end{enumerate}
+		
+		\item \textit{Solution:} Differentiating \eqref{eq-kernel-cca-reg-2} with respect to $\balpha_1$ and $\balpha_2$ and setting the results to zero yield 
+		\begin{align}\label{eq-kernelcca-gen-eigen}
+			\bK \balpha = \lambda \bD^{\parens{\kappa}} \balpha, 
+		\end{align}
+		where 
+		\begin{align*}
+			\bD^{\parens{\kappa}} := \begin{pmatrix}
+				\parens{\bK_1 + \kappa \bI_n}^2 & \boldzero \\ 
+				\boldzero & \parens{\bK_2 + \kappa \bI_n}^2
+			\end{pmatrix}. 
+		\end{align*}
+		Again, this is a generalized eigen-equation, which has $2n$ pairs of eigenvalues 
+		\begin{align*}
+			\lambda_1, -\lambda_1, \cdots, \lambda_n, - \lambda_n. 
+		\end{align*}
+		
+		\item \textit{Equivalent Generalized Eigen-equation:} The generalized eigen-equation \eqref{eq-kernelcca-gen-eigen} can be written as 
+		\begin{align}\label{eq-kernelcca-gen-eigen2}
+			\bK^{\parens{\kappa}} \balpha = \parens{1 + \lambda} \bD^{\parens{\kappa}} \balpha, 
+		\end{align}
+		where 
+		\begin{align*}
+			\bK^{\parens{\kappa}} = \begin{pmatrix}
+				\parens{\bK_1 + \kappa \bI_n}^2 & \bK_1 \bK_2 \\ 
+				\bK_2 \bK_1 & \parens{\bK_2 + \kappa \bI_n}^2
+			\end{pmatrix}. 
+		\end{align*}
+		Then, \eqref{eq-kernelcca-gen-eigen2} has the following pairs of eigenvalues 
+		\begin{align*}
+			1 + \lambda_1, 1 - \lambda_1, \cdots, 1 + \lambda_n, 1 - \lambda_n. 
+		\end{align*}
+		Note that \eqref{eq-kernelcca-gen-eigen2} can be equivalently written as 
+		\begin{align*}
+			\widetilde{\bK}^{\parens{\kappa}} \tilde{\balpha} = \tilde{\lambda} \tilde{\balpha}, 
+		\end{align*}
+		where 
+		\begin{align*}
+			\widetilde{\bK}^{\parens{\kappa}} = & \, \bracks{\bD^{\parens{\kappa}}}^{-\frac{1}{2}} \bK^{\parens{\kappa}} \bracks{\bD^{\parens{\kappa}}}^{-\frac{1}{2}} = \begin{pmatrix}
+				\bI_n & \widetilde{\bK}_1^{\parens{\kappa}} \widetilde{\bK}_2^{\parens{\kappa}} \\ 
+				\widetilde{\bK}_2^{\parens{\kappa}} \widetilde{\bK}_1^{\parens{\kappa}} & \bI_n
+			\end{pmatrix}, \\ 
+			\widetilde{\bK}_1^{\parens{\kappa}} := & \, \parens{\bK_1 + \kappa \bI_n}^{-1} \bK_1, \\ 
+			\widetilde{\bK}_2^{\parens{\kappa}} := & \, \parens{\bK_2 + \kappa \bI_n}^{-1} \bK_2, \\ 
+			\tilde{\balpha} := & \, \bracks{\bD^{\parens{\kappa}}}^{-\frac{1}{2}} \balpha, \\ 
+			\tilde{\lambda} := & \, 1 + \lambda. 
+		\end{align*}
+		
+	\end{enumerate}	
+	
+\end{enumerate}
+
+
+\printbibliography
+
+\end{document}

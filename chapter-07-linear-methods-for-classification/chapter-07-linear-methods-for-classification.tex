@@ -1,0 +1,1215 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+%\usepackage[T1]{fontenc}
+%\usepackage{newpxtext,newpxmath}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 7, Linear Methods for Classification}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Linear Methods for Classification}{7}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 4, Linear Methods for Classification} in \textcite{Friedman2001-np}, and 
+	\item \textit{Chapter 8, Linear Discriminant Analysis} in \textcite{Izenman2009-jk},  
+	\item \textit{Chapter 3, Projective Methods} in \textcite{Burges2010-jc}, and 
+	\item \textit{Single-Layer Networks: Classification} in \textcite{Bishop2023-dl}. 
+\end{itemize}
+
+\section*{I. An Introduction to Linear Methods for Classification} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Assumptions:} There are $W$ classes in total labeled as $1, \cdots, W$. The predictor $G \parens{\bx}$ takes values in $\calW := \sets{1, 2, \cdots, W}$ so that we can partition the input space into a collection of $W$ disjoint regions. 
+	
+	\item \textbf{Overview:} This chapter focuses on \textit{linear} methods for classification. These methods are called \textit{linear} methods since the decision boundaries these methods produce are \textit{linear}. 
+	
+	In particular, we focus on producing a \emph{discriminant function} $\delta_w \parens{\bx}$ for each class $w = 1, \cdots, W$, and classify $\bx$ to the class with the largest value for its discriminant function. This discriminant approach includes 
+	\begin{itemize}
+		\item regression based approaches (e.g., linear regression, and logistic regression), and 
+		\item approaches to model the boundaries between classes directly: 
+		\begin{itemize} 
+			\item perceptron, and 
+			\item finding an optimally separating hyperplane. 
+		\end{itemize}
+	\end{itemize}
+	
+	\textit{Remark.} We do \emph{not} need the discriminant function $\delta_w$ to be linear. All we require is that some monotone transformation of it is linear. 
+	
+	\item \textbf{An Introduction to Linear Regression Approach:} One fits a linear regression models to the class indicator and classify to the largest fit. 
+	
+	Suppose the linear model for the $w$-th class is of the form 
+	\begin{align*}
+		\hat{f}_w \parens{\bx} = \hat{\beta}_{w,0} + \widehat{\bbeta}_w^\top \bx. 
+	\end{align*}
+	The decision boundary for Classes $w$ and $u$ is 
+	\begin{align}
+		\sets[\Big]{ \bx \bigm| \hat{f}_w \parens{\bx} = \hat{f}_{u} \parens{\bx} } = & \, \sets[\Big]{ \bx \bigm| \hat{\beta}_{w,0} + \widehat{\bbeta}_w^\top \bx = \widehat{\beta}_{u,0} + \widehat{\bbeta}_{u}^\top \bx } \nonumber \\ 
+		= & \, \sets[\Big]{ \bx \bigm| \parens{\hat{\beta}_{w,0} - \hat{\beta}_{u,0}} + \parens{\widehat{\bbeta}_w - \widehat{\bbeta}_u}^\top \bx = 0 }. 
+	\end{align}
+	Note that the decision boundary is an affine set or hyperplane. 
+	
+	\item \textbf{Example -- Logistic Regression:} We model the posterior probability of Class $w$ given the input vector $\bx$, i.e., $\Pr \parens{G = w \,\vert\, X = \bx}$. 
+	
+	In the binary classification case where $W = 2$ and $\calW = \sets{1, 2}$, we let 
+	\begin{align*}
+		\Pr \parens{G = 1 \,\vert\, X = \bx} = \frac{\exp \parens{\beta_0 + \bbeta^\top \bx}}{1 + \exp \parens{\beta_0 + \bbeta^\top \bx}}, \\
+		\Pr \parens{G = 2 \,\vert\, X = \bx} = \frac{1}{1 + \exp \parens{\beta_0 + \bbeta^\top \bx}}. 
+	\end{align*}
+	Even though each of  $\Pr \parens{G = 1 \,\vert\, X = \bx}$ and $\Pr \parens{G = 2 \,\vert\, X = \bx}$ is \emph{not} linear in $\bx$, but its logit transformation 
+	\begin{align*}
+		\mathrm{logit} \parens{p} := \log \parens[\bigg]{\frac{p}{1 - p}}, \qquad \text{ where } p := \Pr \parens{G = 1 \,\vert\, X = \bx}, 
+	\end{align*}
+	is, by noting 
+	\begin{align*}
+		\log \frac{\Pr \parens{G = 1 \,\vert\, X = \bx}}{\Pr \parens{G = 2 \,\vert\, X = \bx}} = \beta_0 + \bbeta^\top \bx. 
+	\end{align*}
+	In this case, the decision boundary is
+	\begin{align*}
+		\sets[\Big]{ \bx \bigm| \text{the log odds is } 0 } = \sets[\Big]{ \bx \bigm| \beta_0 + \bbeta^\top \bx = 0 }, 
+	\end{align*}
+	which is an affine set or hyperplane. 
+\end{enumerate}
+
+\section*{II. Linear Regression of an Indicator Matrix} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Basic Setup:} 
+	
+	\begin{enumerate}
+		\item Denote the training data by $\sets{\parens{\bx_i, g_i}}_{i=1}^n$, where $g_i \in \calW$. 
+		
+		\item Let $\by := \parens{y_1, \cdots, y_W}^\top \in \sets{0, 1}^W$ be a binary $W$-dimensional vector with 
+		\begin{align*}
+			y_w = \begin{cases}
+				1, & \, \text{ if } G = w, \\ 
+				0, & \, \text{ otherwise}. 
+			\end{cases}
+		\end{align*}
+		Note that there is exactly one component in $\by$ is equal to 1. 
+		
+		Collectively, we write these binary response variables in the matrix form as 
+		\begin{align*}
+			\bY = \begin{bmatrix}
+				\by_1^\top \\ \by_2^\top \\ \vdots \\ \by_n^\top
+			\end{bmatrix} \in \sets{ 0, 1 }^{n \times W}, 
+		\end{align*}
+		where $n$ is the number of training cases, $W$ is the number of classes, and each $\by_i$ corresponds to the class label of $g_i$ for all $i = 1, 2, \cdots, n$. Then, each row has exactly one 1 and $\parens{W - 1}$ 0's. 
+		
+		\item Let $\bX \in \Real^{n \times \parens{p+1}}$ be the collection of covariates of the training set, where $ p+1 $ columns correspond to the $p$ inputs and a leading column of $1$'s for the intercept. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Model Assumption:} We assume a linear model between $\bY$ and $\bX$, i.e., 
+	\begin{align*}
+		\bY = \bX \bB + \beps, 
+	\end{align*}
+	where $\bB \in \Real^{\parens{p+1} \times W}$ is the coefficient matrix, and $\beps \in \Real^{n \times W}$ is the random error term. 
+	
+	\item \textbf{Estimation of the Coefficient Matrix $\bB$:} Using the least squares method, the estimator of the coefficient matrix $\bB$, denoted by $\widehat{\bB}$, is 
+	\begin{align*}
+		\widehat{\bB} := & \, \argmin_{\bB} \braces[\Big]{\trace \parens[\big]{\parens{\bY - \bX \bB}^\top \parens{\bY - \bX \bB}}} \nonumber \\ 
+		= & \, \parens{\bX^\top \bX}^{-1} \bX^\top \bY \in \Real^{ \parens{p+1} \times W }, 
+	\end{align*}
+	and the fitted value vector is 
+	\begin{align*}
+		\widehat{\bY} = \bX \widehat{\bB} = \bX \parens{\bX^\top \bX}^{-1} \bX^\top \bY. 
+	\end{align*}
+	
+	\item \textbf{Prediction at a New Case $\bx_0$:} To classify a new case $\bx_0 \in \Real^{p+1}$, we do the following: 
+	\begin{enumerate}
+		\item Compute the fitted output $ \hat{\boldf} \parens{\bx} = \parens{\bx_0^\top \widehat{\bB}}^\top \in \Real^W$; 
+		\item Classify it to the class with the largest component, i.e., 
+		\begin{align}\label{eq-linear-reg-argmax}
+			\widehat{G} \parens{\bx_0} = \argmax_{w \in \calW} \hat{f}_w \parens{\bx_0}, 
+		\end{align}
+		where $\hat{f}_w \parens{\bx_0}$ is the $w$-th component of $\hat{\boldf} \parens{\bx_0}$. 
+	\end{enumerate}
+	
+	\textit{Remark.} For each $w = 1, \cdots, W$, $\hat{f}_w \parens{\bx}$ can be either negative or greater than 1. 
+	
+	\item \textbf{Another View of Linear Regression Approach to Classification:} Construct targets $\bt_w$ for each class, where $\bt_w$ is the $w$-th column of the $W \times W$ identity matrix, for all $w = 1, \cdots, W$. Then, the response vector $\by_i^\top \in \Real^W$, the $i$-th row of $\bY$, for the $i$-th observation, has the value $\by_i = \bt_w$ if $g_i = w$. We then fit the linear model by least squares 
+	\begin{align*}
+		\minimize_{\bB} \, \sum_{i=1}^n \norm[\Big]{\by_i - \parens{\bx_i^\top \bB}^\top}_2^2. 
+	\end{align*}
+	The criterion is a sum-of-squared Euclidean distances of the \textit{fitted vectors} from their \textit{targets}. 
+	
+	To classify a new observation $\bx_0$, we compute its fitted value $\hat{\boldf} \parens{\bx_0} = \parens{\bx_0^\top \widehat{\bB}}^\top$ and classify it to the closet target, i.e., 
+	\begin{align}\label{eq-linear-reg-argmin}
+		\widehat{G} \parens{\bx_0} = \argmin_{w \in \calW} \norm[\big]{\hat{\boldf} \parens{\bx_0} - \bt_w}_2^2. 
+	\end{align}
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item The sum-of-squared-norm criterion is exactly the criterion for multiple response linear regression. 
+		
+		\item The classification rule \eqref{eq-linear-reg-argmin} is exactly the same as the rule \eqref{eq-linear-reg-argmax}. 
+	\end{enumerate}
+	
+	\item \textbf{Problem of Linear Regression Approach to Classification:} When $W \ge 3$, especially when $W$ is large, this linear regression approach is problematic as classes can be \textit{masked} by others. 
+	
+	A loose but general rule is that if $W \ge 3$ classes are lined up, polynomial terms up to degree $W - 1$ are needed. 
+	
+\end{enumerate}
+
+\section*{III. Linear Discriminant Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Bayes' Rule Classifier:} We view classification problem from the decision-theoretical perspective and use the 0-1 loss function. 
+	
+	Let $\widetilde{G}$ be a classification rule. The expected prediction error (EPE) is 
+	\begin{align*}
+		\mathrm{EPE} \parens{\widetilde{G}} := & \, \E_{\parens{X, G}} \bracks{L \parens{G, \widetilde{G} \parens{X}}}  \\ 
+		= & \, \E_{X} \bracks[\Big]{\E_{G \vert X = \bx} \bracks[\big]{ L \parens{G, \widetilde{G} \parens{\bx}} \,\vert\, X = \bx }} \\ 
+		= & \, \E_{X} \bracks[\Bigg]{ \sum_{w=1}^W L \parens{w, \widetilde{G} \parens{\bx}} \Pr \parens{G = w \,\vert\, X = \bx} }. 
+	\end{align*}
+	In order to find a classification rule $\widehat{G}$ that minimizes $\mathrm{EPE}$, it is sufficient to consider 
+	\begin{align}
+		\widehat{G} := & \, \argmin_{\widetilde{G}} \braces[\Bigg]{\sum_{w=1}^W L \parens{w, \widetilde{G} \parens{\bx}} \Pr \parens{G = w \,\vert\, X = \bx}} \nonumber \\ 
+		= & \, \argmin_{\widetilde{G}} \braces[\bigg]{1 - \Pr \parens{G = \widetilde{G} \parens{\bx} \,\vert\, X = \bx}} \nonumber \\ 
+		= & \, \argmax_{\widetilde{G}} \braces[\bigg]{\Pr \parens{G = \widetilde{G} \parens{\bx} \,\vert\, X = \bx}}. \label{eq-bayes-rule-classifier}
+	\end{align}
+	In this view, we need to know the class posteriors $\Pr \parens{G \,\vert\, X = \bx}$ for the optimal classification. Suppose that $f_w$ is the class-conditional density of $X$ in class $G = w$, and let $\pi_w$ be the prior probability of Class $w$ so that $\sum_{w=1}^W \pi_w = 1$. Then, Bayes theorem yields that 
+	\begin{align}
+		\Pr \parens{G = w \,\vert\, X = \bx} = \frac{\pi_w f_w \parens{\bx}}{\sum_{j=1}^W \pi_j f_j \parens{\bx}}. 
+	\end{align}
+	Therefore, knowing $f_w$, the class conditional densities, is almost equivalent to knowing $\Pr \parens{G = w \,\vert\, X = \bx}$. 
+	
+	\item \textbf{Assumption:} We assume that each class-conditional density has the multivariate Gaussian distribution as 
+	\begin{align*}
+		f_w \parens{\bx} = \frac{1}{\parens{2\pi}^{p/2} \abs{\bSigma_w}^{1/2}} \exp \parens[\bigg]{-\frac{1}{2} \parens{\bx - \bmu_w}^\top \bSigma_w^{-1} \parens{\bx - \bmu_w}}, 
+	\end{align*}
+	where the covariance matrix of Class $w$, $\bSigma_w$, may differ from that of Class $u$, $\bSigma_{u}$, for $w \neq u$. 
+	
+	\item \textbf{Linear Discriminant Analysis (LDA):} In the linear discriminant analysis (LDA), we further assume that $\bSigma_w = \bSigma$ for all $ w = 1, \cdots, W $. Then, when we compare two classes $w$ and $u$, it is sufficient to look at the log-ratio of the posterior probabilities, i.e., 
+	\begin{align*}
+		& \, \log \frac{\Pr \parens{G = w \,\vert\, X = \bx}}{\Pr \parens{G = u \,\vert\, X = \bx}} \\ 
+		= & \, \log \frac{\pi_w}{\pi_u} + \log \frac{f_w \parens{\bx}}{f_u \parens{\bx}} \\
+		= & \log \frac{\pi_w}{\pi_u} + \bracks[\bigg]{ - \frac{1}{2} \parens{\bx - \bmu_w}^\top \bSigma^{-1} \parens{\bx - \bmu_w} + \frac{1}{2} \parens{\bx - \bmu_u}^\top \bSigma^{-1} \parens{\bx - \bmu_u} } \\
+		= & \log \frac{\pi_w}{\pi_u} - \frac{1}{2} \parens{\bmu_w + \bmu_u}^\top \bSigma^{-1} \parens{\bmu_w - \bmu_u} + \bx^\top \bSigma^{-1} \parens{\bmu_w - \bmu_u}, 
+	\end{align*}
+	which is a linear function in $\bx$. 
+	
+	The \textit{linear discriminant function} in LDA is defined by
+	\begin{align}\label{eq-lda-decision-rule-max1}
+		\delta_w \parens{\bx} = \bx^\top \bSigma^{-1} \bmu_w - \frac{1}{2} \bmu_w^\top \bSigma^{-1} \bmu_w + \log \pi_w \qquad \text{ for all } w = 1, \cdots, W, 
+	\end{align}
+	which is an equivalent description of the decision rule with 
+	\begin{align}\label{eq-lda-decision-rule-max2}
+		G \parens{\bx} = \argmax_{w = 1, \cdots, W} \delta_w \parens{\bx}. 
+	\end{align}
+	
+	\textit{Remark.} This linear log-odds function implies that the \textit{decision boundary} between Classes $w$ and $u$, i.e., the set where $ \Pr \parens{G = w \,\vert\, X = \bx} = \Pr \parens{G = u \,\vert\, X = \bx} $, is linear in $\bx$ and is a hyperplane in $p$-dimensional space. In other words, we can partition $\Real^p$ into $W$ subregions and the boundaries between two subregions is a hyperplane. 
+	
+	\item \textbf{Total Misclassification Probability of LDA When $W = 2$:} 
+	When there are only 2 classes, the LDA rule classifies to Class 2 if and only if
+	\begin{align*}
+		& \, \log \frac{\Pr \parens{G = 2 \,\vert\, X}}{\Pr \parens{G = 1 \,\vert\, X}} > 0 \\ 
+		\iff & \, \log \parens[\bigg]{\frac{\pi_2}{\pi_1}} - \frac{1}{2} \parens{\bmu_2 + \bmu_1}^\top \bSigma^{-1} \parens{\bmu_2 - \bmu_1} + X^\top \bSigma^{-1} \parens{\bmu_2 - \bmu_1} > 0. 
+	\end{align*}
+	For simplicity, we let 
+	\begin{align*}
+		u := & \, \log \parens[\bigg]{\frac{\pi_2}{\pi_1}} - \frac{1}{2} \parens{\bmu_2 + \bmu_1}^\top \bSigma^{-1} \parens{\bmu_2 - \bmu_1}, \\ 
+		V := & \, X^\top \bSigma^{-1} \parens{\bmu_2 - \bmu_1},  
+	\end{align*}
+	and notice that $u$ is a constant and $V$ is a random variable. Also, notice that, for $i = 1, 2$, the expectation of $V$ is 
+	\begin{align*}
+		\E \bracks{V \,\vert\, X \text{ actually belongs to Class $i$}} = & \, \bmu_i^\top \bSigma^{-1} \parens{\bmu_2 - \bmu_1}, 
+	\end{align*}
+	and the variance is 
+	\begin{align*}
+		\var \bracks{V \,\vert\, X \text{ actually belongs to Class $i$}} = & \, \parens{\bmu_2 - \bmu_1}^\top \bSigma^{-1} \var \bracks{X} \bSigma^{-1} \parens{\bmu_2 - \bmu_1} \\ 
+		= & \, \parens{\bmu_2 - \bmu_1}^\top \bSigma^{-1} \parens{\bmu_2 - \bmu_1} =: \Delta^2, 
+	\end{align*}
+	where $\Delta^2$ is the squared Mahalanobis distance between the means of the two classes. 
+	
+	Misclassification occurs when either 
+	\begin{itemize}
+		\item $\bx$ actually belongs to Class 1 but is assigned to Class 2, or 
+		\item $\bx$ actually belongs to Class 2 but is assigned to Class 1. 
+	\end{itemize}
+	The \textit{total misclassification probability} is given by 
+	\begin{align*}
+		\Pr \parens{\text{Misclassification}} = & \, \pi_1 \times \Pr \parens{ \text{Classify $X$ to Class 2} \,\vert\, \text{$X$ belongs to Class 1} } + \\ 
+		& \qquad \pi_2 \times \Pr \parens{ \text{Classify $X$ to Class 1} \,\vert\, \text{$X$ belongs to Class 2} }. 
+	\end{align*}
+	Note that 
+	\begin{align*}
+		& \, \Pr \parens{ \text{Classify $X$ to Class 2} \,\vert\, \text{$X$ belongs to Class 1} } \\ 
+		= & \, \Pr \parens[\Bigg]{\log \frac{\Pr \parens{Y = 2 \,\vert\, X}}{\Pr \parens{Y = 1 \vert\, X}} > 0 \,\Big\vert\, \text{$X$ belongs to Class 1}} \\ 
+		= & \, \Pr \parens[\Big]{ u + V > 0 \,\big\vert\, \text{$X$ belongs to Class 1}}  \\ 
+		= & \, \Pr \parens[\Bigg]{ \frac{V - \bmu_1^\top \bSigma^{-1} \parens{\bmu_2 - \bmu_1}}{\Delta} > - \frac{u + \bmu_1^\top \bSigma^{-1} \parens{\bmu_2 - \bmu_1}}{\Delta} } \\ 
+		= & \, \Pr \parens[\Bigg]{ Z > \frac{\Delta}{2} - \frac{1}{\Delta} \log \parens[\bigg]{\frac{\pi_2}{\pi_1}} } \\ 
+		= & \, \Phi \parens[\bigg]{- \frac{\Delta}{2} + \frac{1}{\Delta} \log \parens[\bigg]{\frac{\pi_2}{\pi_1}}}, 
+	\end{align*}
+	where $Z$ denotes the standard normal random variable and $\Phi$ is the corresponding cumulative distribution function. 
+	
+	Similarly, we have 
+	\begin{align*}
+		\Pr \parens{ \text{Classify $X$ to Class 1} \,\vert\, \text{$X$ belongs to Class 2} }
+		= \Phi \parens[\bigg]{- \frac{\Delta}{2} - \frac{1}{\Delta} \log \parens[\bigg]{\frac{\pi_2}{\pi_1}}}. 
+	\end{align*}
+	Therefore, the total misclassification probability is 
+	\begin{align*}
+		\Pr \parens{\text{Misclassification}} = & \, \pi_1 \times \Phi \parens[\bigg]{- \frac{\Delta}{2} + \frac{1}{\Delta} \log \parens[\bigg]{\frac{\pi_2}{\pi_1}}} + \pi_2 \times \Phi \parens[\bigg]{- \frac{\Delta}{2} - \frac{1}{\Delta} \log \parens[\bigg]{\frac{\pi_2}{\pi_1}}}. 
+	\end{align*}
+	
+	If, in particular, $\pi_1 = \pi_2 = \frac{1}{2}$, we have 
+	\begin{align*}
+		\Pr \parens{\text{Misclassification}} = & \, \frac{1}{2} \Phi \parens[\bigg]{- \frac{\Delta}{2}} + \frac{1}{2} \Phi \parens[\bigg]{- \frac{\Delta}{2}} = \Phi \parens[\bigg]{- \frac{\Delta}{2}}. 
+	\end{align*}
+	
+	\item \textbf{Estimation in LDA:} In practice, we do \emph{not} know the parameters necessary to perform LDA, and we estimate them by the following approach: 
+	\begin{itemize}
+		\item estimate $\pi_w$ by 
+		\begin{align*}
+			\hat{\pi}_w := \dfrac{n_w}{n}, \qquad \text{ for all } w = 1, 2, \cdots, W, 
+		\end{align*}
+		where $n_w$ is the number of observations in Class $w$; 
+		\item estimate $\bmu_w$ by 
+		\begin{align*}
+			\hat{\bmu}_w := \dfrac{\sum_{\sets{i \,\vert\, g_i = w}} \bx_i}{n_w}, \qquad \text{ for all } w = 1, 2, \cdots, W, 
+		\end{align*}
+		\item estimate the common covariance matrix by 
+		\begin{align*}
+			\widehat{\bSigma} := \dfrac{1}{n-W} \sum_{w=1}^W \sum_{\sets{i \,\vert\, g_i = w}} \parens{\bx_i - \hat{\bmu}_w}\parens{\bx_i - \hat{\bmu}_w}^\top. 
+		\end{align*}
+	\end{itemize}
+	
+	\textit{Case for $W = 2$.} When there are only 2 classes, the LDA rule classifies to Class 2 if and only if
+	\begin{align}
+		& \, \log \frac{\Pr \parens{G = 2 \,\vert\, X = \bx}}{\Pr \parens{G = 1 \,\vert\, X = \bx}} > 0 \nonumber \\ 
+		\iff & \, \log \parens[\bigg]{\frac{n_2}{n_1}} - \frac{1}{2} \parens{\hat{\bmu}_2 + \hat{\bmu}_1}^\top \widehat{\bSigma}^{-1} \parens{\hat{\bmu}_2 - \hat{\bmu}_1} + \bx^\top \widehat{\bSigma}^{-1} \parens{\hat{\bmu}_2 - \hat{\bmu}_1} > 0 \nonumber \\ 
+		\iff & \, \bx^\top \widehat{\bSigma}^{-1} \parens{\hat{\bmu}_2 - \hat{\bmu}_1} > \frac{1}{2} \parens{\hat{\bmu}_2 + \hat{\bmu}_1}^\top \widehat{\bSigma}^{-1} \parens{\hat{\bmu}_2 - \hat{\bmu}_1} - \log \parens[\bigg]{\frac{n_2}{n_1}}, \label{eq-lda}
+	\end{align}
+	and Class 1 otherwise. 
+	
+	\item \textbf{Computation for LDA:} Referring to \eqref{eq-lda-decision-rule-max1} and \eqref{eq-lda-decision-rule-max2}, LDA classification rule is equivalent to the following minimization problem 
+	\begin{align}\label{eq-lda-rule-min}
+		G \parens{\bx} = \argmin_{w \in \calW} \braces[\bigg]{\frac{1}{2} \parens{\bx - \hat{\bmu}_w}^\top \widehat{\bSigma}^{-1} \parens{\bx - \hat{\bmu}_w} - \log \hat{\pi}_w}. 
+	\end{align}
+	Using the eigen-decomposition of the symmetric positive definite matrix $\widehat{\bSigma}$, we have 
+	\begin{align*}
+		\widehat{\bSigma} = \widehat{\bU} \widehat{\bD} \widehat{\bU}^\top, 
+	\end{align*}
+	where $\widehat{\bU} \in \Real^{p \times p}$ is an orthogonal matrix and $\widehat{\bD} \in \Real^{p \times p}$ is a diagonal matrix, and obtain 
+	\begin{align*}
+		\parens{\bx - \hat{\bmu}_w}^\top \widehat{\bSigma}^{-1} \parens{\bx - \hat{\bmu}_w} = & \, \parens{\bx - \hat{\bmu}_w}^\top \widehat{\bU} \widehat{\bD}^{-1} \widehat{\bU}^\top \parens{\bx - \hat{\bmu}_w} \\ 
+		= & \, \norm{ \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \parens{\bx - \hat{\bmu}_w}}_2^2 \\ 
+		= & \, \norm{ \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \bx - \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \hat{\bmu}_w}_2^2, 
+	\end{align*}
+	which is the squared distance between the transformed variable $\tilde{\bx} := \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \bx$ and the transformed mean vector $\tilde{\bmu}_w := \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \hat{\bmu}_w$. 
+	
+	Hence, the LDA classifier can be implemented by the following steps: 
+	\begin{enumerate}[label=(\arabic*)]
+		\item Find the eigen-decomposition of $\widehat{\bSigma} = \widehat{\bU} \widehat{\bD} \widehat{\bU}^\top$; 
+		\item Transform the class centroids $\tilde{\bmu}_w = \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \hat{\bmu}_w$, for all $w = 1, 2, \cdots, W$; 
+		\item Given any point $\bx \in \Real^P$, transform to $\tilde{\bx} = \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \bx \in \Real^p$, and then classify according to the closest centroid in the \emph{transformed} space, adjusting for class proportions. 
+	\end{enumerate}
+	
+	\textit{Remark.} Applying the transformation $\tilde{\bx} = \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \bx$ is basically \emph{sphering} the data points, because if we consider $\bx$ were a random variable with covariance matrix $\widehat{\bSigma}$, then 
+	\begin{align*}
+		\var \bracks{\widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \bx} = & \, \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \widehat{\bSigma} \widehat{\bU} \widehat{\bD}^{-\frac{1}{2}} 
+		= \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \parens{\widehat{\bU} \widehat{\bD} \widehat{\bU}^\top} \widehat{\bU} \widehat{\bD}^{-\frac{1}{2}} 
+		= \bI_p. 
+	\end{align*}
+	
+	\item \textbf{Derivation of LDA from Regression When $W = 2$:} Suppose $W = 2$ with class sizes being $n_1$ and $n_2$, respectively. Label the target as $-\frac{n}{n_1}$ and $\frac{n}{n_2}$, respectively. Consider minimization of the least squares criterion
+	\begin{align*}
+		L \parens{\beta_0, \bbeta} := & \,\frac{1}{2} \sum_{i=1}^n \parens{y_i - \beta_0 - \bx_i^\top \bbeta}^2 \\ 
+		= & \, \frac{1}{2} \norm{\bY - \beta_0 \boldone_n - \bX \bbeta}_2^2, 
+	\end{align*}
+	where $\bY := \parens{y_1, y_2, \cdots, y_2}^\top \in \Real^n$ and $\bX \in \Real^{n \times p}$ is the design matrix. Let $\parens{\hat{\beta}_0, \widehat{\bbeta}} := \argmin_{\beta_0, \bbeta} L \parens{\beta_0, \bbeta}$. 
+	
+	We first show that $\widehat{\bbeta}$ satisfies 
+	\begin{align}\label{eq-ex4.2-goal}
+		\bracks[\big]{ \parens{n - 2} \widehat{\bSigma} + n \widehat{\bSigma}_B } \widehat{\bbeta} = n \parens{\hat{\bmu}_2 - \hat{\bmu}_1}, 
+	\end{align}
+	where $\widehat{\bSigma}_B := \frac{n_1 n_2}{n^2} \parens{\hat{\bmu}_2 - \hat{\bmu}_1} \parens{\hat{\bmu}_2 - \hat{\bmu}_1}^\top$. 
+	
+	Taking the derivatives of $L \parens{\beta_0, \bbeta}$ with respect to $\beta_0$ and $\bbeta$ and setting the derivatives to 0 yield 
+	\begin{align*}
+		\frac{\partial}{\partial \beta_0} L \parens{\beta_0, \bbeta} = & \, \boldone_{n}^\top \parens{\bY - \beta_0 \boldone_n - \bX \bbeta} \stackrel{\text{ set }}{=} 0, \\ 
+		\frac{\partial}{\partial \bbeta} L \parens{\beta_0, \bbeta} = & \, \bX^\top \parens{\bY - \beta_0 \boldone_n - \bX \bbeta}\stackrel{\text{ set }}{=} 0. 
+	\end{align*}
+	The minimizer $\parens{\hat{\beta}_0, \widehat{\bbeta}}$ must satisfy 
+	\begin{align}
+		0 = & \, \boldone_n^\top \bY - \boldone_n^\top \boldone_n \hat{\beta}_0 - \boldone_n^\top \bX \widehat{\bbeta} = \boldone_n^\top \bY - n \hat{\beta}_0 - \boldone_n^\top \bX \widehat{\bbeta}, \label{eq-ex-4.2-1} \\ 
+		\boldzero_p = & \, \bX^\top \bY - \hat{\beta}_0 \bX^\top \boldone_n - \bX^\top \bX \widehat{\bbeta}. \label{eq-ex-4.2-2}
+	\end{align}
+	Due to the way we label $y_i$'s, we have 
+	\begin{align*}
+		\boldone_n^\top \bY = n_1 \parens[\bigg]{- \frac{n}{n_1}} + n_2 \parens[\bigg]{\frac{n}{n_1}} = 0. 
+	\end{align*}
+	Using this result, we can simplify \eqref{eq-ex-4.2-1} as $0 = - n \hat{\beta}_0 - \boldone_n^\top \bX \widehat{\bbeta}$, and thus 
+	\begin{align*}
+		\hat{\beta}_0 = - \frac{1}{n} \boldone_n^\top \bX \widehat{\bbeta}. 
+	\end{align*}
+	Plugging the preceding equation into \eqref{eq-ex-4.2-2} yields 
+	\begin{align*}
+		\boldzero_p = \bX^\top \bY + \frac{1}{n} \parens{ \bX^\top \boldone_n } \parens{ \boldone_n^\top \bX } \widehat{\bbeta} - \bX^\top \bX \widehat{\bbeta}, 
+	\end{align*}
+	that is, 
+	\begin{align*}
+		\parens[\bigg]{\bX^\top \bX - \frac{1}{n} \parens{ \bX^\top \boldone_n } \parens{ \boldone_n^\top \bX } } \widehat{\bbeta} = \bX^\top \bY. 
+	\end{align*}
+	The desired result follows if we can show 
+	\begin{align}\label{eq-ex-4.2-3}
+		\bX^\top \bX - \frac{1}{n} \parens{ \bX^\top \boldone_n } \parens{ \boldone_n^\top \bX } = \parens{n - 2} \widehat{\bSigma} + n \widehat{\bSigma}_B, 
+	\end{align}
+	and 
+	\begin{align}\label{eq-ex-4.2-4}
+		\bX^\top \bY = n \parens{\hat{\bmu}_2 - \hat{\bmu}_1}. 
+	\end{align}
+	
+	To show \eqref{eq-ex-4.2-3}, note that 
+	\begin{align*}
+		\parens{n - 2} \widehat{\bSigma} = & \, \sum_{\sets{i \,\vert\, g_i = 1}} \parens{\bx_i - \hat{\bmu}_1} \parens{\bx_i - \hat{\bmu}_1}^\top + \sum_{\sets{i \,\vert\, g_i = 2}} \parens{\bx_i - \hat{\bmu}_2} \parens{\bx_i - \hat{\bmu}_2}^\top \\ 
+		= & \, \sum_{i=1}^n \bx_i \bx_i^\top - \parens[\Bigg]{\sum_{\sets{i \,\vert\, g_i = 1}} \bx_i} \hat{\bmu}_1^\top - \hat{\bmu}_1 \parens[\Bigg]{\sum_{\sets{i \,\vert\, g_i = 1}} \bx_i}^\top + n_1 \hat{\bmu}_1 \hat{\bmu}_1^\top \\ 
+		& \qquad - \parens[\Bigg]{\sum_{\sets{i \,\vert\, g_i = 2}} \bx_i} \hat{\bmu}_2^\top - \hat{\bmu}_2 \parens[\Bigg]{\sum_{\sets{i \,\vert\, g_i = 2}} \bx_i}^\top + n_2 \hat{\bmu}_2 \hat{\bmu}_2^\top \\ 
+		= & \, \sum_{i=1}^n \bx_i \bx_i^\top - n_1 \hat{\bmu}_1 \hat{\bmu}_1^\top - n_2 \hat{\bmu}_2 \hat{\bmu}_2^\top, 
+	\end{align*}
+	and that 
+	\begin{align*}
+		n \widehat{\bSigma}_B = \frac{n_1 n_2}{n} \parens{\hat{\bmu}_2 - \hat{\bmu}_1} \parens{\hat{\bmu}_2 - \hat{\bmu}_1}^\top. 
+	\end{align*}
+	Their sum is 
+	\begin{align*}
+		\parens{n - 2} \widehat{\bSigma} + n \widehat{\bSigma}_B = & \, \sum_{i=1}^n \bx_i \bx_i^\top - \frac{1}{n} \parens[\bigg]{n n_1 \hat{\bmu}_1 \hat{\bmu}_1^\top + n n_2 \hat{\bmu}_2 \hat{\bmu}_2^\top - n_1 n_2 \parens{\hat{\bmu}_2 - \hat{\bmu}_1} \parens{\hat{\bmu}_2 - \hat{\bmu}_1}^\top } \\ 
+		= & \, \sum_{i=1}^n \bx_i \bx_i^\top - \frac{1}{n} \parens[\bigg]{ n_1^2 \hat{\bmu}_1 \hat{\bmu}_1^\top + n_1 n_2 \hat{\bmu}_1 \hat{\bmu}_2^\top + n_1 n_2 \hat{\bmu}_2 \hat{\bmu}_1^\top + n_2 \hat{\bmu}_2 \hat{\bmu}_2^\top } \\ 
+		= & \, \sum_{i=1}^n \bx_i \bx_i^\top - \frac{1}{n} \parens[\Big]{ n_1 \hat{\bmu}_1 + n_2 \hat{\bmu}_2 } \parens[\Big]{ n_1 \hat{\bmu}_1 + n_2 \hat{\bmu}_2 }^\top \\ 
+		= & \, \bX^\top \bX - \frac{1}{n} \parens{ \bX^\top \boldone_n } \parens{ \boldone_n^\top \bX }. 
+	\end{align*}
+	
+	To show \eqref{eq-ex-4.2-4}, note that 
+	\begin{align*}
+		\bX^\top \bY = & \, - \frac{n}{n_1} \sum_{\sets{i \,\vert\, g_i = 1}} \bx_i + \frac{n}{n_2} \sum_{\sets{i \,\vert\, g_i = 2}} \bx_i 
+		= -n \hat{\bmu}_1 + n \hat{\bmu}_2 
+		= n \parens{\hat{\bmu}_2 - \hat{\bmu}_1}. 
+	\end{align*}
+	
+	Hence, with the definition of $\widehat{\bSigma}_B$ above, we see $\widehat{\bSigma}_B \bbeta$ is in the direction $\parens{\hat{\bmu}_2 - \hat{\bmu}_1}$. By \eqref{eq-ex4.2-goal}, we conclude that 
+	\begin{align*}
+		\widehat{\bbeta} \propto \widehat{\bSigma} \parens{\hat{\bmu}_2 - \hat{\bmu}_1}, 
+	\end{align*}
+	and that the least-squares regression coefficient is identical to the LDA coefficient, up to a scalar multiple. 
+	
+	\textit{Remarks.}
+	\begin{enumerate}
+		\item Since the derivation of the LDA via least squares above does \emph{not} use a Gaussian distribution assumption for the features, one can extend LDA to non-Gaussian data. However, the derivation of the particular intercept or \textit{cut-point} given in \eqref{eq-lda} does require Gaussian assumption. 
+		\item With two more classes, LDA is not the same as linear regression of the class indicator matrix. 
+	\end{enumerate}
+	
+	\item \textbf{Quadratic Discriminant Analysis (QDA):} If we still assume that the class-conditional density functions are Gaussian but do \textit{not} assume that all classes share the same covariance matrix $\bSigma$ but rather possibly $\bSigma_w \ne \bSigma_u$ for different classes $w$ and $u$, we obtain the \emph{quadratic discriminant analysis (QDA)}. 
+	
+	The associated \textit{quadratic discriminant function} is 
+	\begin{equation}
+		\delta_w \parens{\bx} = -\frac{1}{2} \log \abs{\bSigma_w} - \frac{1}{2} \parens{\bx -\bmu_w}^\top \bSigma_w^{-1} \parens{\bx - \bmu_w} + \log \pi_w. 
+	\end{equation}
+	The decision boundary between Classes $w$ and $u$ is described by a \emph{quadratic} equation 
+	\begin{align*}
+		\sets{\bx \,\vert\, \delta_w \parens{\bx} = \delta_{u} \parens{\bx}}. 
+	\end{align*}
+	
+	\textit{Remark.} When the parameters are \emph{not} known, we can estimate them in a similar fashion as in LDA, but we need to treat the covariance matrix differently. In QDA, we estimate the covariance matrix for each class \emph{separately}. However, if $p$ is large, this means a dramatic increase in parameter estimation. 
+	
+	\item \textbf{Computations for QDA:} Let $\widehat{\bSigma}_w$ be the estimate of the covariance matrix of Class $w$. By eigen-decomposition, we have $\widehat{\bSigma}_w = \widehat{\bU}_w \widehat{\bD}_w \widehat{\bU}_w^\top $, where $\widehat{\bU}_w \in \Real^{p \times p}$ is an orthogonal matrix and $\widehat{\bD}_w$ is a diagonal matrix containing non-negative eigenvalues $d_{w,\ell}$. Then, the ingredients in $\delta_w \parens{\bx}$ become 
+	\begin{align*}
+		\log \, \abs{ \widehat{\bSigma}_w } = \sum_{\ell} \log d_{w,\ell} 
+	\end{align*}
+	and 
+	\begin{align*}
+		\parens{\bx - \hat{\bmu}_w}^\top \widehat{\bSigma}_k^{-1} \parens{\bx - \hat{\bmu}_w} = \bracks{\bU_w^\top \parens{\bx - \hat{\bmu}_w}}^\top \bD_w^{-1} \bracks{ \bU_w^\top \parens{\bx - \widehat{\bmu}_w}}. 
+	\end{align*}
+
+	\item \textbf{Counting the Number of Parameters:} 
+	\begin{itemize}
+		\item In LDA, there are $\parens{W-1} \times \parens{p+1}$ parameters, since we only need the difference $\delta_w - \delta_W$ between the discriminant functions where $W$ is the pre-chosen class, and each difference requires $\parens{p+1}$ parameters; 
+		\item In QDA, there are $\parens{W-1} \times \parens{\frac{1}{2} p \parens{p+3} + 1}$ parameters. 
+	\end{itemize} 
+	
+	\item \textbf{Regularized Discriminant Analysis:} 
+	\begin{enumerate}
+
+		\item \textit{Approach 1:} The first approach is a compromise between LDA and QDA and shrinks the separate covariances of QDA toward a common covariance as in LDA. The regularized covariance matrices have the form
+		\begin{align}\label{eq-reg-lda-qda-1}
+			\widehat{\bSigma}_w \parens{\alpha} := \alpha \cdot \widehat{\bSigma}_w + \parens{1-\alpha} \cdot \widehat{\bSigma}, 
+		\end{align}
+		where $\widehat{\bSigma}$ is the pooled covariance matrix used in LDA. Here, $\alpha \in [0,1]$ is the tuning parameter that can be chosen based on the performance of the model on a validation set or by cross-validation and allows a continuum of models between LDA and QDA. 
+
+		\item \textit{Approach 2:} The second approach allows $\widehat{\bSigma}$ to be shrunk toward the scalar covariance matrix 
+		\begin{align}\label{eq-reg-lda-qda-2}
+			\widehat{\bSigma} \parens{\gamma} = \gamma \cdot \widehat{\bSigma} + \parens{1-\gamma} \cdot \widehat{\sigma}^2 \bI
+		\end{align}
+		for some $\gamma \in \bracks{0, 1}$ and $\widehat{\sigma}^2 > 0$. 
+		
+		\item \textit{Approach 3:} The third approach replaces $\widehat{\bSigma}$ in \eqref{eq-reg-lda-qda-1} by $\widehat{\bSigma} \parens{\gamma}$, leading to a more general family of covariance matrices $\widehat{\bSigma} \parens{\alpha, \gamma}$. 
+	\end{enumerate}
+	
+	\item \textbf{Observations from LDA Rule \eqref{eq-lda-rule-min}:}
+	\begin{enumerate}
+		\item The $W$ centroids (each corresponding to one class) in $p$-dimensional input space lie in an \emph{affine subspace} of dimensionality $\le W - 1$. 
+		
+		This is because if $\bu$ belongs to this affine subspace spanned by centroids $\bmu_1, \cdots, \bmu_W$, we can find $\alpha_2, \cdots, \alpha_{W}$ such that  
+		\begin{align*}
+			\bu = & \, \parens[\Bigg]{1 - \sum_{i=2}^{W} \alpha_i} \bmu_1 + \alpha_2 \bmu_2 + \cdots + \alpha_W \bmu_W \\ 
+			= & \, \bmu_1 + \alpha_2 \parens{\bmu_2 - \bmu_1} + \cdots + \alpha_W \parens{\bmu_W - \bmu_1} \\ 
+			= & \, \bmu_1 + \alpha_2 \bd_2 + \cdots + \alpha_W \bd_W, 
+		\end{align*}
+		where $\bd_i := \bmu_i - \bmu_1$ for all $i = 2, 3, \cdots, W$. 
+		
+		\item In locating the closest centroid, we can ignore distances orthogonal to this subspace of dimensionality $\le W - 1$. 
+		
+		Let $\calM \subseteq \Real^p$ denote this affine subspace of dimensionality $\le W - 1$. Then, for any $\bx \in \Real^p$, we have 
+		\begin{align*}
+			\bx = \calP_{\calM} \bx + \calP_{\calM^{\perp}} \bx, 
+		\end{align*}
+		where $\calP_{\calM} \bx$ and $\calP_{\calM^\perp} \bx$ denote the projections of $\bx$ onto $\calM$ and $\calM^{\perp}$, respectively. In addition, note that, for any $w = 1, 2, \cdots, W$, 
+		\begin{align*}
+			\parens{\bx - \hat{\bmu}_w}^\top \widehat{\bSigma}^{-1} \parens{\bx - \hat{\bmu}_w} = & \, \norm{\tilde{\bx} - \tilde{\bmu}_w}_2^2 \\ 
+			= & \, \norm{ \underbrace{\calP_{\calM} \bx - \tilde{\bmu}_w}_{\in \calM} + \underbrace{\calP_{\calM^{\perp}} \bx}_{\in \calM^\perp}}_2^2 \\ 
+			= & \, \norm{\calP_{\calM} \bx - \tilde{\bmu}_w}_2^2 + \norm{\calP_{\calM^{\perp}} \bx}_2^2, 
+		\end{align*}
+		where $\tilde{\bx} = \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \bx \in \Real^p$ and $\tilde{\bmu}_w = \widehat{\bD}^{-\frac{1}{2}} \widehat{\bU}^\top \bmu_w \in \Real^p$. Note that the term $\norm{\calP_{\calM^{\perp}} \bx}_2^2$ does \emph{not} depend on $w$. 
+	\end{enumerate}
+	
+	Therefore, 
+	\begin{itemize}
+		\item the LDA classification rule is \emph{unchanged} if we project the points to be classified onto the affine subspace $\calM$ of dimensionality at most $W-1$, since the distances orthogonal to $\calM$ does \emph{not} matter; 
+		\item there is a fundamental dimension reduction in LDA, and we only need to consider the data in a subspace of dimension at most $W-1$. 
+	\end{itemize}
+	
+		
+	\item \textbf{Reduce-Rank Linear Discriminant Analysis, Part I --- Fisher's Approach:} 
+	\begin{enumerate}
+		\item \textit{Problem Formulation:} Fisher posed the problem: 
+		\begin{quotation}
+			\textit{Find the linear combination $Z = \ba^\top X$ such that the between-class variance is maximized relative to the within-class variance. }
+		\end{quotation}
+		
+		\item \textit{Review of the Law of Total Variance:} Recall that, for a random vector $X$, we have 
+		\begin{align*}
+			\var \bracks{X} = \var \bracks[\big]{ \E \bracks{X \vert Y} } + \E \bracks[\big]{ \var \bracks{X \vert Y} }. 
+		\end{align*}
+		An interpretation of this result is that the total variance of $X$, $\var \bracks{X}$, is the sum of the between-class variance, $\var \bracks{ \E \bracks{X \vert Y} }$, and the within-class variance, $\E \bracks{ \var \bracks{X \vert Y} }$. 
+		
+		Now, letting $\ba \in \Real^p$ be a constant vector, we have 
+		\begin{align*}
+			\var \bracks{ \innerp{\ba}{X} } = & \, \var \bracks[\big]{ \E \bracks{ \innerp{\ba}{X} \vert Y} } + \E \bracks[\big]{ \var \bracks{\innerp{\ba}{X} \vert Y} } \\ 
+			= & \, \ba^\top \bB \ba + \ba^\top \bW \ba, 
+		\end{align*}
+		where $\bB := \var \bracks{ \E \bracks{X \vert Y} }$ and $\bW := \E \bracks{ \var \bracks{X \vert Y} }$. 
+		
+		\item \textit{Calculation of Variances:} Let $\bar{\bmu} = \sum_{w=1}^W \pi_w \bmu_w$, where $\pi_w$ denotes the prior probability of Class $w$ and $\bmu_w$ denotes the conditional mean of $X$ of Class $w$. 
+		\begin{enumerate}
+			\item \underline{Between-class variance:} 
+			\begin{align*}
+				\bB = \sum_{w=1}^W \pi_w \parens{\bmu_w - \bar{\bmu}} \parens{\bmu_w - \bar{\bmu}}^\top; 
+			\end{align*}
+			Note that $\bB$ is of rank at most $W - 1$. 
+			
+			\item \underline{Within-class variance:} 
+			\begin{align*}
+				\bW = \sum_{w=1}^W \pi_w \var \bracks{X \,\vert\, G = w}; 
+			\end{align*}
+			
+			\item \underline{Total variance:} 
+			\begin{align*}
+				\bT = \bW + \bB. 
+			\end{align*}
+		\end{enumerate}
+		
+		\item \textit{Mathematical Formulation of Fisher's LDA:} Fisher's LDA problem can be formulated as the following maximization problem 
+		\begin{align*}
+			\maximize_{\ba_1} \, \frac{\ba_1^\top \bB \ba_1}{\ba_1^\top \bW \ba_1}, 
+		\end{align*}
+		or, equivalently, 
+		\begin{align}\label{eq-fisher-lda-single}
+			\maximize_{\ba_1} \, \ba_1^\top \bB \ba_1 \hspace{30pt} \text{ subject to } \ba_1^\top \bW \ba_1 = 1.  
+		\end{align}
+		This problem is a \emph{generalized eigenvalue problem}. To find a solution, first note that 
+		\begin{align*}
+			1 = \ba_1^\top \bW \ba_1 = \ba_1^\top \bW^{\frac{1}{2}} \bW^{\frac{1}{2}} \ba_1 = \parens{\bW^{\frac{1}{2}} \ba_1}^\top \bW^{\frac{1}{2}} \ba_1. 
+		\end{align*}
+		Letting $\bc_1 := \bW^{\frac{1}{2}} \ba_1$, we have $\ba_1 = \bW^{-\frac{1}{2}} \bc_1$ and can transform the problem \eqref{eq-fisher-lda-single} to 
+		\begin{align}\label{eq-fisher-lda-single-1}
+			\maximize_{\bc_1} \, \bc_1^\top \bW^{-\frac{1}{2}} \bB \bW^{-\frac{1}{2}} \bc_1 \hspace{30pt} \text{ subject to } \norm{\bc_1}_2^2 = 1.  
+		\end{align}
+		The maximizer of \eqref{eq-fisher-lda-single-1} is the eigenvector of $\bW^{-\frac{1}{2}} \bB \bW^{-\frac{1}{2}}$ associated with its largest eigenvalue, denoted by $\bc_1^*$. It follows that the optimal solution of \eqref{eq-fisher-lda-single}, denoted by $\ba_1^*$, is 
+		\begin{align*}
+			\ba_1^* = \bW^{-\frac{1}{2}} \bc_1^*. 
+		\end{align*}
+		
+		\item \textit{Additional Directions:} We aim to find additional directions $\ba_2, \cdots, \ba_{W-1}$ that maximize the ratio between the between-class variance and the within-class variance, under the constraint that $\ba_{w}$ is orthogonal in $\bW$ to $\ba_{w-1}, \ba_{w-2}, \cdots, \ba_1$, for all $w = 2, \cdots, W-1$. 
+		
+		The associated optimization problem can be collectively formulated as 
+		\begin{align}\label{eq-fisher-lda-multi}
+			\maximize_{\ba_1, \cdots, \ba_{W-1}} \, \sum_{w=1}^{W-1} \ba_w^\top \bB \ba_w \qquad \text{ subject to } \ba_w^\top \bW \ba_{w'} = \indic \parens{w = w'} \text{ for all $w, w'$}. 
+		\end{align}
+		To find the solution to \eqref{eq-fisher-lda-multi}, we first let $\bc_w := \bW^{\frac{1}{2}} \ba_w$ for all $w = 1, \cdots, W-1$. The problem \eqref{eq-fisher-lda-multi} then becomes 
+		\begin{align}\label{eq-fisher-lda-multi-1}
+			\maximize_{\bc_1, \cdots, \bc_{W-1}} \, \sum_{w=1}^{W-1} \bc_w^\top \bW^{-\frac{1}{2}} \bB \bW^{-\frac{1}{2}} \bc_w, \qquad \text{ subject to } \bc_w^\top \bc_{w'} = \indic \parens{w = w'}. 
+		\end{align}
+		The optimal solution to \eqref{eq-fisher-lda-multi-1} is the set of all eigenvectors of $\bW^{-\frac{1}{2}} \bB \bW^{-\frac{1}{2}}$, denoted by $\bc_1^*, \cdots, \bc_{W-1}^*$. To obtain the optimal solution to \eqref{eq-fisher-lda-multi}, transform back as 
+		\begin{align*}
+			\ba_w^* = \bW^{-\frac{1}{2}} \bc_w^*, \qquad \text{ for all } w = 1, \cdots, W - 1. 
+		\end{align*}
+		
+		\textit{Remark.} These directions $\ba_1^*, \cdots, \ba_{W-1}^*$ are called the \emph{discriminant directions}. There are at most $W-1$ of them, since $\bB$ is of rank at most $W-1$. 
+		
+		\item \textit{Estimation:} All development above requires the knowledge of population quantities. In practice, when we only have access to data, we can estimate them as below: 
+		\begin{enumerate}
+			\item $n_w := \sum_{i=1}^n \indic \parens{g_i = w}$, for all $w = 1, \cdots, W$; 
+			\item $\hat{\bmu}_w = \frac{1}{n_w} \sum_{\sets{i \,\vert\, g_i = w}} \bx_i$, for all $w = 1, \cdots, W$; 
+			\item $\hat{\bmu} = \frac{1}{n} \sum_{w=1}^W n_w \hat{\bmu}_w = \frac{1}{n} \sum_{i=1}^n \bx_i$; 
+			\item $\widehat{\bB} = \frac{1}{n} \sum_{w=1}^W n_w \parens{\hat{\bmu}_w - \hat{\bmu}} \parens{\hat{\bmu}_w - \hat{\bmu}}^\top$; 
+			\item $\widehat{\bW} = \frac{1}{n} \sum_{w=1}^W \sum_{\sets{i \,\vert\, g_i = w}} \parens{\bx_i - \hat{\bmu}_w} \parens{\bx_i - \hat{\bmu}_w}^\top$. 
+		\end{enumerate}
+		
+		In particular, we have the following decomposition 
+		\begin{align*}
+			\widehat{\bB} + \widehat{\bW} = \widehat{\bS}, 
+		\end{align*}
+		where $\widehat{\bS} := \frac{1}{n} \sum_{w=1}^W \sum_{\sets{i \,\vert\, g_i = w}} \parens{\bx_i - \hat{\bmu}} \parens{\bx_i - \hat{\bmu}}^\top$. 
+		
+	\end{enumerate}
+	
+	\begin{center}
+		\begin{tabular}{*{3}{c}}
+			\toprule
+			Source of Variations & df & Sum of Squares Matrix \\
+			\midrule
+			Between classes & $W - 1$ & $\displaystyle n \widehat{\bB} = \sum_{w=1}^W n_w \parens{\hat{\bmu}_w - \hat{\bmu}} \parens{\hat{\bmu}_w - \hat{\bmu}}^\top $ \\
+			Within classes & $n - W$ & $\displaystyle n \widehat{\bW} = \sum_{w=1}^W \sum_{\sets{i \,\vert\, g_i = w}} \parens{\bx_i - \hat{\bmu}_w} \parens{\bx_i - \hat{\bmu}_w}^\top$ \\
+			\midrule 
+			Total & $n-1$ & $\displaystyle n \widehat{\bS} = \sum_{w=1}^W \sum_{\sets{i \,\vert\, g_i = w}} \parens{\bx_i - \hat{\bmu}} \parens{\bx_i - \hat{\bmu}}^\top$ \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\item \textbf{Reduce-Rank Linear Discriminant Analysis, Part II --- Principal Component Subspace Approach:} 
+	\begin{enumerate}
+		\item \textit{Main Idea:} We seek a $L < \parens{W - 1}$ dimensional subspace $\calH_L \subseteq \calH_{W - 1}$ that is \emph{optimal} for LDA, where ``optimal'' means that the projected centroids were spread out as much as possible in terms of \emph{variance}. This leads to finding principal component subspaces of the centroids themselves. 
+		\item \textit{Procedure:}
+		\begin{enumerate}
+			\item Compute the $ W \times p $ matrix of class centroids $\bM$ and the common covariance matrix $\bW$ (for \textit{within-class} covariance); 
+			\item Compute $\bM^* = \bM \bW^{-1/2}$ using the eigen-decomposition of $\bW$; 
+			\item Compute $\bB^*$, the covariance matrix of $\bM^*$ ($\bB$ for \textit{between-class} covariance), and its spectral decomposition $\bB^* = \bV^* \bD_B {\bV^*}^\top$. The columns $\bv_{\ell}^*$ of $\bV^*$ in sequence from first to last define the coordinates of the optimal subspaces; 
+			\item Combining all these operations the $\ell$-th discriminant variable is given by $Z_{\ell} = \bv_{\ell}^\top X$ with $\bv_{\ell} = \bW^{-1/2} \bv_\ell^*$. 
+		\end{enumerate}
+		
+		\item \textit{Remark:} This approach establishes the equivalence between the LDA and the PCA.  The directions in the LDA are indeed the principal component directions of the feature variables standardized by the \emph{within-class} covariance matrix. 
+	\end{enumerate}
+	
+	\item \textbf{Connections between Fisher's Reduced-Rank Discriminant Analysis and Gaussian LDA:} 
+	\begin{itemize}
+		\item Gaussian LDA and Fisher's LDA are equivalent in the sense that the Gaussian LDA rule is simply the nearest centroid in the Fisher's LD space. 
+		\item Gaussian LDA can be computed from the Fisher linear discriminant directions. 
+	\end{itemize}
+	
+	\item \textbf{Connections between Fisher's Reduced-Rank Discriminant Analysis and Regression of an Indicator Matrix:} It turns out that LDA amounts to the regression followed by a spectral decomposition of $\widehat{\bY}^\top \bY$. In particular, when $W = 2$, there is a single discriminant variable that is identical up to a scalar multiplication to either of the columns of $\widehat{\bY}$. 
+	
+\end{enumerate}
+
+\section*{IV. Logistic Regression}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Introduction:} The logistic regression model arises from directly modeling the \textit{posterior probabilities} of the $W$ classes via \textit{linear} functions in $\bx$, while ensuring that they sum to one and remain in $\bracks{0, 1}$. The model is of the form 
+	\begin{align*}
+		\log \frac{\Pr \parens{G = 1 \,\vert\, X = \bx}}{\Pr \parens{G = W \,\vert\, X = \bx}} = & \beta_{1,0} + \bbeta_{1}^\top \bx \\
+		\log \frac{\Pr \parens{G = 2 \,\vert\, X = \bx}}{\Pr \parens{G = W \,\vert\, X = \bx}} = & \beta_{2,0} + \bbeta_{2}^\top \bx \\
+		& \vdots  \\
+		\log \frac{\Pr \parens{G = W - 1 \,\vert\, X = \bx}}{\Pr \parens{G = W \,\vert\, X = \bx}} = & \beta_{(W-1),0} + \bbeta_{W-1}^\top \bx. 
+	\end{align*}
+	By the model above, it is simple to obtain that 
+	\begin{align*}
+		\Pr \parens{G = w \,\vert\, X = \bx} = & \frac{\exp \parens{\beta_{w,0} + \bbeta_w^\top \bx}}{1 + \sum_{u=1}^{W-1} \exp \parens{\beta_{u, 0} + \bbeta_u^\top \bx}}, \qquad \text{ for all } w = 1, \cdots, W - 1, \\ 
+		\Pr \parens{G = W \,\vert\, X = \bx} = & \frac{1}{1 + \sum_{u=1}^{W-1} \exp \parens{\beta_{u, 0} + \bbeta_u^\top \bx}}. 
+	\end{align*}
+	It is easy to see that all probabilities above are positive and sum to 1. 
+	
+	\textit{Remark.} Note that in the formulation above, we use the last class, i.e., Class $W$, as the denominator in the log-odds ratio, but the choice of denominator is arbitrary. 
+	
+	\item \textbf{Notation:} Let $\btheta := \sets{\beta_{1,0}, \bbeta_{1}^\top, \cdots, \beta_{\parens{W-1},0}, \bbeta_{W-1}^\top}$ and the probabilities 
+	\begin{align*}
+		\Pr \parens{G = w \,\vert\, X = \bx} =: p_w \parens{\bx; \btheta}, \qquad \text{ for all } w = 1, \cdots, W-1. 
+	\end{align*}
+	
+	\item \textbf{Fitting Logistic Regression Models --- Introduction:} We use the method of maximum likelihood to fit logistic regression models. 
+	
+	We use the \textit{multinomial distribution} and the log-likelihood function for $n$ observations is 
+	\begin{align*}
+		\ell \parens{\btheta} := \sum_{i=1}^n \log p_{g_i} \parens{\bx_i; \btheta}. 
+	\end{align*}
+	
+	\item \textbf{Newton-Raphson Algorithm for Two Classes:} We code the two classes $g_i$ via a $0/1$ response $y_i$ and 
+	\begin{align*}
+		y_i = \begin{cases}
+			1, & \, \text{ if } g_i = 1 \\
+			0, & \, \text{ if } g_i = 2
+		\end{cases}. 
+	\end{align*}
+	Also, let $p_1 \parens{\bx; \bbeta} =: p \parens{\bx; \bbeta}$ and $p_2 \parens{\bx; \bbeta} = 1 - p \parens{\bx; \bbeta}$, where $\bbeta := \parens{\beta_{1,0}, \bbeta_1^\top}^\top \in \Real^{p+1}$. Then, including the constant term $1$ into the $\bx$ vector, the log-likelihood can be re-written as 
+	\begin{align}
+		\ell \parens{\bbeta} = & \, \sum_{i=1}^n \braces[\Big]{y_i \cdot \log p \parens{\bx_i; \bbeta} + \parens{1 - y_i} \cdot \log \parens{1 - p \parens{\bx_i; \bbeta}}} \nonumber \\ 
+		= & \, \sum_{i=1}^n \braces[\Big]{y_i \cdot \parens[\big]{\bbeta^\top \bx - \log \parens{1 + \exp \parens{\bbeta^\top \bx_i}}} + \parens{1 - y_i} \cdot \parens[\big]{-\log \parens{1+\exp \parens{\bbeta^\top \bx_i}}}} \nonumber \\ 
+		= & \, \sum_{i=1}^n \braces[\Big]{ y_i \bbeta^\top \bx_i - \log \parens{1 +  \exp \parens{\bbeta^\top \bx_i}}}. 
+	\end{align}
+	
+	To find the maximum, we first find the \emph{score function}, the first-order derivative of $\ell$ with respect to $\bbeta$, which is 
+	\begin{align*}
+		\frac{\partial \ell \parens{\bbeta}}{\partial \bbeta} = %\sum_{i=1}^N \curbra{y_i x_i - \frac{x_i \exp\parens{\beta^\top x_i}}{1+\exp\parens{\beta^\top x_i}}} = 
+		\sum_{i=1}^n \bx_i \parens[\Bigg]{y_i - \frac{ \exp \parens{\bbeta^\top \bx_i}}{1+\exp \parens{\bbeta^\top \bx_i}}} = \sum_{i=1}^n \bx_i \parens[\Big]{y_i - p \parens{\bx_i; \bbeta}}
+	\end{align*}
+	and set the preceding equation to $\boldzero_{p+1}$, which are $\parens{p+1}$ equations nonlinear in $\bbeta$. 
+	
+	Since the first component of the vector $\bx_i$ is $1$ for all $i = 1, \cdots, n$, the first equation is 
+	\begin{align*}
+		\sum_{i=1}^n \parens[\big]{y_i - p \parens{\bx_i; \bbeta} } = 0 \qquad \iff \qquad \sum_{i=1}^n y_i = \sum_{i=1}^n p \parens{\bx_i; \bbeta}, 
+	\end{align*}
+	which can be interpreted that the \textit{expected} number of class ones matches the \textit{observed} number. 
+	
+	To compute the maximizer of $\ell$, we use the \emph{Newton-Raphson algorithm}, which requires the second-order derivative of $\ell$ given by 
+	\begin{align*}
+		\frac{\partial^2 \ell \parens{\bbeta} }{ \partial \bbeta \partial \bbeta^\top}
+		= & \, \sum_{i=1}^n \bx_i \parens[\bigg]{- \frac{\partial}{\partial \bbeta^\top} \parens[\bigg]{\frac{\exp \parens{\bbeta^\top \bx_i}}{1+\exp \parens{\bbeta^\top \bx_i}}}} \nonumber \\ 
+		= & \, - \sum_{i=1}^n \bx_i \parens[\bigg]{ \frac{ \exp \parens{\bbeta^\top \bx_i} \bx_i^\top \parens{1 + \exp \parens{\bbeta^\top \bx_i}} - \exp \parens{\bbeta^\top \bx_i} \exp \parens{\bbeta^\top \bx_i} \bx_i^\top}{\parens{1 + \exp \parens{\bbeta^\top \bx_i}}^2}} \nonumber \\ 
+		= & \, - \sum_{i=1}^n \bx_i \bx_i^\top \frac{ \exp \parens{\bbeta^\top \bx_i}}{\parens{1 + \exp \parens{ \bbeta^\top \bx_i}}^2} \nonumber \\ 
+		= & \, - \sum_{i=1}^n \bx_i \bx_i^\top \frac{\exp \parens{\bbeta^\top \bx_i}}{1 + \exp \parens{\bbeta^\top \bx_i}} \cdot \frac{1}{1 + \exp \parens{\bbeta^\top \bx_i}} \nonumber \\ 
+		= & \, - \sum_{i=1}^n \bx_i \bx_i^\top p \parens{\bx_i; \bbeta} \parens{1 - p \parens{\bx_i; \bbeta}}. 
+	\end{align*}
+	Then, given $\bbeta^{\mathrm{old}}$, the Newton-Raphson update is 
+	\begin{align}
+		\bbeta^{\parens{\mathrm{new}}} = \bbeta^{\parens{\mathrm{old}}} - \left. \parens[\bigg]{\frac{\partial^2 \ell \parens{\bbeta} }{ \partial \bbeta \partial \bbeta^\top}}^{-1} \frac{\partial \ell \parens{\bbeta} }{ \partial \bbeta} \right\vert_{\bbeta = \bbeta^{\parens{\mathrm{old}}}}. 
+	\end{align}
+	
+	We write everything in the matrix form. Let 
+	\begin{itemize}
+		\item $\bY \in \Real^n$ denote the vector with values of $y_i$'s, 
+		\item $\bX \in \Real^{n \times \parens{p+1}}$ be the design matrix, 
+		\item $\bp \in \Real^n$ be the vector of fitted probabilities with the $i$-th element being $p \parens{\bx_i; \bbeta^{\parens{\mathrm{old}}}}$, and 
+		\item $\bW \in \Real^{n \times n}$ be the diagonal matrix with the $i$-th element being $p \parens{\bx_i; \bbeta^{\parens{\mathrm{old}}}} \cdot \parens{1 - p \parens{\bx_i; \bbeta^{\parens{\mathrm{old}}}}}$. 
+	\end{itemize}
+	Then, we have 
+	\begin{align}
+		\frac{\partial \ell \parens{\bbeta}}{\partial \bbeta} = \bX^\top \parens{\bY - \bp}, \qquad \text{ and } \qquad \frac{\partial^2 \ell \parens{\bbeta} }{\partial \bbeta \partial \bbeta^\top} = -\bX^\top \bW \bX. \nonumber
+	\end{align}
+	With these ingredients defined, the Newton-Raphson update becomes 
+	\begin{align*}
+		\bbeta^{\mathrm{new}} = & \, \bbeta^{\parens{\mathrm{old}}} - \left. \parens[\bigg]{\frac{\partial^2 \ell \parens{\bbeta}}{\partial \bbeta \partial \bbeta^\top}}^{-1} \frac{\partial \ell \parens{\bbeta}}{\partial \bbeta} \right\vert_{\bbeta = \bbeta^{\parens{\mathrm{old}}}} \nonumber \\ 
+		= & \, \bbeta^{\parens{\mathrm{old}}} + \parens{\bX^\top \bW \bX}^{-1} \bX^\top \parens{\bY - \bp} \nonumber \\ 
+		= & \, \parens{\bX^\top \bW \bX}^{-1} \bX^\top \bW \parens{\bX \bbeta^{\parens{\mathrm{old}}} + \bW^{-1} \parens{\bY - \bp}} \nonumber \\ 
+		= & \, \parens{\bX^\top \bW \bX}^{-1} \bX^\top \bW \bz, 
+	\end{align*}
+	where we re-express this update as a weighted least squares update and define 
+	\begin{align*}
+		\bz := \bX \bbeta^{\mathrm{old}} + \bW^{-1} \parens{\bY - \bp}, 
+	\end{align*}
+	known as the \textit{adjusted response} or \textit{working response}. Then, the equations can be solved iteratively. 
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item This algorithm is referred to as \textit{iteratively reweighted least squares}, abbreviated as \emph{IRLS}, since each iteration solves the following weighted least squares problem
+		\begin{align*}
+			\bbeta^{\mathrm{new}} \leftarrow \argmin_{\bbeta} \parens{\bz - \bX \bbeta}^\top \bW \parens{\bz - \bX \bbeta}. 
+		\end{align*}
+		
+		\item One can choose a starting point arbitrarily, but convergence is \emph{never} guaranteed. \emph{Typically} the algorithm does converge as the log-likelihood is concave, but \textit{overshooting} can occur. 
+	\end{enumerate}
+	
+	\item \textbf{Fitting Algorithm for More Than Two Classes:} Consider the case when there are more than 2 classes, i.e., $W \ge 3$. 
+	\begin{itemize}
+		\item The Newton-Raphson algorithm can also be expressed as an iteratively reweighted least squares algorithm, but with a vector of $W - 1 $ responses and a non-diagonal weight matrix per observation; 
+		\item Another choice for algorithm is the coordinate-descent methods; 
+		\item The \texttt{R} package \texttt{glmnet} can fit very large logistic regression problems efficiently, both in $n$ and $p$. 
+	\end{itemize}
+	
+	\item \textbf{Quadratic Approximations and Inference:} 
+	\begin{enumerate}
+		\item The maximum likelihood estimates $\widehat{\bbeta}$ satisfy a \textit{self-consistency} relationship: they are the coefficients of a weighted least squares fit with the responses 
+		\begin{align*}
+			z_i = \bx_i^\top \widehat{\bbeta} + \frac{y_i - \hat{p}_i}{\hat{p}_i \parens{1 - \hat{p}_i} }
+		\end{align*}
+		and the weights are $w_i = \hat{p}_i \parens{1 - \hat{p}_i}$, both of which depend on $\widehat{\bbeta}$ itself. 
+		
+		\item The \textit{weighted residual sum-of-squares} is the Pearson chi-square statistic
+		\begin{align*}
+			\sum_{i=1}^n \frac{ \parens{ y_i - \hat{p}_i}^2 }{ \hat{p}_i \parens{ 1 - \hat{p}_i} }, 
+		\end{align*}
+		a quadratic approximation to the deviance. 
+		
+		\item Asymptotically, if the model is correct, then $\widehat{\bbeta}$ is consistent. 
+		
+		\item By the central limit theorem, as $n \to \infty$, the distribution of $\widehat{\bbeta}$ converges to $\Normal \parens{\bbeta, \parens{\bX \bW \bX}^{-1}}$. 
+%		
+%		%\item To make inference, one can use the \textit{Rao's score test} for testing \textit{inclusion} of a term and use the \textit{Wald test} testing \textit{exclusion} of a term. Neither of these require iterative fitting, and are based on the maximum-likelihood fit of the current model. 
+%		%\item \textit{More on Rao's Score Test:} {\LARGE \textbf{HERE}}
+%		%\item \textit{More on Wald Test:} {\LARGE \textbf{HERE}}
+	\end{enumerate}
+	
+	\item \textbf{$L_1$ Regularized Logistic Regression:} The $L_1$ penalty used in the lasso for variable selection and estimation can be applied to logistic regression. We maximize a penalized likelihood function 
+	\begin{align}\label{eq-logis-reg-l1}
+		\maximize_{\beta_0, \bbeta} \, \braces[\Bigg]{ \sum_{i=1}^n \bracks[\big]{y_i \cdot \parens{\beta_0 + \bbeta^\top \bx_i} - \log \parens{1 + \exp \parens{\beta_0 + \bbeta^\top \bx_i} } - \lambda \sum_{j=1}^p \abs{\beta_j} }}, 
+	\end{align}
+	where we do \emph{not} penalize the intercept. To compute the maximizer, one has several options: 
+	\begin{itemize}
+		\item using nonlinear programming method due to the concavity of the problem; 
+		\item using the quadratic approximations and applying a weighted lasso algorithm to \eqref{eq-logis-reg-l1}. In this case, it turns out that the variables with non-zero coefficients have the form 
+		\begin{align*}
+			\bx_j^\top \parens{\bY - \bp} = \lambda \cdot \mathrm{sign}\parens{\beta_j}; 
+		\end{align*}
+		the active variables are tied in their \emph{generalized correlation} with the residuals. 
+	\end{itemize}
+	
+	\item \textbf{Comparisons between LDA and Logistic Regression:} 
+	\begin{enumerate}
+		\item \textit{Similarities:} 
+		\begin{enumerate}
+			\item Both methods attempt to approximate the Bayes' rule classifier 
+			\begin{align*}
+				\widehat{G} = & \, \argmax_{w \in \calW} \braces[\bigg]{\Pr \parens{G = w \,\vert\, X = \bx}} \\ 
+				= & \, \argmax_{w \in \calW} \braces[\bigg]{\Pr \parens{G = w} \Pr \parens{X = \bx \,\vert\, G = w}}; 
+			\end{align*}
+			\item The log-posterior odds take on similar forms: 
+			\begin{itemize}
+				\item Under the Gaussian and common covariance matrix assumptions of the LDA, the log-posterior odds between Classes $w$ and $W$ is of the form 
+				\begin{align*}
+					& \, \log \frac{ \Pr \parens{G = w \,\vert\, X = \bx} }{ \Pr \parens{G = W \,\vert\, X = \bx}} \\ 
+					= & \, \log \parens[\bigg]{ \frac{\pi_w}{ \pi_W}} - \frac{1}{2} \parens{\bmu_w + \bmu_W}^\top \bSigma^{-1} \parens{\bmu_w - \bmu_W} + \bx^\top \bSigma^{-1} \parens{\bmu_w - \bmu_W} \\ 
+					= & \, \alpha_{w,0} + \balpha_{w}^\top \bx. 
+				\end{align*}
+				
+				\item Under the logistic construction, the log-odds is modeled as 
+				\begin{align*}
+					\log \frac{\Pr \parens{G = w \,\vert\, X = \bx}}{\Pr \parens{G = W \,\vert\, X = \bx}} = \beta_{w,0} + \bbeta_w^\top \bx. 
+				\end{align*}
+			\end{itemize}
+		\end{enumerate}
+		
+		\item \textit{Differences:} 
+		\begin{itemize}
+			\item The logistic regression model is more general and has fewer assumptions; 
+			\item The way the linear coefficient vectors are estimated are different; 
+			\item The logistic regression model assumes a model for $\Pr \parens{G = w \,\vert\, X = \bx}$ directly, but the LDA assumes a model for $\Pr \parens{X \,\vert\, G = w}$ and use the Bayes' rule to model $\Pr \parens{G = w \,\vert\, X}$; 
+			\item The joint density of $G$ and $X$ is 
+			\begin{align*}
+				\Pr \parens{X, G = w} = & \, \Pr \parens{X} \Pr \parens{G = w \,\vert\, X}, 
+			\end{align*}
+			where $\Pr \parens{X}$ denotes the marginal density of the inputs $X$. For both LDA and logistic regression, the second term on the RHS has the logit-linear form
+			\begin{align*}
+				\Pr \parens{G = w \,\vert\, X = \bx} = \frac{\exp \parens{\beta_{w,0} + \bbeta_w^\top \bx}}{1 + \sum_{u=1}^{W-1} \exp \parens{\beta_{u, 0} + \bbeta_{u}^\top \bx}}. 
+			\end{align*}
+			\begin{itemize}
+				\item In \textit{logistic regression}, the marginal density of $X$ can be an \emph{arbitrary} density function $\Pr \parens{X}$ and we fit the parameters of $\Pr \parens{G \,\vert\, X}$ by maximizing the conditional likelihood. Here, we \underline{ignore} $\Pr \parens{X}$. 
+				\item In \textit{LDA}, we fit parameters by maximizing the full log-likelihood based on the joint density 
+				\begin{align*}
+					\Pr \parens{X, G = w} = \phi \parens{X; \bmu_w, \bSigma} \cdot \pi_w, 
+				\end{align*}
+				where $\phi \parens{\,\cdot\,; \bmu, \bSigma}$ is the Gaussian density with mean $\bmu$ and covariance matrix $\bSigma$. Even though these parameters are unknown, they can be estimated from data. Here, the density of $X$ does play a role and is a mixture of Gaussian densities 
+				\begin{align*}
+					p \parens{\bx} = \sum_{w=1}^W \pi_w \cdot \phi \parens{\bx; \bmu_w, \bSigma}. 
+				\end{align*}
+			\end{itemize}
+		
+		\item By putting additional model assumptions, the approach by LDA is more efficient and has lower variance; 
+
+		\item LDA may \emph{not} be very robust to gross outliers, but outliers are reduced in importance in logistic regression. 
+		\end{itemize}
+		
+		\item \textit{Conclusion:} In general, logistic regression model is a safer and more robust approach comparing to the LDA model. Nevertheless, both approaches provide similar results in most cases. 
+	\end{enumerate}
+\end{enumerate}
+
+
+\section*{V. Separating Hyperplanes}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Main Idea:} The separating hyperplane classifiers construct linear decision boundaries that \emph{explicitly} try to separate the data into different classes as well as possible. 
+	
+	\item \textbf{Setup:} We consider the case of $W = 2$ and let the class label be $\calW = \sets{+1, -1}$. 
+	
+	\item \textbf{Separating Hyperplane Classifier:} Separating hyperplane classifiers are in the form of a linear combination of the input features, i.e., 
+	\begin{align*}
+		\sets[\Bigg]{\bx := \parens{x_1, \cdots, x_p}^\top \in \Real^p \biggm| \hat{\beta}_0 + \sum_{i=1}^p \hat{\beta}_i x_i = 0}. 
+	\end{align*}
+		
+	\item \textbf{A Brief Review of Linear Algebra:} Let $L$ be a hyperplane or affine set in $\Real^p$. 
+	\begin{itemize}
+		\item Any points $\bx \in L \subset \Real^p$ can be characterized as 
+		\begin{align*}
+			\sets[\Big]{\bx \in \Real^p \bigm| f \parens{\bx} := \beta_0 + \bbeta^\top \bx = 0}, 
+		\end{align*}
+		where $\beta_0 \in \Real$ and $\bbeta \in \Real^p$ are fixed. 
+		
+		\item For any two point $\bx_1$ and $\bx_2$ lying in $L$, we must have $\bbeta^\top \parens{\bx_1 - \bx_2} = 0$, and hence, $\bbeta^* := \frac{\bbeta}{\norm{\bbeta}_2}$ is the unit vector normal to the surface of $L$; 
+		
+		\item For any point $\bx_0 \in L$, we have $\beta_0 = - \bbeta^\top \bx_0$; 
+		
+		\item The signed distance of any point $\bx$ to $L$ is given by 
+		\begin{align*}
+			{\bbeta^*}^\top \parens{\bx - \bx_0} = \frac{1}{\norm{\bbeta}_2} \parens{\bbeta^\top x + \beta_0} = \frac{1}{\norm{\nabla f \parens{\bx}}_2} f \parens{\bx}. 
+		\end{align*}
+		Thus, $f \parens{\bx}$ is proportional to the signed distance from $\bx$ to the hyperplane defined by $f \parens{\bx} = 0$. 
+	\end{itemize}
+	
+	\item \textbf{Perceptron:} A separating hyperplane classifier that returns the sign is called \textit{perceptron}. 
+	
+	\item \textbf{Rosenblatt's Perceptron Learning Algorithm:} 
+	\begin{enumerate}
+		\item \textit{Main Idea:} The perceptron learning algorithm attempts to find a separating hyperplane by \emph{minimizing} the distance of misclassified points to the decision boundary. 
+		\item \textit{Observations:} Note that 
+		\begin{enumerate}
+			\item if $y_i = +1$ and if $y_i$ is misclassified, we have $\beta_0 + \bbeta^\top \bx < 0$; 
+			\item if $y_i = -1$ and if $y_i$ is misclassified, we have $\beta_0 + \bbeta^\top \bx > 0$. 
+		\end{enumerate}
+		\item \textit{Mathematical Formulation:} We minimize 
+		\begin{align}
+			D \parens{\bbeta, \beta_0} := - \sum_{i \in \calM} y_i \cdot \parens{\bx^\top_i \bbeta + \beta_0}, 
+		\end{align}
+		where $\calM$ indexes the set of misclassified points. 
+		
+		\item \textit{Properties of $D$:}
+		\begin{itemize}
+			\item $D \parens{\bbeta, \beta_0} \ge 0$; 
+			\item $D \parens{\bbeta, \beta_0}$ is \textit{proportional} to the distance of the misclassified points to the decision boundary defined by $\bbeta^\top \bx + \beta_0 = 0$. 
+		\end{itemize}
+		
+		\item \textit{Algorithm:} Assume that $\calM$ is \emph{fixed}. the gradient of $D$ is 
+		\begin{align*}
+			\frac{\partial D \parens{\bbeta, \beta_0}}{\partial \bbeta} = & \, - \sum_{i \in \calM} y_i \bx_i, \qquad \text{ and } \qquad
+			\frac{\partial D \parens{\bbeta, \beta_0}}{\partial \beta_0} = - \sum_{i \in \calM} y_i. \nonumber
+		\end{align*}
+		The algorithm uses \textit{stochastic gradient descent}, and a step is taken after \emph{each} observation is visited. The parameters are updated by 
+		\begin{equation*}
+			\begin{pmatrix}
+				\bbeta \\ \beta_0
+			\end{pmatrix} \leftarrow 
+			\begin{pmatrix}
+			\bbeta \\ \beta_0
+			\end{pmatrix} + \rho 
+			\begin{pmatrix}
+				y_i \bx_i \\ y_i
+			\end{pmatrix}, 
+		\end{equation*}
+		where $\rho > 0$ is the \emph{learning rate} (also known as the step size). 
+		
+		\item \textit{Convergence Property:} If the classes are \textit{linearly separable}, the algorithm converges to a separating hyperplane in a finite number of steps. 
+		
+		\item \textit{Problems of This Algorithm:} 
+		\begin{itemize}
+			\item When data are separable, there are many solutions, and which one is found depends on the starting values; 
+			\item The ``finite'' number of steps can be very large --- the smaller the gap, the longer the time to find it; 
+			\item When the data are \textit{not} separable, the algorithm will \emph{not} converge, and cycles develop. The cycles can be long and therefore hard to detect. 
+		\end{itemize}
+		
+	\end{enumerate}
+	
+	\item \textbf{Optimal Separating Hyperplane:} 
+	\begin{enumerate}
+		\item \textit{Main Idea:} The \textit{optimal separating hyperplane} separates the two classes and \textit{maximizes} the distance to the closest point from either class. 
+		\item \textit{Advantages:} This approach
+		\begin{itemize}
+			\item provides a \emph{unique} solution to the separating hyperplane problem; and
+			\item maximizes the margin between the two classes on the training data, leading to better classification performance on test data. 
+		\end{itemize}
+		
+		\item \textit{Mathematical Formulation:} 
+		\begin{equation}
+			\begin{aligned}\label{eq-optimal-orig}
+				& \ \maximize_{\beta_0, \bbeta, \norm{\bbeta}_2 = 1}  M, \\ & \qquad \text{ subject to } y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge M, \text{ for all } i = 1, \cdots, n. 
+			\end{aligned}
+		\end{equation}
+		The conditions ensure all the points are at least a signed distance $M$ from the decision boundary determined by $\beta$ and $\beta_0$. 
+		
+		\item \textit{Equivalent Formulation 1:} We can get rid of the constraint $\norm{\bbeta}_2 = 1$ by replacing the conditions with 
+		\begin{align*}
+			\frac{1}{\norm{\bbeta}} y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge M, 
+		\end{align*}
+		or equivalent, 
+		\begin{align*}
+			y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge M \norm{\bbeta}_2. 
+		\end{align*}
+		Note that $\beta_0$ here may be different from the one appearing in \eqref{eq-optimal-orig}. 
+		
+		\item \textit{Equivalent Formulation 2:} Note that \textit{for any $\bbeta$ and $\beta_0$ satisfying the inequalities above, any positively scaled multiple satisfies them too. We can arbitrarily set $\norm{\bbeta}_2 = \frac{1}{M}$}, and rewrite the original optimization problem \eqref{eq-optimal-orig} as 
+		\begin{equation}\label{eq-optimal-trans}
+			\begin{aligned}
+				& \, \minimize_{\beta_0, \bbeta} \ \frac{1}{2} \norm{\bbeta}_2^2, \\ 
+				& \qquad \text{ subject to } y_i \parens{\bx_i^\top \bbeta + \beta_0} \ge 1 \text{ for all } i = 1, \cdots, n. 
+			\end{aligned}
+		\end{equation}
+		This means that the constraints define an \emph{empty margin} around the linear decision boundary of thickness $1/\norm{\bbeta}_2$, and we choose $\bbeta$ and $\beta_0$ to maximize its thickness. 
+		
+		\textit{Remark.} Note that \eqref{eq-optimal-trans} is a convex optimization problem with a quadratic objective function and linear constraints. 
+		
+		\item \textit{Characterizing the Solution of \eqref{eq-optimal-trans}:} The primal Lagrangian function to be minimized with respect to $\bbeta$ and $\beta_0$ is 
+		\begin{align}\label{eq-svm-primal}
+			L_P \parens{\bbeta, \beta_0} := \frac{1}{2} \norm{\bbeta}_2^2 - \sum_{i=1}^n \alpha_i \bracks[\big]{ y_i \parens{\bx_i^\top \bbeta + \beta_0} - 1 }. 
+		\end{align}
+		We set the first-order derivatives to be 0, and obtain 
+		\begin{align*}
+			\frac{\partial L_P \parens{\bbeta, \beta_0}}{\partial \bbeta} = \bbeta - \sum_{i=1}^n \alpha_i  y_i \bx_i = 0 \hspace{10pt} & \iff \hspace{10pt} \bbeta = \sum_{i=1}^n \alpha_i y_i \bx_i \\ 
+			\frac{\partial L_P \parens{\bbeta, \beta_0}}{\partial \beta_0} = - \sum_{i=1}^n \alpha_i y_i = 0 \hspace{10pt} & \iff \hspace{10pt} \sum_{i=1}^n \alpha_i y_i = 0. 
+		\end{align*}
+		Substituting back to $L_P$, we obtain the \textit{dual function} 
+		\begin{equation*}
+			L_D \parens{\alpha_1, \cdots, \alpha_n} = \sum_{i=1}^n \alpha_i - \frac{1}{2} \sum_{i=1}^n \sum_{k=1}^n \alpha_i \alpha_k y_i y_k \bx_i^\top \bx_k. 
+		\end{equation*}
+		Letting $\balpha := \parens{\alpha_1, \cdots, \alpha_n}^\top$, the corresponding dual problem to \eqref{eq-optimal-trans} is 
+		\begin{equation}\label{eq-svm-dual-prob}
+			\begin{aligned}
+				& \maximize_{\balpha} \ L_D \parens{\balpha} = \sum_{i=1}^n \alpha_i - \frac{1}{2} \sum_{i=1}^n \sum_{k=1}^n \alpha_i \alpha_k y_i y_k \bx_i^\top \bx_k \\ 
+				& \qquad \text{subject to } \alpha_i \ge 0 \text{ for all } i = 1, \cdots, n, \hspace{10pt} \sum_{i=1}^n \alpha_i y_i = 0. 
+			\end{aligned}
+		\end{equation}
+		
+		\item \textit{KKT Conditions for \eqref{eq-optimal-trans}:} The \emph{Karush-Kuhn-Tucker (KKT) conditions} for \eqref{eq-optimal-trans} are 
+		\begin{enumerate}
+			\item \underline{Primal stationarity:} 
+			\begin{align*}
+				\sum_{i=1}^n \alpha_i y_i \bx_i - \bbeta = 0, \qquad \text{ and } \qquad \sum_{i=1}^n \alpha_i y_i = 0, 
+			\end{align*}
+			\item \underline{Dual feasibility:} $\alpha_i \ge 0$ for all $i = 1, 2, \cdots, n$, 
+			\item \underline{Complementary slackness:} 
+			\begin{align*}
+				\alpha_i \bracks{ y_i \parens{\bx_i^\top \bbeta + \beta_0} - 1 } = 0, \qquad \text{ for all } i = 1, \cdots, n. 
+			\end{align*}
+		\end{enumerate}
+		
+		\item \textit{Implications from KKT Conditions:} 
+		\begin{enumerate}
+			\item From complementary slackness: 
+			\begin{itemize}
+				\item if $\alpha_i > 0$, then $y_i \parens{\bx_i^\top \bbeta + \beta_0} = 1$, and $\bx_i$ is on the boundary of the margin; 
+				\item if $y_i \parens{\bx_i^\top \bbeta + \beta_0} > 1$, $\bx_i$ is \emph{not} on the boundary and $\alpha_i = 0$. 
+			\end{itemize}
+			
+			\item From primal stationary, $\bbeta$ is determined in terms of a linear combination of the support points $\bx_i$, the points that are on the decision boundary so that $\alpha_i > 0$. This is how the name ``\textit{support vector machine}'' comes from. 
+		\end{enumerate}
+		
+		\item \textit{Optimal Separating Hyperplane and Classification Rule:} The \emph{optimal separating hyperplane} produces a function 
+		\begin{align}\label{eq-svm-solution}
+			\hat{f} \parens{\bx} = & \, \bx^\top \widehat{\bbeta} + \hat{\beta}_0 
+			= \bx^\top \parens[\Bigg]{\sum_{i=1}^n \hat{\alpha}_i y_i \bx_i} + \hat{\beta}_0 
+			= \sum_{i=1}^n \hat{\alpha}_i y_i \bx_i^\top \bx + \hat{\beta}_0, 
+		\end{align}
+		for classifying new observations, i.e., 
+		\begin{align*}
+			\widehat{G} \parens{\bx} = \mathrm{sign} \parens[\big]{\hat{f} \parens{\bx}}. 
+		\end{align*}
+		In \eqref{eq-svm-solution}, $\parens{\widehat{\bbeta}, \hat{\beta}_0}$ is the minimizer of $L_P$ in \eqref{eq-svm-primal}, and $\parens{\hat{\alpha}_1, \hat{\alpha}_2, \cdots, \hat{\alpha}_n}^\top$ is the maximizer of $L_D$ in \eqref{eq-svm-dual-prob}. 
+		
+		\item \textit{On $\norm{\widehat{\bbeta}}_2$:} Let $\widehat{\bbeta}$ be the minimizer of $L_P$ in \eqref{eq-svm-primal}. We derive $\norm{\widehat{\bbeta}}_2$. Using the complementary slackness condition, we have 
+		\begin{align*}
+			0 = & \, \sum_{i=1}^n \hat{\alpha}_i \bracks{ y_i \parens{\bx_i^\top \widehat{\bbeta} + \hat{\beta}_0} - 1 } \\ 
+			= & \, \sum_{i=1}^n \hat{\alpha}_i \bracks[\bigg]{ y_i \parens[\bigg]{\bx_i^\top \sum_{j=1}^n \hat{\alpha}_j y_j \bx_j + \hat{\beta}_0} - 1 } \\ 
+			= & \, \sum_{i=1}^n \sum_{j=1}^n \hat{\alpha}_i \hat{\alpha}_j y_i y_j \bx_i^\top \bx_j + \hat{\beta}_0 \sum_{i=1}^n \hat{\alpha}_i y_i  - \sum_{i=1}^n \hat{\alpha}_i \\ 
+			= & \, \sum_{i=1}^n \sum_{j=1}^n \hat{\alpha}_i \hat{\alpha}_j y_i y_j \bx_i^\top \bx_j - \sum_{i=1}^n \hat{\alpha}_i. 
+		\end{align*}
+		As a consequence, we have 
+		\begin{align*}
+			\norm{\widehat{\bbeta}}_2^2 = & \, \sum_{i=1}^n \sum_{j=1}^n \hat{\alpha}_i \hat{\alpha}_j y_i y_j \bx_i^\top \bx_j 
+			= \sum_{i=1}^n \hat{\alpha}_i. 
+		\end{align*}
+		Thus, the optimal hyperplane has the maximum margin $2 / \norm{\widehat{\bbeta}_2}$, where 
+		\begin{align*}
+			\frac{1}{\norm{\widehat{\bbeta}}_2} = \parens[\Bigg]{\sum_{i=1}^n \hat{\alpha}_i}^{-\frac{1}{2}}. 
+		\end{align*}
+		In addition, since $\hat{\alpha}_i = 0$ if the $i$-th observation does \emph{not} lie on the boundary of the margin (i.e., $\bx_i$ is not the support vectors), we have 
+		\begin{align*}
+			\frac{1}{\norm{\widehat{\bbeta}}_2} = \parens[\Bigg]{\sum_{i \in \mathrm{SV}} \hat{\alpha}_i}^{-\frac{1}{2}}, 
+		\end{align*}
+		where $\mathrm{SV} \subset \sets{1, 2, \cdots, n}$ denotes the subset of indices that identify the support vectors. 
+		
+		\item \textit{Remarks:} 
+		\begin{itemize}
+			\item A large margin on the training data will lead to good separation on the test data; 
+			\item The fact that the solution depends \emph{only} on \textit{support points} suggests that the optimal hyperplane focuses more on the points that count, and is \emph{more robust} to model misspecification. The LDA solution, on the other hand, depends on \textit{all} of the data, even points far away from the decision boundary; 
+			\item When the data are \textit{not} separable, there will be no feasible solution to this problem, and an alternative formulation is needed. 
+		\end{itemize}
+		
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+
+\section*{VI. Evaluating a Classifier}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Goal:} We discuss how to evaluate the performance of a classifier in this section. 
+	
+	Note that the metrics discussed here are \emph{not} restricted to the linear classification methods, but are applicable to all kinds of classifiers, including both 
+	\begin{enumerate}
+		\item the linear ones introduced in this chapter, and 
+		\item the non-linear ones that will be introduced in later chapters. 
+	\end{enumerate}
+	
+	\textit{Remark.} We focus on binary classifiers only. 
+	
+	\item \textbf{True Positive, False Positive, True Negative, and False Negative:} 
+	\begin{enumerate}
+		
+		\item \textit{Scenario:} Consider the cancer screening example. For each person tested, there are 
+		\begin{enumerate}
+			\item a true label of whether this person has cancer or not, and 
+			\item a predicted label made by the classifier. 
+		\end{enumerate}
+		
+		\item \textit{True Positive:} If this person actually has cancer and the classifier predicts this person has cancer, the prediction is called a \emph{true positive}. 
+		
+		\item \textit{False Positive:} If this person actually does \emph{not} have cancer but the classifier predicts this person has cancer, the prediction is called a \emph{false positive}. 
+		
+		\item \textit{True Negative:} If this person actually does \emph{not} have cancer and the classifier predicts this person does \emph{not} have cancer, the prediction is called a \emph{true negative}. 
+		
+		\item \textit{False Negative:} If this person actually has cancer but the classifier predicts this person does \emph{not} have cancer, the prediction is called a \emph{false negative}. 
+		
+	\end{enumerate}
+	
+	\textit{Remark.} The false positives are also known as \emph{type 1 errors}, and the false negatives are called \emph{type 2 errors}. 
+	
+	\item \textbf{Confusion Matrix:} If we let 
+	\begin{enumerate}
+		\item $n$ be the total number of people taking the test, 
+		\item $n_{\mathrm{TP}}$ be the number of true positives, 
+		\item $n_{\mathrm{FP}}$ be the number of false positives, 
+		\item $n_{\mathrm{TN}}$ be the number of true negatives, and 
+		\item $n_{\mathrm{FN}}$ be the number of false negatives, 
+	\end{enumerate}
+	then 
+	\begin{align*}
+		n = n_{\mathrm{TP}} + n_{\mathrm{FP}} + n_{\mathrm{TN}} + n_{\mathrm{FN}}, 
+	\end{align*}
+	and they can be represented in a \emph{confusion matrix} as 
+	\begin{center}
+		\begin{tabular}{@{}cc|cc@{}}
+			\multicolumn{1}{c}{} &\multicolumn{1}{c}{} &\multicolumn{2}{c}{\textbf{Predicted}} \\ 
+			\multicolumn{1}{c}{} & 
+			\multicolumn{1}{c|}{} & 
+			\multicolumn{1}{c}{Positive} & 
+			\multicolumn{1}{c}{Negative} \\ 
+			\cline{2-4}
+			\multirow[c]{2}{*}{\rotatebox[origin=tr]{90}{\textbf{Actual}}}
+			& Positive  & $n_{\mathrm{TP}}$ & $n_{\mathrm{FN}}$ \\[1.5ex]
+			& Negative  & $n_{\mathrm{FP}}$ & $n_{\mathrm{TN}}$ \\ 
+			\cline{2-4}
+		\end{tabular}
+	\end{center}
+	
+	\item \textbf{Accuracy:} \emph{Accuracy} is measured by the fraction of correct classifications and is given by 
+	\begin{align*}
+		\mathrm{Accuracy} = & \, \frac{n_{\mathrm{TP}} + n_{\mathrm{TN}}}{n_{\mathrm{TP}} + n_{\mathrm{FP}} + n_{\mathrm{TN}} + n_{\mathrm{FN}}} 
+		= \frac{n_{\mathrm{TP}} + n_{\mathrm{TN}}}{n}. 
+	\end{align*}
+	
+	\textit{Remark.} When there are strongly imbalanced classes, accuracy can be misleading. 
+	
+	For example, if there are 1,000 patients in total and is only 1 person with cancer, a naive classifier that simply decides that nobody has cancer will achieve 99.9\% accuracy, which is completely useless. 
+	
+	\item \textbf{Precision:} \textit{Precision} is an estimate of the probability that a person who has a positive prediction does indeed belong to the positive class, and is given by 
+	\begin{align*}
+		\mathrm{Precision} = \frac{n_{\mathrm{TP}}}{n_{\mathrm{TP}} + n_{\mathrm{FP}}}. 
+	\end{align*}
+	
+	\item \textbf{Recall:} \textit{Recall} is an estimate of the probability that a person who actually belongs to the positive class is correctly detected by the test, and is given by
+	\begin{align*}
+		\mathrm{Recall} = \frac{n_{\mathrm{TP}}}{n_{\mathrm{TP}} + n_{\mathrm{FN}}}. 
+	\end{align*}
+	
+	\item \textbf{False Positive Rate:} The \emph{false positive rate} is an estimate of the probability that a person who actually belongs to the negative class is predicted to belong to the positive class, and is given by 
+	\begin{align*}
+		\text{False Positive Rate} = \frac{n_{\mathrm{FP}}}{n_{\mathrm{TN}} + n_{\mathrm{FP}}}. 
+	\end{align*}
+	
+	\item \textbf{False Discovery Rate:} The \emph{false discovery rate} is an estimate of the probability that a person who is predicted to belong to the positive class does actually belong to the negative class, and is given by 
+	\begin{align*}
+		\text{False Discovery Rate} = \frac{n_{\mathrm{FP}}}{n_{\mathrm{TP}} + n_{\mathrm{FP}}}. 
+	\end{align*}
+	
+	\item \textbf{$F$-Score:} A measure combining precision and recall together is the \emph{$F$-score}, which is the geometric mean of precision and recall and is  defined as 
+	\begin{align*}
+		F = \frac{1}{\frac{1}{2} \parens{\mathrm{Precision}^{-1} + \mathrm{Recall}^{-1}}}. 
+	\end{align*}
+	
+	\textit{Remark.} More generally, we can define the $F_{\beta}$-score as 
+	\begin{align*}
+		F_{\beta} = \parens{1 + \beta^2} \frac{1}{\beta^2 \times \mathrm{Precision}^{-1} + \mathrm{Recall}^{-1}}. 
+	\end{align*}
+	
+	\item \textbf{Receiver Operating Characteristic Curve:} 
+	\begin{enumerate}
+		\item \textit{Motivation:} A probabilistic classifier can be converted to a class decision by setting a threshold. As the value of the threshold varies, we can reduce type 1 errors at the expense of increasing type 2 errors, or vice versa. 
+		
+		We can plot the \emph{receiver operating characteristic} (ROC) curve to better understand this trade-off. 
+		
+		\item \textit{ROC Curve:} As the decision boundary varies from $-\infty$ to $+\infty$, the ROC curve can be generated by plotting 
+		\begin{itemize}
+			\item the cumulative fraction of correct detection of the positive class on the vertical axis against 
+			\item the cumulative fraction of incorrect detection of the positive class on the horizontal axis. 
+		\end{itemize}
+		
+		\item[] \textit{Remark.} A specific confusion matrix represents one point on the ROC curve. 
+		
+		\item \textit{Special Points on the ROC Curve Plot:} 
+		\begin{enumerate}
+			\item \textit{Top Left Point:} If the top left point $(0, 1)$ appears on the ROC curve, this is the best possible classifier with no misclassification at all. 
+			\item \textit{Top Bottom Point:} The bottom left corner $(0, 0)$ represents a simple classifier that assigns every point to the negative class and therefore has no true positives but also no false positives. 
+			\item \textit{Top Right Point:} The top right corner $(1, 1)$ represents a classifier that assigns everything to the cancer class and therefore has no false negatives but also no true negatives. 			
+		\end{enumerate}
+		
+		\item \textit{Diagonal Line on the ROC Curve Plot:} We can consider a random classifier that simply assigns each data point to the positive class with probability $\rho$ and to the negative class with probability $1 - \rho$. As we vary the value of $\rho$, it will trace out an ROC curve given by a diagonal straight line. 
+		
+		\item[] \textit{Remark.} Any classifier below the diagonal line performs worse than random guessing. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Area Under the Curve:} To generate a single number that characterizes the whole ROC curve, we use the \emph{area under the curve} (AUC), i.e., the area under the ROC curve. 
+	
+	\textit{Remark.} A value of 0.5 for the AUC represents random guessing, whereas a value of 1.0 represents a perfect classifier. 
+	
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

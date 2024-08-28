@@ -1,0 +1,421 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 26, Factor Analysis}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Factor Analysis}{26}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 15, Latent Variable Models for Blind Source Separation} in \textcite{Izenman2009-jk}, and 
+	\item \textit{Chapter 14, Unsupervised Learning} in \textcite{Friedman2001-np}. 
+\end{itemize}
+
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} In \textit{factor analysis model}, a set of observed continuous variables is explained by a linear combination of a much smaller set of continuous latent variables, called \textit{factors}. 
+	
+%	\item \textbf{Latent Variables:} \textit{Latent variables} (continuous or discrete) are typically \textit{artificial} or \textit{hypothetical} constructs and are used to give a formal representation of ideas or concepts that \emph{cannot} be well-defined or measured directly. 
+%	
+%	Latent variables are usually formed as linear combinations of observable variables for the purpose of reducing the dimensionality of a data set. 
+%
+%	\item \textbf{Cocktail-party Problem:} The cocktail-party problem is an example of the BBS problem. In this problem, $m$ people are speaking simultaneously at a party, and each of $p$ microphones placed in the same room at different distances from each speaker records a different mixture of the speakers' voices at $n$ time points. The \emph{question} is whether, based upon these microphone recordings, we can separate out the individual speech signals of each of the m speakers. 
+	
+	\item \textbf{Factor Analysis Model:} Let $X = \parens{X_1, X_2, \cdots, X_p}^\top \in \Real^p$ be a real-valued random vector that we can observe. The factor analysis model takes on the form of 
+	\begin{align}\label{eq-factor-model}
+		X = \bA S + \varepsilon, 
+	\end{align}
+	where 
+	\begin{enumerate}
+		\item $S = \parens{S_1, S_2, \cdots, S_m}^\top \in \Real^m$ and $S_1, S_2, \cdots, S_m$ are $m$ unobservable random variables called \emph{latent variables} or \emph{common factors} and $m \le p$, 
+		\item $\bA \in \Real^{p \times m}$ is a mixing matrix of full rank containing unknown coefficients called the \emph{factor loadings}, and 
+		\item $\varepsilon = \parens{\varepsilon_1, \varepsilon_2, \cdots, \varepsilon_p}^\top \in \Real^p$ and $\varepsilon_1, \varepsilon_2, \cdots, \varepsilon_p$ are unobservable random variables that are called \emph{specific} (or \emph{unique}) factors because $\varepsilon_j$ \emph{only} appears in the equation involving $X_j$. 
+	\end{enumerate}
+	
+	Let the $\parens{j, i}$-th entry of $\bA$ be $a_{j, i}$ for all $j = 1, 2, \cdots, p$ and $i = 1, 2, \cdots, m$. We can rewrite \eqref{eq-factor-model} by the following system of linear equations: 
+	\begin{align}
+		X_j = a_{j,1} S_1 + a_{j,2} S_2 + \cdots + a_{j,m} S_m + \varepsilon_j, \qquad \text{ for all } j = 1, \cdots, p. 
+	\end{align}
+	
+	\item \textbf{Assumptions:} We assume the following: 
+	\begin{enumerate}
+		\item Each of the $p$ observed random variables $X_1, X_2, \cdots, X_p$ has been standardized to have zero mean and unit variance; 
+		\item The relationships between the observed variables, $X_1, X_2, \cdots, X_p$, are explained \emph{only} by the underlying common factors and \emph{not} by the errors; 
+		\item The common factors have mean zero and unit variance, and are uncorrelated, that is, 
+		\begin{align*}
+			\E \bracks{S} = \boldzero_{m} \qquad \text{ and } \qquad \var \bracks{S} = \bI_m; 
+		\end{align*}
+		\item The random error term $\varepsilon$ has zero mean and a diagonal covariance matrix, $\var \bracks{\varepsilon} = \bPsi$, with positive diagonal entries; 
+		\item $S$ and $\varepsilon$ are independent so that $\E \bracks{S \varepsilon^\top } = \boldzero_{m \times p}$. 
+	\end{enumerate}
+	
+	\item \textbf{Goal:} The goal of the factor analysis is to estimate $\bA$ and recover $S$. 
+	
+	\item \textbf{Moments of $X$:} From \eqref{eq-factor-model} and the assumptions, we obtain 
+	\begin{align}
+		\E \bracks{X} = \boldzero_p, 
+	\end{align}
+	and 
+	\begin{align}\label{eq-cov-mat}
+		\bSigma_{XX} := \var \bracks{X} = \bA \bA^\top + \bPsi. 
+	\end{align}
+	Since $X_j$ has unit variance for all $j = 1, 2, \cdots, p$, the $j$-th diagonal element of $\bSigma_{XX}$ is 
+	\begin{align}
+		1 = h_j^2 + \psi_{j,j}, 
+	\end{align}
+	where $h_j^2 = \sum_{i} a_{j,i}^2$ is called the \emph{communality} and $\psi_{j,j}$ is called the \emph{uniqueness} given by the $j$-th diagonal element of $\bPsi$. 
+	
+	\item \textbf{Orthogonal and Oblique Factors:} The common factors, $\sets{S_j}$, are called \emph{orthogonal} if they are pairwise uncorrelated, and are called \emph{oblique} if they are correlated. 
+
+\end{enumerate}
+
+
+\section*{III. Principal Components Factor Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Goal:} Without making any distributional assumption for the sources $S$ in \eqref{eq-factor-model}, we determine $\bA$ using a least-squares approach. 
+	
+	\item \textbf{Model Transformation:} Premultiplying \eqref{eq-factor-model} by the Moore-Penrose generalized inverse of $\bA$, 
+	\begin{align}
+		\bB = \parens{\bA^\top \bA}^{-1} \bA^\top,  
+	\end{align}
+	where $\parens{\bA^\top \bA}^{-1}$ exists since $\bA \in \Real^{p \times m}$ has full rank and $p \ge m$, we obtain 
+	\begin{align*}
+		\bB X = \bB \bA S + \bB \varepsilon = S + \bB \varepsilon, 
+	\end{align*}
+	that is, 
+	\begin{align*}
+		S = \bB X - \bB \varepsilon. 
+	\end{align*}
+	Substituting the preceding equation back into \eqref{eq-factor-model}, we have 
+	\begin{align*}
+		X = \bA \parens{\bB X - \bB \varepsilon} + \varepsilon, 
+	\end{align*}
+	or equvivalently, 
+	\begin{align}\label{eq-pc-fa}
+		X = \bC X + E, 
+	\end{align}
+	where $\bC = \bA \bB$ has rank $m$, $\bA$ and $\bB$ are full-rank matrices each of rank $m$, $E = \parens{\bI_p - \bC} \varepsilon$, and $X$ and $E$ both have mean zero. 
+	
+	\item \textbf{Principal Components Factor Analysis:} Assume $\bSigma_{XX}$ is \emph{known}. The model \eqref{eq-pc-fa} is the \emph{multivariate reduced-rank regression model} corresponding to principal component analysis. To obtain $\bA$ and $\bB$, we use the least-squares criterion and minimize 
+	\begin{align}
+		\E \bracks[\Big]{\parens{X - \bA \bB X}^\top \parens{X - \bA \bB X}}. 
+	\end{align}
+	The minimum is obtained by setting 
+	\begin{align*}
+		\bA = \parens{\bv_1, \bv_2, \cdots, \bv_m} = \bB^\top, 
+	\end{align*}
+	where $\bv_j$'s is the eigenvector associated with the $j$-th largest eigenvalue of $\bSigma_{XX}$. 
+	
+	This approach is referred to as the \emph{principal components} approach to the factor analysis. 
+	
+	\textit{Remark.} The principal components approach essentially ignores the matrix $\bPsi$. 
+	
+	\item \textbf{Factor Scores:} The rows of $\bB$ give the coefficients of the $m$ principal components scores, $\bv_j^\top X$, for all $j = 1, 2, \cdots, m$, and the eigenvalues of $\bSigma_{XX}$ measure the variance (or power) of the $m$ sources. 
+	
+	\item \textbf{Estimation:} Typically, $\bSigma_{XX}$ is unknown. We estimate it from the standardized input data by $\widehat{\bSigma}_{XX}$, the sample correlation matrix. Estimates of $\bA$ and $\bB$ are given by 
+	\begin{align}
+		\widehat{\bA} = \parens{\hat{\bv}_1, \cdots, \hat{\bv}_m} = \widehat{\bB}^\top, 
+	\end{align}
+	respectively, where $\hat{\bv}_j$ is the eigenvector corresponding to the $j$-th largest eigenvalue of $\widehat{\bSigma}_{XX}$, for all $j = 1, 2, \cdots, m$. 
+	
+	\item \textbf{Choice of $m$:} We discuss how to determine the value of $m$, the number of common factors. Because the $p$ eigenvalues of $\widehat{\bSigma}_{XX}$ sum to $p$, i.e., the trace of $\widehat{\bSigma}_{XX}$, a popular decision rule is that $m$ should be taken to be the number of those sample eigenvalues that are greater than unity. 
+	
+	\item \textbf{Estimates of Factor Scores:} The $m$-vector of estimated factor scores corresponding to a standardized sample observation $\bx = \parens{x_1, x_2, \cdots, x_p}^\top$ is given by 
+	\begin{align}
+		\hat{\boldf} = \widehat{\bB} \bx = \parens{\hat{\bv}_1^\top \bx, \hat{\bv}_2^\top \bx, \cdots, \hat{\bv}_m^\top \bx}^\top, 
+	\end{align}
+	
+	\textit{Remark.} If we have $n$ observations, $\bx_1, \bx_2, \cdots, \bx_n \sim X$, we can plot the first two estimated factor scores, 
+	\begin{align*}
+		\parens{\hat{\bv}_1^\top \bx_i, \hat{\bv}_2^\top \bx_i}, \qquad \qquad \text{ for all } i = 1, 2, \cdots, n, 
+	\end{align*}
+	on a scatterplot, using which we can identify outliers. 
+	
+	\item \textbf{Factor Indeterminacy:} Let $\bT \in \Real^{m \times m}$ be an orthogonal matrix. Then, we have 
+	\begin{align*}
+		\bC = \parens{\bA \bT} \parens{\bT^\top \bB}. 
+	\end{align*}
+	Thus, we can only determine $\bA$ up to a rotation. This is called the \textit{factor indeterminacy}. 
+	
+	We choose $\bT$ to have certain desirable properties: 
+	\begin{enumerate}
+		\item We require certain elements of $\widehat{\bA} \bT$ to be zero; or 
+		\item \textit{Varimax Rotation:} We seek to find an orthogonal transformation $\bT$ to maximize 
+		\begin{align*}
+			\sum_{k=1}^m \bracks[\Bigg]{\sum_{j=1}^p \tilde{a}_{j,k}^4 - \frac{1}{p} \parens[\bigg]{\sum_{j=1}^p \tilde{a}_{j,k}^2}^2}, 
+		\end{align*}
+		where $\tilde{a}_{j,k}$ is the $\parens{j,k}$-th entry of the matrix $\bA \bT$. 
+		% the sum, over all factors, of the variance of the squares of the scaled loadings (the estimated loadings divided by $h_i$) for each factor. 
+	\end{enumerate}
+	
+	\item \textbf{Principal Factor Method:} 
+	\begin{enumerate}
+		\item \textit{Main Idea:} Principal factor method is a modification of the principal components method that takes the diagonal matrix $\bPsi$ into account. We replace the correlation matrix $\bSigma_{XX}$ by $\bSigma_{XX} - \bPsi$ so that we have the communalities $\sets{h_j^2}_{j=1}^p$ on the diagonal. 
+		\item \textit{Estimation:} Since $\bPsi$ is unknown, we estimate $\sets{h_j^2}_{j=1}^p$. We estimate $h_j^2$ by the squared multiple correlation between $X_j$ and the remaining $p-1$ variables as 
+		\begin{align}
+			\hat{h}_j^2 = 1 - \frac{1}{r_{j,j}}, \qquad \text{ for all } j = 1, 2, \cdots, p, 
+		\end{align}
+		where $r_{j,j}$ is the $j$-th diagonal element of the inverse of the sample correlation matrix. 
+		
+		\item \textit{Caution:} The matrix $\widehat{\bSigma}_{XX} - \widehat{\bPsi}$ is \emph{not} necessarily be positive-definite, so that its eigenvalues can be both positive and negative. Because the sum of the positive eigenvalues exceeds the sum of the communalities, the number of factors, $m$, is usually taken to be at most the maximum number of positive eigenvalues whose sum is less than $\tr \parens{\widehat{\bSigma}_{XX} - \widehat{\bPsi}}$. 
+	\end{enumerate}
+	
+	\item \textbf{Comparison between Factor Analysis and Principal Component Analysis (PCA):} 
+	\begin{enumerate}
+		\item \textit{Similarities:}
+		\begin{itemize}
+			
+			\item They both aim to reduce the dimensionality of a vector of random variables. 
+			
+			\item They both attempt to represent some aspect of the covariance matrix or the correlation matrix as well as possible. 
+			
+			\item The results of the principal factor method are equivalent to those of the PCA if all non-zero elements of $\bPsi$ are identical. More generally, the coefficients found from PCA and the loadings found from \emph{orthogonal} factor analysis are often very similar. 
+			
+		\end{itemize}
+		
+		\item \textit{Differences:}
+		\begin{itemize}
+			\item On the model: 
+			\begin{itemize}
+				\item Factor analysis has a definite model \eqref{eq-factor-model}, but 
+				\item PCA does \emph{not}. 
+			\end{itemize}
+			
+			\item On the covariance or correlation matrix: 
+			\begin{itemize}
+				\item PCA concentrates on the diagonal elements of the covariance or correlation matrix, but 
+				\item Factor analysis focuses more on the off-diagonal elements, by noting the common factor term $\bA S$ in \eqref{eq-cov-mat} accounts completely for the off-diagonal elements. 
+			\end{itemize}
+			
+			\item On the number of dimensionality $m$: 
+			\begin{itemize}
+				\item If any individual variables are almost independent of all others, there will be a principal component corresponding to each such variable; 
+				\item A common factor in factor analysis must contribute to \underline{at least two} of the variables, so it is not possible to have a ``single variable'' common factor. 
+			\end{itemize}
+			
+			\item[] \textit{Remark.} Any ``single variable'' factors appear as error terms and do \emph{not} contribute to the dimensionality of the model. 
+			
+			\item On the changes of the dimensionality $m$: changing $m$ can have much more drastic effects on the factor analysis than it does on PCA. If we increase $m$ from $m_1$ to $m_2$, 
+			\begin{itemize}
+				\item in PCA, additional $m_2 - m_1$ principal components are included, and the original $m_1$ principal components are \emph{unaffected}; 
+				\item in factor analysis, none of $m_2$ factors need bear any resemblance to the original $m_1$ factors. 
+			\end{itemize}
+			
+			\item On the exact computation: 
+			\begin{itemize}
+				\item The principal components are exact linear functions of the data vector $\bx$; 
+				\item The factors are \emph{not} exact linear functions of $\bx$; instead, $\bx$ is defined as a linear function of factors apart from an error term. 
+			\end{itemize}
+			
+			\item[] \textit{Remark.} The fact that the expected value of $X$ is a linear function of $S$ need \emph{not} imply that the expected value of $S$ is a linear function of $X$, unless multivariate normal assumptions are made. 
+		\end{itemize}
+		
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{IV. Maximum Likelihood Factor Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Assumptions:} The \textit{maximum likelihood factor analysis} assumes a fully parametric model. We assume 
+	\begin{enumerate}
+		\item the $m$ sources in \eqref{eq-factor-model} are distributed as multivariate Gaussian, $S \sim \Normal_m \parens{\boldzero_m, \bI_m}$, 
+		\item the error term $\varepsilon$ is also distributed as multivariate Gaussian, $\varepsilon \sim \Normal_p \parens{\boldzero_p, \bPsi}$, where $\bPsi$ is diagonal, 
+		\item $S$ and $\varepsilon$ are independent. 
+	\end{enumerate}
+	These assumptions imply that $X$ is also multivariate Gaussian, 
+	\begin{align}
+		X \sim \Normal_p \parens{\boldzero_p, \bSigma_{XX}}, 
+	\end{align}
+	where $\bSigma_{XX} = \bA \bA^\top + \bPsi$. 
+	
+	\item \textbf{Data:} Let $\bx_1, \bx_2, \cdots, \bx_n$ be $n$ independent observations from $X$. 
+	
+	\item \textbf{Estimation of $\bSigma_{XX}$:} We estimate $\bSigma_{XX}$ by the sample covariance matrix $\widehat{\bSigma}_{XX}$, which has a Wishart distribution: 
+	\begin{align*}
+		n \widehat{\bSigma}_{XX} \sim W_p \parens{n, \bSigma_{XX}}. 
+	\end{align*}
+	
+	\item \textbf{ML Estimation of $\bA$ and $\bPsi$:} We estimate $\bA$ and $\bPsi$ using the method of maximum likelihood by maximizing the logarithm of the likelihood function 
+	\begin{align}
+		\ell \parens{\bA, \bPsi} := - \frac{n}{2} \log \abs{\bA \bA^\top + \bPsi} - \frac{n}{2} \tr \parens[\big]{\widehat{\bSigma}_{XX} \parens{\bA \bA^\top + \bPsi}^{-1}}, 
+	\end{align}
+	where terms that do \emph{not} involve $\bA$ or $\bPsi$ have been ignored. 
+	
+	\item \textbf{EM Algorithm to Estimate $\bA$ and $\bPsi$:} We use the EM algorithm to maximize $\ell$. We treat the unobservable source variables as if they were missing data. If $S$ were actually observed with values $\bs_1, \cdots, \bs_n$, the complete-data likelihood function is the joint density function of $\sets{\bs_1, \bs_2, \cdots, \bs_n}$ and $\sets{\beps_1, \beps_2, \cdots, \beps_n}$, 
+	\begin{align}
+		L \parens{\bA, \bPsi} := & \, \prod_{i=1}^n \bracks[\Bigg]{\frac{1}{\parens{2 \pi}^{p/2} \abs{\bPsi}^{1/2} } \exp \parens[\bigg]{-\frac{1}{2} \beps_i^\top \bPsi^{-1} \beps_i} \times \frac{1}{\parens{2\pi}^{m/2}} \exp \parens[\bigg]{- \frac{1}{2} \bs_i^\top \bs_i}} \nonumber \\ 
+		= & \, \prod_{i=1}^n \Bigg[\frac{1}{\parens{2 \pi}^{p/2} \abs{\bPsi}^{1/2} } \exp \parens[\bigg]{-\frac{1}{2} \parens{\bx_i - \bA \bs_i}^\top \bPsi^{-1} \parens{\bx_i - \bA \bs_i}} \times \nonumber \\ 
+		& \qquad \qquad \frac{1}{\parens{2\pi}^{m/2}} \exp \parens[\bigg]{- \frac{1}{2} \bs_i^\top \bs_i} \Bigg] \nonumber \\ 
+		\propto & \, \parens[\Bigg]{ \prod_{j=1}^p \psi_{j,j} }^{-\frac{n}{2}} \exp \parens[\bigg]{-\frac{1}{2} \sum_{i=1}^n \sum_{j=1}^p \frac{\parens{x_{i,j} - \ba_j \bs_i}^2}{\psi_{j,j}} - \frac{1}{2} \sum_{i=1}^n \bs_i^\top \bs_i}, 
+	\end{align}
+	where $x_{i, j}$ is the $j$-th component of $\bx_i$, $\ba_j$ is the $j$-th row of $\bA$, and $\psi_{j,j}$ is the $j$-th diagonal element of the diagonal matrix $\bPsi$, for all $j = 1, 2, \cdots, p$. 
+	
+	The log-likelihood function of the complete-data is 
+	\begin{align}
+		\ell_{c} \parens{\bA, \bPsi} = -\frac{n}{2} \sum_{j=1}^p \log \psi_{j,j} - \frac{1}{2} \sum_{i=1}^n \sum_{j=1}^p \frac{\parens{x_{i,j} - \ba_j \bs_i}^2}{\psi_{j,j}} - \frac{1}{2} \sum_{i=1}^n \bs_i^\top \bs_i. 
+	\end{align}
+	Then, we have 
+	\begin{enumerate}
+		\item In the \emph{E-step}, given the observed data $\bx_1, \bx_2, \cdots, \bx_n$ and the current values of $\bA$ and $\bPsi$, we find the conditional expectation of $\ell_c$. 
+		
+		Since the joint distribution of $X$ and $S$, given $\bA$ and $\bPsi$, is $\parens{p + m}$-variate Gaussian, the conditional distribution of $S$ given $X$ is 
+		\begin{align*}
+			S \mid X, \bA, \bPsi \sim \Normal_m \parens{\bdelta X, \bD}, 
+		\end{align*}
+		where $\bdelta := \bA^\top \parens{\bA \bA^\top + \bPsi}^{-1}$ and $\bD = \bI_m - \bA^\top \parens{\bA \bA^\top + \bPsi}^{-1} \bA$. 
+		
+		To find the conditional expectation of $\ell_c$, we need to compute the conditional expectations of the following statistics 
+		\begin{align*}
+			\bC_{XX} = \frac{1}{n} \sum_{i=1}^n \bx_i \bx_i^\top, \qquad \bC_{XS} = \frac{1}{n} \sum_{i=1}^n \bx_i \bs_i^\top, \qquad \bC_{SS} = \frac{1}{n} \sum_{i=1}^n \bs_i \bs_i^\top. 
+		\end{align*}
+		Then, given data $\sets{\bx_i}_{i=1}^n$ and current values of $\bA$, $\bPsi$, we have 
+		\begin{align*}
+			\E \bracks[\big]{\bC_{XX} \mid \sets{\bx_i}_{i=1}^n, \bA, \bPsi} = & \, \frac{1}{n} \sum_{i=1}^n \bx_i \bx_i^\top = \bC_{XX}, \\ 
+			\E \bracks[\big]{\bC_{XS} \mid \sets{\bx_i}_{i=1}^n, \bA, \bPsi} = & \, \bC_{XX} \bdelta^\top =: \widetilde{\bC}_{XS}, \\ 
+			\E \bracks[\big]{\bC_{SS} \mid \sets{\bx_i}_{i=1}^n, \bA, \bPsi} = & \, \bdelta \bC_{XX} \bdelta^\top + \bD =: \widetilde{\bC}_{SS}. 
+		\end{align*}
+		
+		\item In the \emph{M-step}, we maximize over $\bA$ and $\bPsi$, and the resulting maximizers are 
+		\begin{align*}
+			\widehat{\bA} = \widetilde{\bC}_{XS} \widetilde{\bC}_{SS}^{-1}, \qquad \text{ and } \qquad \widehat{\bPsi} = \diag \parens{ \bC_{XX} - \widetilde{\bC}_{XS} \widetilde{\bC}_{SS}^{-1} \widetilde{\bC}_{XS}^\top }. 
+		\end{align*}
+	\end{enumerate}
+	
+	The complete EM algorithm is shown below: 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{EM Algorithm for Maximum Likelihood Factor Analysis}\label{algo-ml-fa}
+		\begin{algorithmic}[1]
+			\STATE Let $\widehat{\bA}^{\parens{0}}$ and $\widehat{\bPsi}^{\parens{0}}$ be initial guesses for the parameter matrices $\bA$ and $\bPsi$, respectively; 
+			\STATE Compute 
+			\begin{align*}
+				\bC_{XX} = & \, \frac{1}{n} \sum_{i=1}^n \bx_i \bx_i^\top; 
+			\end{align*}
+			\STATE For $k = 1, 2, \cdots$, iterate between the following two steps: 
+			\begin{enumerate}
+				\item \textit{E-Step:} Compute 
+				\begin{align*}
+					\widetilde{\bC}_{XS}^{\parens{k-1}} = & \, \bC_{XX} {\bdelta^{\parens{k-1}}}^\top, \\
+					\widetilde{\bC}_{SS}^{\parens{k-1}} = & \, \bdelta^{\parens{k-1}} \bC_{XX} {\bdelta^{\parens{k-1}}}^\top + \bD^{\parens{k-1}}, 
+				\end{align*}
+				where 
+				\begin{align*}
+					\bdelta^{\parens{k-1}} = & \, \widehat{\bA}^{\parens{k-1}^\top}\parens[\Big]{\widehat{\bA}^{\parens{k-1}} \widehat{\bA}^{\parens{k-1}^\top} + \widehat{\bPsi}^{\parens{k-1}}}^{-1}, \\ 
+					\bD^{\parens{k-1}} = & \, \bI_m - \bdelta^{\parens{k-1}} \widehat{\bA}^{\parens{k-1}}; 
+				\end{align*}
+				
+				\item \textit{M-Step:} Update the parameter estimates, 
+				\begin{align*}
+					\widehat{\bA}^{\parens{k}} = & \, \widetilde{\bC}_{XS}^{\parens{k-1}} \bracks{\widetilde{\bC}_{SS}^{\parens{k-1}}}^{-1}, \\ 
+					\widehat{\bPsi}^{\parens{k}} = & \, \diag \parens{ \bC_{XX} - \widetilde{\bC}_{XS}^{\parens{k-1}} \bracks{\widetilde{\bC}_{SS}^{\parens{k-1}}}^{-1} \bracks{\widetilde{\bC}_{XS}^{\parens{k-1}}}^\top 
+					}; 
+				\end{align*}
+				\end{enumerate}
+			\STATE Stop when convergence has been attained. 
+		\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\item \textbf{Critiques of the Maximum Likelihood Factor Analysis (MLFA):} 
+	\begin{enumerate}
+		\item MLFA is based upon Gaussian assumptions but has been routinely applied to non-Gaussian or discrete data; 
+		\item There may exist many local maxima; 
+		\item The log-likelihood function is rotationally invariant in factor space. Therefore, the sources $S$ and the mixing matrix $\bA$ in can \emph{only} be defined up to an arbitrary rotation. 
+	\end{enumerate}	
+
+\end{enumerate}
+
+
+\section*{V. Independent Factor Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Blind Source Separation Problem:} The \textit{blind source separation} (BSS) problem involves decomposing an unknown mixture of non-Gaussian signals into its independent component signals. 
+	
+	\item \textbf{Overview:} Independent factor analysis (IFA) was proposed as an alternative to ICA and factor analysis to deal with the BSS problem. IFA adopts the maximum likelihood factor analysis model but employs arbitrary \emph{non-Gaussian} densities for the factors. 	
+	
+	\item \textbf{Model Specification:} The model is given by 
+	\begin{align*}
+		X = \bA S + \varepsilon. 
+	\end{align*}
+	We make the following assumptions: 
+	\begin{enumerate}
+		\item The random error term $\varepsilon$ has a $p$-variate Gaussian distribution $\Normal_p \parens{\boldzero_p, \bPsi}$, where $\bPsi$ is \emph{not} necessarily diagonal; 
+		\item Each unobserved source $S_j$ is assumed to be independently distributed according to a non-Gaussian density $q_{S_j} \parens{\,\cdot\, \vert\, \btheta_j}$ characterized by the parameter vector $\btheta_j$, for all $j = 1, 2, \cdots, m$. 
+	\end{enumerate}
+	In this set-up, the collection of parameters is given by $\parens{\bA, \bPsi, \btheta}$, where $\btheta := \parens{\btheta_1, \cdots, \btheta_m}$. 
+	
+	\item \textbf{Specification of $q_{S_j}$:} We require each source density, $q_{S_j}$, is modeled parametrically by an arbitrary mixture of univariate Gaussian densities, 
+	\begin{align*}
+		q_{S_j} \parens{s_j \,\vert\, \btheta_j} = \sum_{k=1}^{I_j} w_{j, k} \cdot \varphi \parens{s_j \,\vert\, \mu_{j, k}, \sigma_{j, k}^2}, 
+	\end{align*}
+	where 
+	\begin{itemize}
+		\item $\varphi \parens{\,\cdot\, \vert\, \mu_{j, k}, \sigma_{j, k}^2 }$ is the density function of a normal random variable with mean $\mu_{j,k}$ and variance $\sigma_{j,k}^2$, 
+		\item $w_{j, k} > 0$ is the mixing proportion associated with the $k$-th component of the $j$-th source density, for all $k = 1, 2, \cdots, I_j$, satisfying $\sum_{k=1}^{I_j} w_{j, k} = 1$ for all $j = 1, 2, \cdots, m$. 
+	\end{itemize}
+	
+	In particular, note that 
+	\begin{align*}
+		\btheta_j = \sets[\Big]{\parens{w_{j,k}, \mu_{j,k}, \sigma_{j,k}^2} \,\big\vert\, k = 1, \cdots, I_j}. 
+	\end{align*}
+	These parameters can be estimated using the EM algorithm. 
+	
+	\item \textbf{Critiques:} 
+	\begin{enumerate}
+		\item The total number of parameters can grow to be very large; 
+		\item The IFA procedure by maximizing the log-likelihood function using the EM algorithm is an extremely computationally intensive procedure when there are many sources to be separated; 
+		\item EM is a slow algorithm that does \emph{not} necessarily converge to a global maximum of the log-likelihood; 
+		\item It is hard to determine the number of Gaussian components in the mixture for each component and whether such a mixture of Gaussian formulation appears justified. 
+	\end{enumerate}
+
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

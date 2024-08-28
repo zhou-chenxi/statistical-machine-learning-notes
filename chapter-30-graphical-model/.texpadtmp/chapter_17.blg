@@ -1,0 +1,20 @@
+[0] Config.pm:343> INFO - This is Biber 2.5
+[0] Config.pm:346> INFO - Logfile is '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_17_undirected_graphical_model/.texpadtmp/chapter_17.blg'
+[51] biber-darwin:290> INFO - === Sun Mar 29, 2020, 21:33:01
+[85] Biber.pm:351> INFO - Reading '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_17_undirected_graphical_model/.texpadtmp/chapter_17.bcf'
+[176] Biber.pm:776> INFO - Found 1 citekeys in bib section 0
+[188] Biber.pm:3493> INFO - Processing section 0
+[216] Biber.pm:3657> INFO - Looking for bibtex format file '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_17_undirected_graphical_model/noteref.bib' for section 0
+[217] bibtex.pm:1187> INFO - Decoding LaTeX character macros into UTF-8
+[217] bibtex.pm:1048> INFO - Found BibTeX data source '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_17_undirected_graphical_model/noteref.bib'
+[220] Utils.pm:149> WARN - BibTeX subsystem: warning: comma(s) at end of name (removing)
+[220] Utils.pm:149> WARN - BibTeX subsystem: author, warning: comma(s) at end of name (removing)
+[220] Utils.pm:149> WARN - BibTeX subsystem: warning: comma(s) at end of name (removing)
+[220] Utils.pm:149> WARN - BibTeX subsystem: author, warning: comma(s) at end of name (removing)
+[232] UCollate.pm:66> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[232] UCollate.pm:66> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[232] Biber.pm:3306> INFO - Sorting list 'nyt/global/' of type 'entry' with scheme 'nyt' and locale 'en-US'
+[233] Biber.pm:3310> INFO - No sort tailoring available for locale 'en-US'
+[234] bbl.pm:526> INFO - Writing '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_17_undirected_graphical_model/.texpadtmp/chapter_17.bbl' with encoding 'ascii'
+[234] bbl.pm:619> INFO - Output to /Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_17_undirected_graphical_model/.texpadtmp/chapter_17.bbl
+[235] Biber.pm:108> INFO - WARNINGS: 4

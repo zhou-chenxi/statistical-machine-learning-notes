@@ -1,0 +1,20 @@
+[0] Config.pm:343> INFO - This is Biber 2.5
+[0] Config.pm:346> INFO - Logfile is '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_12_suppor_vector_machines_and_flexible_discriminants/.texpadtmp/chapter_12.blg'
+[47] biber-darwin:290> INFO - === Fri Nov  8, 2019, 20:27:17
+[66] Biber.pm:351> INFO - Reading '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_12_suppor_vector_machines_and_flexible_discriminants/.texpadtmp/chapter_12.bcf'
+[157] Biber.pm:776> INFO - Found 1 citekeys in bib section 0
+[169] Biber.pm:3493> INFO - Processing section 0
+[183] Biber.pm:3657> INFO - Looking for bibtex format file '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_12_suppor_vector_machines_and_flexible_discriminants/noteref.bib' for section 0
+[189] bibtex.pm:1187> INFO - Decoding LaTeX character macros into UTF-8
+[190] bibtex.pm:1048> INFO - Found BibTeX data source '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_12_suppor_vector_machines_and_flexible_discriminants/noteref.bib'
+[192] Utils.pm:149> WARN - BibTeX subsystem: warning: comma(s) at end of name (removing)
+[193] Utils.pm:149> WARN - BibTeX subsystem: author, warning: comma(s) at end of name (removing)
+[193] Utils.pm:149> WARN - BibTeX subsystem: warning: comma(s) at end of name (removing)
+[193] Utils.pm:149> WARN - BibTeX subsystem: author, warning: comma(s) at end of name (removing)
+[206] UCollate.pm:66> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[206] UCollate.pm:66> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[206] Biber.pm:3306> INFO - Sorting list 'nyt/global/' of type 'entry' with scheme 'nyt' and locale 'en-US'
+[206] Biber.pm:3310> INFO - No sort tailoring available for locale 'en-US'
+[208] bbl.pm:526> INFO - Writing '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_12_suppor_vector_machines_and_flexible_discriminants/.texpadtmp/chapter_12.bbl' with encoding 'ascii'
+[208] bbl.pm:619> INFO - Output to /Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_12_suppor_vector_machines_and_flexible_discriminants/.texpadtmp/chapter_12.bbl
+[209] Biber.pm:108> INFO - WARNINGS: 4

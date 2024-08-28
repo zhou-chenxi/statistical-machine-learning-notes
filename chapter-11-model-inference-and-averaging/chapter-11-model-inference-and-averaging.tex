@@ -1,0 +1,936 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor bet-ween}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 11, Model Inference and Averaging}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Model Inference and Averaging}{11}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 8, Model Inference and Averaging} in \textcite{Friedman2001-np}, and 
+	\item \textit{Chapter 14, Committee Machines} in \textcite{Izenman2009-jk}. 
+\end{itemize}
+
+
+\section*{I. The Bootstrap and Maximum Likelihood Methods}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{A Review of Bootstrap Methods:} The \textit{bootstrap} is a tool for assessing uncertainty. It can estimate the prediction error well. 
+	
+	\begin{enumerate}
+		\item \textit{Setup:} Let $\bZ := \parens{\bz_1, \bz_2, \cdots, \bz_n}$ denote the training dataset, where $\bz_i := \parens{\bx_i, y_i}$ for all $i = 1, 2, \cdots, n$. 
+		
+		\item \textit{Procedures:} 
+		
+		\textit{Step 1:} Randomly draw datasets \textit{with replacement} from the training data $\bZ$, where each sample dataset has the same size as the original training set; 
+		
+		\textit{Step 2:} Do \textit{Step 1} $B$ times and produce $B$ bootstrap datasets; 
+		
+		\textit{Step 3:} Fit the model to each of the bootstrap datasets and examine the behavior of the fits over the $B$ replications. 
+	\end{enumerate}
+	
+	\textit{Remark.} This procedure is called the \textit{nonparametric bootstrap} since the method is model-free and there is no specific parametric model to generate new datasets. 
+
+	\item \textbf{A Smoothing Example:} Let the training dataset be $\bZ = \parens{\bz_1, \bz_2, \cdots, \bz_n}$, with $\bz_i = \parens{x_i, y_i}$ for $i = 1, \cdots, n$. We assume that $x_i \in \Real$ is a one-dimensional input and let $y_i \in \Real$ be the outcome. 
+	
+	Suppose we use a cubic spline to fit the data with three knots placed at the quartiles of the input values. This is a 7-dimensional linear space of functions, where ``seven'' is obtained by 
+	\begin{align*}
+		4 \text{ regions} \times 4 \text{ parameters in each region} - 3 \text{ knots} \times 3 \text{ constraints for each knot} = 7. 
+	\end{align*}
+	Then, we represent the solution in the form
+	\begin{align}
+		\mu \parens{x} = \sum_{j=1}^7 \beta_j h_j \parens{x}, 
+	\end{align}
+	where $h_j$'s are the basis functions. We can think of the function $\mu$ as representing the conditional mean $\E \bracks{Y \,\vert\, X = x}$. Let $\bH$ be the $n \times 7$ matrix with $\parens{i, j}$-th element $h_j \parens{x_i}$. 
+	
+	\begin{itemize}
+		\item The least squares estimate of $\bbeta := \parens{\beta_1, \cdots, \beta_7}^\top \in \Real^7$ is
+		\begin{align}
+			\widehat{\bbeta} = \parens{\bH^\top \bH}^{-1} \bH^\top \bY, 
+		\end{align}
+		where $\bY := \parens{y_1, \cdots, y_n}^\top \in \Real^n$ is the response vector. 
+		
+		\item The fitted value at $x$ is 
+		\begin{align}
+			\hat{\mu} \parens{x} = \sum_{j=1}^7 \hat{\beta}_j h_j \parens{x}, 
+		\end{align}
+		where $\hat{\beta}_j$ is the $j$-th component of $\widehat{\bbeta}$. 
+		
+		\item The estimated covariance matrix of $\widehat{\bbeta}$ is
+		\begin{align}
+			\widehat{\var} \bracks{\widehat{\bbeta}} = \hat{\sigma}^2 \parens{\bH^\top \bH}^{-1}, 
+		\end{align}
+		where the noise variance $\sigma^2$ is estimated by 
+		\begin{align}
+			\hat{\sigma}^2 := \frac{1}{n} \sum_{i=1}^n \parens[\big]{y_i - \hat{\mu} \parens{x_i}}^2. 
+		\end{align}
+		
+		\item Let $\bh \parens{x} := \parens{h_1 \parens{x}, h_2 \parens{x}, \cdots, h_7 \parens{x}}^\top$. The standard error of a prediction $\hat{\mu} \parens{x} = \bh \parens{x}^\top \widehat{\bbeta}$ is
+		\begin{equation}\label{eq-se-ls}
+			\widehat{\mathrm{se}} \bracks{\widehat{\mu} \parens{x}} = \bracks[\big]{ \bh \parens{x}^\top \parens{\bH^\top \bH}^{-1} \bh \parens{x} }^{1/2} \hat{\sigma}.
+		\end{equation}
+		
+	\end{itemize}
+	
+	\item \textbf{Pointwise Confidence Interval Using the Nonparametric Bootstrap in the Smoothing Example:} We apply the bootstrap in the smoothing example above to obtain the pointwise confidence interval. The procedure is outlined as follows: 
+	\begin{enumerate}[label=(\arabic*)]
+		\item Draw $B$ datasets each of size $n$ with replacement from the training set; 
+		\item For each bootstrap data set $\bZ^*$, we fit a cubic spline model $\hat{\mu}^*$; 
+		\item With the $B$ bootstrap samples, form a $\parens{1 - \alpha} \cdot 100\%$ pointwise confidence band from the percentiles at each $x$ by finding the $\parens{\alpha / 2} \times B$ largest and smallest values at each $x$. 
+	\end{enumerate}
+	
+	\item \textbf{Parametric Bootstrap:} Suppose further we assume that the errors in the smoothing example follow a Gaussian distribution with mean 0 and variance $\sigma^2$, that is, 
+	\begin{align}\label{eq-smoothing-model}
+		Y = \mu \parens{x} + \varepsilon, \qquad \mu \parens{x} = \sum_{j=1}^7 \beta_j h_j \parens{x}, \qquad \varepsilon \sim \Normal \parens{0, \sigma^2}. 
+	\end{align}
+	The \emph{parametric bootstrap} procedure is outlined as follows: 
+	\begin{enumerate}
+		\item Simulate new responses by adding Gaussian noise to the predicted values, that is, for $i = 1, \cdots, n$, 
+		\begin{align}
+			y_i^* = \hat{\mu} \parens{x_i} + \varepsilon_i^*, 
+		\end{align}
+		where $\varepsilon^*_i \sim \Normal \parens{0, \hat{\sigma}^2}$; 
+		
+		\item Repeat the preceding process $B$ times. Then, the resulting bootstrap dataset is of the form $\sets{\parens{x_i, y_i^*}}_{i=1}^n$. We compute the $B$-spline model based on them; 
+		
+		\item The \emph{predicted values} estimated from a bootstrap sample $\bY^* := \parens{y_1^*, \cdots, y_n^*}^\top$ is 
+		\begin{align*}
+			\hat{\mu}^* \parens{x} = \bh \parens{x}^\top \parens{\bH^\top \bH}^{-1} \bH^\top \bY^*, 
+		\end{align*}
+		and has the distribution
+		\begin{align}\label{bootdis}
+			\hat{\mu}^* \parens{x} \sim \Normal \parens[\big]{\hat{\mu} \parens{x}, \bh \parens{x}^\top \parens{\bH^\top \bH}^{-1} \bh \parens{x} \hat{\sigma}^2}. 		\end{align}
+		In particular, the mean of this distribution is the same as the least squares estimate, and the standard deviation is the same as that of the least squares, that is, \eqref{eq-se-ls}. 
+		
+	\end{enumerate}
+	
+	% \textit{Remark.} In this example, the parametric bootstrap agrees with least squares as the model \eqref{smoothing.model} has additive Gaussian error. In the general setting, the parametric bootstrap does not agree with least squares but with maximum likelihood. 
+	
+	\item \textbf{Maximum Likelihood Inference:} Consider a probability density or probability mass function $g_{\btheta}$ whose functional form is known but the parameter $\btheta \in \Theta \subseteq \Real^p$ is unknown. Suppose we have $n$ random samples from it 
+	\begin{align}
+		Z_1, \cdots, Z_n \iid g_{\btheta}, 
+	\end{align}
+	Maximum likelihood is based on the likelihood function
+	\begin{align}
+		L \parens{\btheta; \bZ} := \prod_{i=1}^{n} g_{\btheta} \parens{Z_i}, 
+	\end{align}
+	where $\bZ := \parens{Z_1, \cdots, Z_n}$. We think $L \parens{\btheta; \bZ}$ as a function of the parameter $\btheta$, with the data $\bZ$ being fixed. 
+	
+	Typically, we work with the \textit{log-likelihood function}, denoted by
+	\begin{align}
+		\ell \parens{\btheta; \bZ} := \log L \parens{\btheta; \bZ} = \sum_{i=1}^n \log g_{\btheta} \parens{Z_i}. 
+	\end{align}
+	Each component $\log g_{\btheta} \parens{Z_i}$ is called a \textit{log-likelihood component}. The maximum likelihood method chooses the value of $\widehat{\btheta}$ that maximizes $\ell \parens{\btheta; \bZ}$. 
+	
+	\item \textbf{Score Function:} The first-order derivative of the log-likelihood function $\ell \parens{\btheta; \bZ}$ with respect to $\btheta$ is called the \textit{score function}, that is, 
+	\begin{align}
+		\nabla \ell \parens{\btheta; \bZ} = \sum_{i=1}^n \nabla \ell \parens{\btheta; Z_i} = \sum_{i=1}^n \frac{\partial \ell \parens{\btheta; Z_i}}{\partial \btheta}. 
+	\end{align}
+	Assuming that the likelihood achieves its maximum in the \textit{interior} of the parameter space, we then have $\nabla \ell \parens{\widehat{\btheta}; \bZ} = \boldzero_p$. 
+	
+	\item \textbf{Information Matrix:} The \textit{information matrix} is defined to be
+	\begin{align}
+		\bI \parens{\btheta} = - \sum_{i=1}^n \frac{\partial ^2 \ell \parens{\btheta; Z_i} }{ \partial \btheta \partial \btheta^\top}. 
+	\end{align}
+	
+	\begin{enumerate}
+		\item \textit{Observed Information:} When $\bI \parens{\btheta}$ is evaluated at $\btheta = \widehat{\btheta} $, it is often called the \textit{observed information}, that is, 
+		\begin{equation}
+			\bI \parens{\widehat{\btheta}} = - \sum_{i=1}^n \frac{\partial ^2 \ell \parens{\btheta; Z_i} }{\partial \btheta \partial \btheta^\top}\bigg\rvert_{\btheta = \widehat{\btheta}}; 
+		\end{equation}
+		
+		\item \textit{Expected Information:} The expectation of the information matrix is called the \textit{Fisher information} (or \textit{expected information}), 
+		\begin{align}
+			\bi \parens{\btheta} := \E_{\btheta} \bracks{\bI \parens{\btheta} }. 
+		\end{align}
+	\end{enumerate}
+	
+	\item \textbf{Classical Asymptotic Results:} Let $\btheta_0$ denote the true value of $\btheta$ and $\widehat{\btheta}$ be the maximum likelihood estimator of $\btheta$ from the data $Z_1, \cdots, Z_n$. The sampling distribution of the maximum likelihood estimator has a limiting normal distribution, that is, 
+	\begin{align}
+		\widehat{\btheta} \to \Normal \parens[\big]{\btheta_0, \bi \parens{\btheta_0}^{-1}}, \qquad \text{ as } n \to \infty. 
+	\end{align}
+	
+	Since $\btheta_0$ is unknown, the sampling distribution of $\widehat{\btheta}$ can be \emph{approximated} by 
+	\begin{align}
+		\Normal \parens[]{\widehat{\btheta}, \bi \parens{\widehat{\btheta}}^{-1}} \qquad \text{ or } \qquad \Normal \parens[]{\widehat{\btheta}, \bI \parens{\widehat{\btheta}}^{-1}}. 
+	\end{align}
+	
+	For all $j = 1, 2, \cdots, p$, the standard error of $\hat{\theta}_j$ can be estimated using the diagonal elements of the information matrix, either the expected one or the observed one; that is, 
+	\begin{align}
+		\sqrt{\bracks{\bi \parens{\widehat{\btheta}}^{-1}}_{j,j}} \qquad \text{ and } \qquad \sqrt{\bracks{\bI \parens{\widehat{\btheta}}^{-1}}_{j,j}}.
+	\end{align}
+	The $\parens{1 - \alpha} \cdot 100\%$ confidence interval for each $\theta_j$ can be obtained by 
+	\begin{align}
+		\hat{\theta}_j \pm z_{1 - \alpha/2} \sqrt{\bracks{\bi \parens{\widehat{\btheta}}^{-1}}_{j,j}} \qquad \text{ or } \qquad \hat{\theta}_j \pm z_{1 - \alpha/2} \sqrt{\bracks{\bI \parens{\widehat{\btheta}}^{-1}}_{j,j}}, 
+	\end{align}
+	respectively, where $z_{1-\alpha/2}$ is the $\parens{1 - \alpha / 2} \cdot 100$-th percentile of the standard normal distribution.  
+	
+	\item \textbf{Asymptotic Distribution of Log-Likelihood Function:} Asymptotically, the log-likelihood function evaluated at the maximum likelihood estimator has a chi-squared distribution 
+	\begin{equation}
+		2 \bracks[\big]{\ell \parens{\widehat{\btheta}} - \ell \parens{\btheta_0}} \sim \chi^2_p, \qquad \text{ as } n \to \infty, 
+	\end{equation} 
+	where $p$ is the number of components in $\btheta$ and $\chi_p^2$ is the chi-squared distribution with $p$ degrees of freedom. 
+	
+	With this result, a more accurate $\parens{1 - \alpha} \cdot 100\%$ confidence interval is the set of all $\btheta$ such that
+	\begin{align}
+		2 \bracks[\big]{\ell \parens{\widehat{\btheta}} - \ell \parens{\btheta_0} } \le \chi^2_{p, 1-\alpha}, 
+	\end{align}
+	where $\chi^2_{p, 1-\alpha}$ is the $\parens{1 - \alpha} \cdot 100$-th percentile of the chi-squared distribution with $p$ degrees of freedom. 
+	
+	\item \textbf{Example:} Consider the smoothing example where we assumed that 
+	\begin{equation}
+		Y = \mu \parens{x} + \varepsilon, \hspace{20pt} \mu \parens{x} = \sum_{j=1}^7 \beta_j h_j \parens{x}, \hspace{20pt} \varepsilon \sim \Normal \parens{0, \sigma^2}. 
+	\end{equation}
+	With the parameter $\btheta := \parens{\bbeta^\top, \sigma^2}^\top$ and data $\bZ$, the log-likelihood function is 
+	\begin{equation}
+		\ell \parens{\btheta; \bZ} = -\frac{n}{2} \log \parens{2 \pi \sigma^2} - \frac{1}{2 \sigma^2} \sum_{i=1}^n \parens{y_i - \bh \parens{x_i}^\top \bbeta}^2. 
+	\end{equation}
+	Then, the maximum likelihood estimator of $\btheta$ is obtained by setting 
+	\begin{equation} 
+		\frac{\partial \ell \parens{\btheta; \bZ}}{\partial \bbeta} = \boldzero_7, \hspace{20pt} \text{ and } \hspace{20pt} \frac{\partial \ell \parens{\btheta; \bZ} }{\partial \sigma^2} = 0. 
+	\end{equation}
+	The resulting estimators of $\bbeta$ and $\sigma^2$ are 
+	\begin{equation}
+		\widehat{\bbeta} := \parens{\bH^\top \bH}^{-1}\bH^\top \bY, \hspace{20pt} \text{ and } \hspace{20pt} \hat{\sigma}^2 := \frac{1}{n} \sum_{i=1}^n \parens{y_i - \hat{\mu} \parens{x_i}}^2, 
+	\end{equation}
+	respectively, which are the same as presented before. 
+	
+	\item \textbf{Connection Between Bootstrap and Maximum Likelihood:} Bootstrap is a \textit{computer implementation} of nonparametric or parametric maximum likelihood. Bootstrap allows one to compute maximum likelihood estimates of standard errors and other statistical quantities in settings where no formulas are available. 
+
+\end{enumerate}
+
+
+\section*{II. Bayesian Methods}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{General Idea of Bayesian Inference:} In Bayesian approach, we specify 
+	\begin{enumerate}
+		\item a sampling model for the data $\bz$ given the parameters, $f  \parens{\,\cdot\, \,\vert\, \btheta}$, and 
+		\item a prior density function on the parameters $\btheta$, $p$. 
+	\end{enumerate}
+	Then, the \textit{posterior distribution} is computed by using the Bayes theorem 
+	\begin{equation}
+		p \parens{\btheta \,\vert\, \bz} = \frac{f \parens{\bz \,\vert\, \btheta} p \parens{\btheta}}{f \parens{\bz}}, % = \frac{f \parens{\bz \,\vert\, \btheta} p \parens{\btheta}}{\int f \parens{\bz \,\vert\, \btheta} p \parens{\btheta} \diff \btheta}, 
+	\end{equation}
+	where 
+	\begin{align*}
+		f \parens{\bz} = \int_{\Theta} f \parens{\bz \,\vert\, \btheta} p \parens{\btheta} \diff \btheta. 
+	\end{align*}
+	Note that the posterior distribution $p \parens{\btheta \,\vert\, \bz}$ reflects our updated knowledge about $\btheta$ after we see the data. 
+	
+	To understand $p \parens{\,\cdot\, \,\vert\, \bz}$, one can draw samples from it or summarize it by the mean or the mode. 
+	
+	\item \textbf{Characteristics of Bayesian Approach:} The Bayesian approach 
+	\begin{enumerate}
+		\item specifies the prior distribution to express the \emph{uncertainty} present before seeing the data, and 
+		\item allow the uncertainty to remain after seeing the data to be expressed in the form of the posterior distribution. 
+	\end{enumerate}
+	
+	\item \textbf{Prediction Distribution:} Suppose we are given a new data point $\bz_{\text{new}}$, the prediction distribution is calculated by 
+	\begin{align}
+		f \parens{\bz_{\text{new}} \,\vert\, \bz} = \int_{\Theta} f \parens{\bz_{\text{new}} \,\vert\, \btheta} p \parens{\btheta \,\vert\, \bz} \diff \btheta. 
+	\end{align}
+	
+	\textit{Remark.} In the maximum likelihood approach, we just use $f \parens{\bz_{\text{new}} \,\vert\, \widehat{\btheta}}$ to represent the predicted distribution of future observations and to make predictions. This does \emph{not} account for the uncertainty in estimating $\btheta$. 
+	
+	\item \textbf{Bayesian Approach to the Smoothing Example:} We make the following assumptions: 
+	\begin{itemize}
+		\item the data $Y$ has the following parametric model 
+		\begin{align*}
+			Y = \mu \parens{x} + \varepsilon, \hspace{20pt} \mu \parens{x} = \sum_{j=1}^7 \beta_j h_j \parens{x}, \hspace{20pt} \varepsilon \sim \Normal \parens{0, \sigma^2}; 
+		\end{align*}
+		\item the variance of the error $\varepsilon$, $\sigma^2$, is known; 
+		\item the observed feature values $x_1, x_2, \cdots, x_n \in \Real$ are \textit{fixed} so that the randomness in the data comes \textit{solely} from $Y$ varying around its mean $\mu$; 
+		\item assume the following prior distribution on $\bbeta$ 
+		\begin{equation}\label{priorbeta}
+			\bbeta \sim \Normal \parens{0, \tau \bSigma}, 
+		\end{equation}
+		where $\tau > 0$. 
+	\end{itemize}
+	Under the assumptions above, the implicit process for $\mu \parens{x}$ is a Gaussian process with the covariance kernel 
+	\begin{align*}
+		K \parens{x, x'} = & \, \cov \parens{\mu \parens{x}, \mu \parens{x'}} \\ 
+		= & \, \cov \parens{\bh \parens{x}^\top \bbeta, \bh \parens{x'}^\top \bbeta} \nonumber \\ 
+		= & \, \bh \parens{x}^\top \var \bracks{\bbeta} \bh \parens{x'} \nonumber \\ 
+		= & \, \tau \bh \parens{x}^\top \bSigma \bh \parens{x'}. 
+	\end{align*}
+	
+	Then, the posterior distribution of $\bbeta$ is also Gaussian. We find the parameters associated with this posterior distribution. Notice that 
+	\begin{equation}
+		\bZ \,\vert\, \bbeta \sim \Normal \parens{\bH, \sigma^2 \bI}, \hspace{20pt} \text{and} \hspace{20pt} \bbeta \sim \Normal \parens{\mathbf{0}, \tau \bSigma}, 
+	\end{equation}
+	where $\bH$ is the $n \times 7$ matrix with $\parens{i, j}$-th element $h_j \parens{x_i}$. 
+	
+	Then, the density function of the posterior distribution of $\bbeta$ is proportional to the product of the likelihood function and the prior density: 
+	\begin{align*}
+		f \parens{\bbeta \,\vert\, \bZ} \propto & \, f \parens{\bZ \,\vert\, \bbeta} f \parens{\bbeta} \\ 
+		\propto & \, \exp \braces[\Bigg]{- \frac{1}{2} \parens{\bY - \bH \bbeta}^\top \parens{\sigma^2 \bI}^{-1} \parens{\bY - \bH \bbeta}} \cdot \exp \braces[\Bigg]{-\frac{1}{2} {\bbeta}^\top \parens{\tau \bSigma}^{-1} {\bbeta}} \\ 
+		\propto & \, \exp \braces[\Bigg]{- \frac{1}{2 \sigma^2} \parens[\big]{\bY^\top \bY - 2 \bY^\top \bH \bbeta + \bbeta^\top \bH^\top \bH \bbeta} - \frac{1}{2 \tau} {\bbeta}^\top \bSigma^{-1} {\bbeta}} \\
+		\propto & \, \exp \braces[\Bigg]{- \frac{1}{2 \sigma^2} \bracks[\bigg]{\bbeta^\top \parens[\bigg]{\bH^\top \bH +\frac{\sigma^2}{\tau}\bSigma^{-1}} \bbeta - 2 \bY^\top \bH \bbeta}}. 
+	\end{align*}
+	Supposing that the posterior mean of $\bbeta$ is $\widetilde{\bmu}$ and the posterior covariance matrix is $\widetilde{\bSigma}$, we must have 
+	\begin{align*}
+		- \frac{1}{2} \parens{\bbeta - \widetilde{\bmu}}^\top \widetilde{\bSigma}^{-1} \parens{\bbeta - \widetilde{\bmu}}^\top 
+		= & \, - \frac{1}{2} \parens{\bbeta^\top \widetilde{\bSigma}^{-1} \bbeta - 2 \widetilde{\bmu}^\top \widetilde{\bSigma}^{-1} \bbeta + \widetilde{\bmu}^\top \widetilde{\bSigma}^{-1} \widetilde{\bmu}} \\ 
+		= & \, - \frac{1}{2\sigma^2} \bracks[\bigg]{\bbeta^\top \parens[\bigg]{\bH^\top \bH +\frac{\sigma^2}{\tau}\bSigma^{-1}} \bbeta - 2 \bY^\top \bH \bbeta + C}, 
+	\end{align*}
+	where $C$ is a constant independent of $\bbeta$. From the equation above, we must have 
+	\begin{align}
+		\widetilde{\bSigma}^{-1} = \frac{1}{\sigma^2} \parens[\Bigg]{\bH^\top \bH +\frac{\sigma^2}{\tau}\bSigma^{-1}}, \hspace{20pt} \text{ and } \hspace{20pt} \widetilde{\bmu}^\top \widetilde{\bSigma}^{-1} \bbeta = \frac{1}{\sigma^2} \bY^\top \bH \bbeta. 
+	\end{align}
+	It follows that 
+	\begin{align}
+		\widetilde{\bSigma} = \parens[\bigg]{\bH^\top \bH +\frac{\sigma^2}{\tau}\bSigma^{-1}}^{-1} \sigma^2, 
+	\end{align}
+	and 
+	\begin{align}
+		\widetilde{\bmu} = \parens[\bigg]{\bH^\top \bH + \frac{\sigma^2}{\tau}\bSigma^{-1}}^{-1} \bH^\top \bY. 
+	\end{align}
+	In summary, the posterior distribution of $\bbeta$ is Gaussian with the following parameters 
+	\begin{equation}\label{post}
+		\begin{aligned}
+			\E \bracks{\bbeta \,\vert\, \bZ} = & \, \parens[\bigg]{\bH^\top \bH + \frac{\sigma^2}{\tau} \bSigma^{-1} }^{-1} \bH^\top \bY, \\ 
+			\var \bracks{\bbeta \,\vert\, \bZ} = & \, \parens[\bigg]{\bH^\top \bH + \frac{\sigma^2}{\tau} \bSigma^{-1}}^{-1} \sigma^2. 
+		\end{aligned}
+	\end{equation}
+	It follows that the corresponding posterior values for $\mu \parens{x}$ are 
+	\begin{align*}
+		\E \bracks[\big]{\mu \parens{x} \,\vert\, \bZ} = & \, \E \bracks{\bh \parens{x}^\top \bbeta \,\vert\, \bZ} = \bh \parens{x}^\top \parens[\bigg]{\bH^\top \bH + \frac{\sigma^2}{\tau} \bSigma^{-1}}^{-1} \bH^\top \bY, \\ 
+		\cov \bracks[\big]{\mu \parens{x}, \mu \parens{x'} \,\vert\, \bZ} = & \, \cov \bracks[\big]{ \bh \parens{x}^\top \bbeta, \bh \parens{x'}^\top \bbeta \,\vert\, \bZ} = \bh \parens{x}^\top \parens[\bigg]{\bH^\top \bH + \frac{\sigma^2}{\tau} \bSigma^{-1}}^{-1} \bh\parens{x'} \sigma^2. 
+	\end{align*}
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item The prior distribution \eqref{priorbeta} of $\bbeta$ when $\tau \to \infty$ is called the \textit{non-informative} prior. 
+		\item As $\tau \to \infty$, the posterior distribution \eqref{post} and the bootstrap distribution \eqref{bootdis} coincide. In Gaussian models, maximum likelihood and parametric bootstrap analyses tend to agree with Bayesian analysis that uses a non-informative prior for the free parameters. 
+		\item Notice that it was assumed that $\sigma^2$ is known. From a Bayesian perspective, this is \emph{not} proper. A prior distribution on $\sigma$ should be imposed. A typical choice is $g \parens{\sigma} \propto 1/\sigma$. Then, one calculates the posterior distribution of $\mu \parens{x}$ and $\sigma$ and integrates out $\sigma$. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+\section*{III. Relationship Between the Bootstrap and Bayesian Inference}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{A Simple Example:} Suppose we have $Z \sim \Normal \parens{\theta, 1}$, and we specify the prior on $\theta$ as $\theta \sim \Normal \parens{0, \tau}$, where $\tau > 0$. Then, the posterior distribution of $\theta$ is 
+	\begin{align}
+		\theta \,\vert\, Z = z \sim \Normal \parens[\bigg]{\frac{z}{1+1/\tau}, \frac{1}{1+1/\tau}}. 
+	\end{align}
+	As $\tau \to \infty$, we have a \emph{non-informative prior} and the posterior distribution becomes 
+	\begin{align}
+		\theta \,\vert\, Z = z \sim \Normal \parens{z, 1}, 
+	\end{align}
+	which is the same as a parametric bootstrap distribution where we generate the bootstrap values $Z^*$ from the maximum likelihood estimate of the sampling density $\Normal \parens{Z, 1}$. 
+	
+	\textit{Remark.} There are \textit{three} ingredients that make this correspondence work: 
+	\begin{enumerate}[label=(\roman*)]
+		\item We chose a non-informative prior for $\theta$ with infinite variance; 
+		\item \label{eq-boot-bayes-2} The dependence of the log-likelihood $\ell \parens{\theta; Z}$ on the data $Z$ only through the maximum likelihood estimator $\hat{\theta}$, and therefore, we can write the log-likelihood as $\ell \parens{\theta; Z} = \ell \parens{\theta; \hat{\theta}}$; 
+		\item \label{eq-boot-bayes-3} The symmetry of the log-likelihood in $\theta$ and $\hat{\theta}$, that is, $\ell \parens{\theta; \hat{\theta}} = \ell \parens{\hat{\theta}; \theta} + C$, where $C$ is a constant independent of ${\theta}$ and $\hat{\theta}$. 
+	\end{enumerate}
+	Note that \ref{eq-boot-bayes-2} and \ref{eq-boot-bayes-3} hold only for the Gaussian distribution. 
+	
+	\item \textbf{Another Example:} Consider a discrete sample space with $L$ categories. Let $w_j$ be the probability that a sample point falls in Category $j$, and $\hat{w}_j$ be the observed proportion in category $j$, for all $j = 1, \cdots, L$. Collectively, let 
+	\begin{align}
+		\bw := \parens{w_1, w_2, \cdots, w_L}, \hspace{20pt} \text{ and } \hspace{20pt} \widehat{\bw} := \parens{\hat{w}_1, \hat{w}_2, \cdots, \hat{w}_L}. 
+	\end{align}
+	We specify a prior distribution of $\bw$ as the Dirichlet distribution with parameter $a$, that is, 
+	\begin{equation}
+		\bw \sim \mathrm{Dir}_L \parens{a, \cdots, a}, 
+	\end{equation}
+	and the probability density function is of the form 
+	\begin{equation}
+		p \parens{\bw} \propto \prod_{\ell = 1}^L w_{\ell}^{a-1}. 
+	\end{equation}
+	Furthermore, assume the data $\bx$ are drawn from a multinomial distribution with parameters $n$ and $\bw$, where $n$ is the total sample size and $\bw$ is the category probability. The likelihood function is of the form 
+	\begin{equation}
+		p \parens{\bx \,\vert\, \bw} \propto \, \prod_{l=1}^L w_l^{x_l}. 
+	\end{equation}
+	Now, we derive the posterior distribution of $\bw$: 
+	\begin{align*}
+		p \parens{\bw \,\vert\, \bx} \propto & \, p \parens{\bx \,\vert\, \bw} \cdot p \parens{\bw} \\ 
+		\propto & \, \prod_{\ell=1}^L w_{\ell}^{x_{\ell}} \cdot \prod_{\ell = 1}^L w_{\ell}^{a-1} \\ 
+		= & \, \prod_{\ell=1}^L w_{\ell}^{x_i + a - 1}, 
+	\end{align*}
+	and, therefore, the posterior distribution of $\bw$ is 
+	\begin{align}	
+		\mathrm{Dir}_L \parens{ a + x_1, \cdots, a + x_L} = \text{Dir}_L \parens{a + n \hat{w}_1, \cdots, a + n \hat{w}_L}. 
+	\end{align}
+	Letting $a \to 0$, we obtain a non-informative prior and the corresponding posterior distribution is $\mathrm{Dir}_L \parens{n \widehat{w}_1, \cdots, n \widehat{w}_L}$. 
+	
+	Now, the bootstrap distribution can be expressed as sampling the category proportions from a multinomial distribution, that is, 
+	\begin{align}
+		n \widehat{\bw}^* \sim \mathrm{Mult} \parens{n, \widehat{\bw}}, 
+	\end{align}
+	where $\mathrm{Mult} \parens{n, \widehat{\bw}}$ denotes a multinomial distribution. This bootstrap distribution has the same support, the same mean, and nearly the same covariance matrix as the posterior distribution. % Therefore, the bootstrap distribution of $S \parens{\widehat{\bw}^*}$ will closely approximate the posterior distribution of $S \parens{\bw}$. 
+	
+	\textit{Remark.} The bootstrap distribution represents an (approximate) nonparametric, non-informative posterior distribution for the parameter. 
+
+\end{enumerate}
+
+
+\section*{IV. The Expectation-Maximization (EM) Algorithm}
+
+\subsection*{IV.1 EM Algorithm for Two-component Gaussian Mixture Model}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Two-Component Gaussian Mixture Model:} We model the data as a mixture of two normal distributions as 
+	\begin{equation}
+		\begin{aligned}
+			Z_1 \sim & \, \Normal \parens{\mu_1, \sigma_1^2},  \\ 
+			Z_2 \sim & \, \Normal \parens{\mu_2, \sigma_2^2},  \\ 
+			Y = & \, \parens{1 - \Delta} \cdot Z_1 + \Delta \cdot Z_2, 
+		\end{aligned}
+	\end{equation}
+	where $\Delta \in \sets{ 0, 1 }$ with $\Pr \parens{\Delta = 1} = \pi$. 
+	
+	\begin{enumerate}
+		\item \textit{Generating Process:} The generating process is the following: 
+		\begin{enumerate}
+			\item First generate a random variable $\Delta$ from $\sets{0, 1}$ with probability $\pi$; 
+			\item Depending on the outcome of $\Delta$, we sample either $Z_1$ or $Z_2$ from the corresponding distribution. 
+		\end{enumerate}
+		
+		\item \textit{Density Function of $Y$:} The probability density function of $Y$ is 
+		\begin{align}
+			g_Y \parens{y} = \parens{1 - \pi} \cdot \phi \parens{y; \mu_1, \sigma_1^2} + \pi \phi \parens{y; \mu_2, \sigma_2^2}, \qquad \text{ for all } y \in \Real, 
+		\end{align}
+		where $\phi \parens{\,\cdot\,; \mu, \sigma^2}$ is the density function of a normal distribution with mean $\mu$ and variance $\sigma^2$. 
+	\end{enumerate}
+	 
+	\item \textbf{Goal:} Let $Y_1, Y_2, \cdots, Y_n$ be i.i.d samples from a two-component Gaussian mixture model. We wish to estimate the parameters $\btheta := \parens{\pi, \mu_1, \sigma_1^2, \mu_2, \sigma_2^2}^\top$ by the method of maximum likelihood. The log-likelihood function based on $n$ samples is 
+	\begin{equation}
+		\ell \parens{\btheta; Y_1, Y_2, \cdots, Y_n} = \sum_{i=1}^n \log \bracks[\big]{ \parens{1 - \pi} \cdot \phi \parens{Y_i; \mu_1, \sigma_1^2} + \pi \cdot \phi \parens{Y_i; \mu_2, \sigma_2^2}}, 
+	\end{equation}
+	which is numerically hard to optimize directly. 
+	
+	\item \textbf{Motivations of the EM Algorithm:} 
+	\begin{enumerate}
+		\item Observe that the unobserved variables $\sets{\Delta_i}_{i=1}^n$ can only take values 0 or 1. Suppose we know the values of $\sets{\Delta_i}_{i=1}^n$. The log-likelihood function becomes 
+		\begin{align*}
+			& \, \ell \parens{\btheta; Y_1, \cdots, Y_n} \\ 
+			= & \, \log \parens[\Bigg]{\prod_{i=1}^n \parens[\big]{\parens{1 - \pi} \phi \parens{Y_i; \mu_1, \sigma_1^2} }^{1 - \Delta_i} \parens[\big]{\pi \phi \parens{Y_i; \mu_2, \sigma_2^2} }^{\Delta_i}} \\ 
+			= & \, \sum_{i=1}^n \bracks[\big]{\parens{1 - \Delta_i} \cdot \log \phi \parens{Y_i; \mu_1, \sigma_1^2} + \Delta_i \cdot \log \phi \parens{Y_i; \mu_2, \sigma_2^2}} \\ 
+			& \qquad + \sum_{i=1}^n \bracks[\big]{ \parens{1 - \Delta_i} \log \parens{1 - \pi} + \Delta_i \log \pi}. 
+		\end{align*}
+		Then, 
+		\begin{enumerate}
+			\item the maximum likelihood estimators of $\mu_1$ and $\sigma_1^2$ are the sample mean and the variance for those data with $\Delta_i = 0$, respective, 
+			\item the maximum likelihood estimators of $\mu_2$ and $\sigma_2^2$ are the sample mean and the variance for those data with $\Delta_i = 1$, respectively, and 
+			\item the maximum likelihood estimator of $\pi$ is the sample proportion of $\Delta_i = 1$. 
+		\end{enumerate}
+		
+		\item However, we do \emph{not} know $\Delta_i$'s. We proceed in an iterative fashion and substitute for each $\Delta_i$ with its expected value 
+		\begin{align}
+			\gamma_i \parens{\btheta} := \E \bracks{\Delta_i \,\vert\, \btheta, Y_1, \cdots, Y_n} = \Pr \parens{\Delta_i = 1 \,\vert\, \btheta, Y_1, \cdots, Y_n}. 
+		\end{align}
+		The $\gamma_i \parens{\btheta}$ is called the \textit{responsibility} of Model 2 for the $i$-th observation. 
+	\end{enumerate}
+	
+	\item \textbf{Main Idea of the EM Algorithm:} 
+	\begin{enumerate}
+		\item \textit{Expectation(E)-step:} do a soft assignment of each observation to each model. That is, the current estimates of the parameters are used to assign probabilities according to the relative density of the training points under each model; 
+		\item \textit{Maximization(M)-step:} the responsibilities obtained from the E-step are used in weighted maximum-likelihood fit to update the estimates of the parameters. 
+	\end{enumerate}
+	
+	\item \textbf{Complete EM Algorithm:}
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{EM Algorithm for Two-Component Gaussian Mixture}\label{algo-em-two-comp-gaussian}
+			\begin{algorithmic}[1]
+				\STATE Take initial guesses for the parameters $\hat{\mu}_1$, $\hat{\sigma}^2_1$, $\hat{\mu}_2$, $\hat{\sigma}^2_2$, and $\hat{\pi}$. 
+				\STATE \textit{Expectation Step:} Compute the responsibilities 
+				\begin{align*}
+					\hat{\gamma}_{i} = \frac{\hat{\pi} \phi \parens{Y_i; \hat{\mu}_2, \hat{\sigma}_2^2}}{\parens{1 - \hat{\pi}} \phi \parens{Y_i; \hat{\mu}_1, \hat{\sigma}_1^2} + \hat{\pi} \phi \parens{Y_i; \hat{\mu}_2, \hat{\sigma}_2^2}}, \qquad \text{ for all } i = 1, \cdots, n. 
+				\end{align*}
+				\STATE \textit{Maximization Step:} Compute the weighted means and variances 
+				\begin{align*}
+					\hat{\mu}_1 = & \, \frac{\sum_{i=1}^n \parens{1 - \hat{\gamma}_i} Y_i}{\sum_{i=1}^n \parens{1 - \hat{\gamma}_i}}, \quad && \hat{\mu}_2 = \frac{\sum_{i=1}^n \hat{\gamma}_i Y_i}{\sum_{i=1}^b \hat{\gamma}_i}, \\ 
+					\hat{\sigma}^2_1 = & \, \frac{\sum_{i=1}^n \parens{1 - \hat{\gamma}_i} \parens{Y_i - \hat{\mu}_1}^2}{\sum_{i=1}^n \parens{1 - \hat{\gamma}_i}}, \quad && \hat{\sigma}^2_2 = \frac{\sum_{i=1}^n \hat{\gamma}_i \parens{Y_i - \hat{\mu}_2}^2}{\sum_{i=1}^n \hat{\gamma}_i}, \\ 
+					\hat{\pi} = & \, \frac{1}{n} \sum_{i=1}^n \hat{\gamma}_i. 
+				\end{align*}
+				\STATE Iterate Steps 2 and 3 until convergence. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+
+	\item \textbf{EM Algorithm Computes a Local Maximum:} 
+	\begin{enumerate}
+		\item Note that the maximizer of $\ell$ is achieved when a spike of infinite height is put any one data point, e.g., $\hat{\mu}_1 = Y_i$ for some $i$ and $\hat{\sigma}_1^2 = 0$ --- such a solution is \emph{not} useful; 
+		\item We actually search for a good local maximum of the log-likelihood function for which $\hat{\sigma}_1^2 > 0$ and $\hat{\sigma}_2^2 > 0$. Note that there may be multiple local maxima. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\subsection*{IV.2 EM Algorithm in General}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Motivation:} In some problems, maximizing the (log-)likelihood function directly is hard; but it is easier to enlarge the sample with latent/unobserved/missimg data and maximize a version of (log-)likelihood function with the augmented data. 
+	
+	\item \textbf{Notation:} Let 
+	\begin{itemize}
+		\item $\bZ_{\mathrm{obs}}$ be the \textit{observed} data, 
+		\item $\ell \parens{\btheta; \bZ_{\mathrm{obs}}} := \log f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta}$ be the log-likelihood function of $\btheta$ that depends on the observed data $\bZ_{\mathrm{obs}}$ and the parameter $\btheta$, 
+		\item $\bZ_{\mathrm{mis}}$ be the \textit{unobserved/missing} data, 
+		\item $\bZ := \parens{\bZ_{\mathrm{obs}}, \bZ_{\mathrm{mis}}}$ be the \textit{complete} data, and 
+		\item $\ell_0 \parens{\btheta; \bZ} := \log f_0 \parens{\bZ; \btheta}$ be the log-likelihood function the $\btheta$ based on the complete data $\bZ$. 
+	\end{itemize}
+	
+	\item \textbf{EM Algorithm:} 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{EM Algorithm for General Case}\label{algo-em-general}
+			\begin{algorithmic}[1]
+				\STATE Take initial guesses for the parameters $\widehat{\btheta}^{\parens{0}}$; 
+				\STATE \textit{Expectation(E-) Step:} At the $j$-th step,  compute 
+				\begin{align*}
+					Q \parens{\btheta', \widehat{\btheta}^{\parens{j}}} := \E \bracks{\ell_0 \parens{\btheta'; \bZ} \,\vert\, \bZ_{\mathrm{obs}}, \widehat{\btheta}^{\parens{j}}}
+				\end{align*}
+				as a function of the dummy argument $\btheta'$; 
+				\STATE \textit{Maximization(M-) Step:} Determine the new estimate $\widehat{\btheta}^{\parens{j+1}}$ as the maximizer of $Q \parens{\btheta', \widehat{\btheta}^{\parens{j}}}$ over $\btheta'$; 
+				\STATE Iterate Steps 2 and 3 until convergence. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\item \textbf{Rationale of EM Algorithm:} First note that 
+	\begin{align}
+		f_1 \parens{\bZ_{\mathrm{mis}} \,\vert\, \bZ_{\mathrm{obs}}, \btheta'} = \frac{f_0 \parens{\bZ_{\mathrm{mis}}, \bZ_{\mathrm{obs}} \,\vert\, \btheta'}}{f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'}}. 
+	\end{align}
+	Hence, 
+	\begin{align}
+		f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'} = \frac{f_0 \parens{\bZ_{\mathrm{mis}}, \bZ_{\mathrm{obs}} \,\vert\, \btheta'}}{f_1 \parens{\bZ_{\mathrm{mis}} \,\vert\, \bZ_{\mathrm{obs}}, \btheta'}} = \frac{f_0 \parens{\bZ \,\vert\, \btheta'}}{f_1 \parens{\bZ_{\mathrm{mis}} \,\vert\, \bZ_{\mathrm{obs}}, \btheta'}}. 
+	\end{align}
+	In terms of the log-likelihood function, we have 
+	\begin{align}\label{eq-em-algo1}
+		\ell \parens{\btheta'; \bZ_{\mathrm{obs}}} = \ell_0 \parens{\btheta'; \bZ} - \ell_1 \parens{\btheta'; \bZ_{\mathrm{mis}} \,\vert\, \bZ_{\mathrm{obs}}}, 
+	\end{align}
+	where $\ell_1$ is the log-likelihood function based on the conditional density $f_1 \parens{\,\cdot\, \,\vert\, \bZ_{\mathrm{obs}}, \btheta'}$. 
+	
+	Now, taking the expectations of both sides of \eqref{eq-em-algo1} with respect to the distribution of $\bZ \,\vert\, \bZ_{\mathrm{obs}}$ that depends on $\btheta$ gives 
+	\begin{align*}
+		\ell \parens{\btheta'; \bZ_{\mathrm{obs}}} = & \, \E \bracks{\ell_0 \parens{\btheta'; \bZ} \,\vert\, \bZ_{\mathrm{obs}}, \btheta} - \E \bracks{\ell_1 \parens{\btheta'; \bZ \,\vert\, \bZ_{\mathrm{obs}}} \,\vert\, \bZ_{\mathrm{obs}}, \btheta} \\ 
+		= & \, Q \parens{\btheta', \btheta} - R \parens{\btheta', \btheta}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		Q \parens{\btheta', \btheta} := \E \bracks{\ell_0 \parens{\btheta'; \bZ} \,\vert\, \bZ_{\mathrm{obs}}, \btheta}, 
+	\end{align*}
+	and 
+	\begin{align*}
+		R \parens{\btheta', \btheta} := \E \bracks{\ell_1 \parens{\btheta'; \bZ \,\vert\, \bZ_{\mathrm{obs}}} \,\vert\, \bZ_{\mathrm{obs}}, \btheta}. 
+	\end{align*}
+	
+	Analysis of $Q \parens{\btheta', \btheta}$ and $R \parens{\btheta', \btheta}$: 
+	\begin{enumerate}
+		\item \underline{Analysis of $R \parens{\btheta', \btheta}$:} Note that $R \parens{\btheta', \btheta}$ is the expectation of a log-likelihood function of a density function (indexed by $\btheta'$) with respect to the same density indexed by $\btheta$. It is maximized as a function of $\btheta'$ when $\btheta' = \btheta$, by Jensen's inequality; 
+		\item \underline{Analysis of $Q \parens{\btheta', \btheta}$:} In the M-step, we maximize $Q \parens{\btheta', \btheta}$ over $\btheta'$. Hence, if $\btheta'$ maximizes $Q \parens{\btheta', \btheta}$, we have 
+		\begin{align*}
+			\ell \parens{\btheta'; \bZ} - \ell \parens{\btheta; \bZ} = \bracks{Q \parens{\btheta', \btheta} - Q \parens{\btheta, \btheta} } - \bracks{R \parens{\btheta', \btheta} - R \parens{\btheta, \btheta} } \ge 0, 
+		\end{align*}
+		where the first term is nonnegative and the second term is nonpositive. 
+	\end{enumerate}
+	Thus, the EM iteration never decreases the value of the log-likelihood function. 
+	
+	\textit{Remark.} In the M-step, a full maximization is \emph{not} necessary. We only need to find a value $\widehat{\btheta}^{\parens{j+1}}$ so that $Q \parens{\btheta', \widehat{\btheta}^{\parens{j}}} $ increases as a function of the first argument, i.e., 
+	\begin{align*}
+		Q \parens{\widehat{\btheta}^{\parens{j+1}}, \widehat{\btheta}^{\parens{j}}} > Q \parens{\widehat{\btheta}^{\parens{j}}, \widehat{\btheta}^{\parens{j}}}. 
+	\end{align*}
+	The resulting algorithm is called the \emph{generalized EM algorithm}. 
+	
+	\item \textbf{EM Algorithm as a Minorization Procedure:} 
+	\begin{enumerate}
+		\item \textit{Basic Definition and Motivation:} A function $g \parens{x, y}$ is said to \textit{minorize} a function $f \parens{x}$ if 
+		\begin{align*}
+			g \parens{x, y} \le f \parens{x}, \qquad g \parens{x, x} = f \parens{x}, \qquad \text{ for all } x, y \text{ in the domain}. 
+		\end{align*}
+		This is useful for maximizing $f$ since $f$ is non-decreasing under the update 
+		\begin{align*}
+			x^{\parens{j+1}} = \argmax_x g \parens{x, x^{\parens{j}}}. 
+		\end{align*}
+		To see this, we note that 
+		\begin{align*}
+			f \parens{x^{\parens{j}}} \stackrel{\mathrm{(i)}}{=} g \parens{x^{\parens{j}}, x^{\parens{j}}} \stackrel{\mathrm{(ii)}}{\le} g \parens{x^{\parens{j+1}}, x^{\parens{j}}} \stackrel{\mathrm{(iii)}}{\le} f \parens{x^{\parens{j+1}}}, 
+		\end{align*}
+		where (i) and (iii) follow from the fact that $g$ minorizes $f$, and (ii) is because $x^{\parens{j+1}}$ maximizes the function $x \mapsto g \parens{x, x^{\parens{j}}}$. 
+		
+		\item \textit{MM Algorithm:} The algorithm of maximizing $f$ via the minorization function $g$ is known as the \textit{MM algorithms}, for ``Minorize-Maximize''. Details are given in Algorithm \ref{algo-mm}. 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+				\caption{MM Algorithm}\label{algo-mm}
+				\begin{algorithmic}[1]
+					\REQUIRE $x^{\parens{0}}$ in the domain. 
+					\FOR{$j = 0, 1, 2, \cdots$}
+					\STATE \textit{Minorization Step:} Compute $g \parens{x, x^{\parens{j}}}$; 
+					\STATE \textit{Maximization Step:} Maximization $g$ with respect to the first argument 
+					\begin{align*}
+						x^{\parens{j+1}} := \argmax_x g \parens{x, x^{\parens{j}}}; 
+					\end{align*}
+					\ENDFOR
+				\end{algorithmic}
+			\end{algorithm}
+		\end{minipage}
+
+		\item \textit{Connection to EM Algorithm:} We show that the EM algorithm is an example of the MM algorithms. To start with,  we show 
+		\begin{align*}
+			S \parens{\btheta', \btheta} := Q \parens{\btheta', \btheta} + \log f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta} - Q \parens{\btheta, \btheta}
+		\end{align*}
+		minorizes the log-likelihood function of the observed data $\ell \parens{\btheta'; \bZ_{\mathrm{obs}}}$. 
+		
+		Note that $S \parens{\btheta', \btheta'} = \ell \parens{\btheta'; \bZ_{\mathrm{obs}}}$, since 
+		\begin{align*}
+			S \parens{\btheta', \btheta'} = Q \parens{\btheta', \btheta'} + \log f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'} - Q \parens{\btheta', \btheta'} = \log f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'} = \ell \parens{\btheta'; \bZ_{\mathrm{obs}}}. 
+		\end{align*}
+		Also, we have $S \parens{\btheta', \btheta} \le \ell \parens{\btheta'; \bZ_{\mathrm{obs}}}$ for all $\btheta'$ and $\btheta$, since 
+		\begin{align*}
+			S \parens{\btheta', \btheta} - \ell \parens{\btheta'; \bZ_{\mathrm{obs}}} 
+			= & \, Q \parens{\btheta', \btheta} + \ell \parens{\btheta; \bZ_{\mathrm{obs}}} - Q \parens{\btheta, \btheta} - \ell \parens{\btheta'; \bZ_{\mathrm{obs}}} \\ 
+			= & \, \bracks{Q \parens{\btheta', \btheta} - \ell \parens{\btheta'; \bZ_{\mathrm{obs}}}} - \bracks{Q \parens{\btheta, \btheta} - \ell \parens{\btheta; \bZ_{\mathrm{obs}}} } \\ 
+			= & \, R \parens{\btheta', \btheta} - R \parens{\btheta, \btheta} \\ 
+			\le & \, 0, 
+		\end{align*}
+		by Jensen's inequality, using the notation defined earlier. 
+		
+		Hence, the function $S \parens{\btheta', \btheta}$ minorizes $\ell \parens{\btheta'; \bZ_{\mathrm{obs}}}$. By maximizing $S \parens{\btheta', \btheta}$ in the first argument sequentially, we can increase the value of the log-likelihood function at the observed data steadily, which achieves the goal of maximizing $\ell \parens{\,\cdot\,; \bZ_{\mathrm{ob}}}$. 
+		
+	\end{enumerate}
+	
+	\item \textbf{EM Algorithm as a Maximization-Maximization Procedure:} 
+	\begin{enumerate}
+		\item \textit{Derivation:} Consider the function 
+		\begin{align}
+			G \parens{\btheta', \tilde{f}} := \E_{\tilde{f}} \bracks{\ell_0 \parens{\btheta'; \bZ}} - \E_{\tilde{f}} \bracks{\log \tilde{f} \parens{\bZ_{\mathrm{mis}}}}, 
+		\end{align}
+		where $\tilde{f}$ is any density function over the latent/missing data $\bZ_{\mathrm{mis}}$. 
+		
+		Then, we have 
+		\begin{align*}
+			G \parens{\btheta', \tilde{f}} = & \, \int \tilde{f} \parens{\bz_{\mathrm{mis}}} \log f_0 \parens{\bZ_{\mathrm{obs}}, \bz_{\mathrm{mis}} \,\vert\, \btheta'} \diff \bz_{\mathrm{mis}} - \int \tilde{f} \parens{\bz_{\mathrm{mis}}} \log \tilde{f} \parens{\bz_{\mathrm{mis}}} \diff \bz_{\mathrm{mis}} \\ 
+			= & \, - \int \tilde{f} \parens{\bz_{\mathrm{mis}}} \log \frac{\tilde{f} \parens{\bz_{\mathrm{mis}}}}{f_0 \parens{\bZ_{\mathrm{obs}}, \bz_{\mathrm{mis}} \,\vert\, \btheta'}} \diff \bz_{\mathrm{mis}} \\ 
+			= & \, - \int \tilde{f} \parens{\bz_{\mathrm{mis}}} \log \frac{\tilde{f} \parens{\bz_{\mathrm{mis}}}}{f_0 \parens{\bZ_{\mathrm{obs}}, \bz_{\mathrm{mis}} \,\vert\, \btheta'} \cdot \frac{f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'}}{f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'}}} \diff \bz_{\mathrm{mis}}  \\ 
+			= & \, - \int \tilde{f} \parens{\bz_{\mathrm{mis}}} \log \frac{\tilde{f} \parens{\bz_{\mathrm{mis}}}}{f_1 \parens{\bz_{\mathrm{mis}} \,\vert\, \bZ_{\mathrm{obs}}, \btheta'} f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'}} \, \diff \bz_{\mathrm{mis}}  \\ 
+			= & \, - \mathrm{KL} \parens{\tilde{f} \,\Vert\, f_1 \parens{\,\cdot\, \,\vert\, \bZ_{\mathrm{obs}}, \btheta'}} + \log f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'}, 
+		\end{align*}
+		where $\mathrm{KL} \parens{p \,\Vert\, q} = \int p \parens{x} \log \parens{p \parens{x} / q \parens{x}} \diff x$ is the Kullback-Leibler divergence between $p$ and $q$, is always nonnegative, and is minimized when $p = q$. 
+		
+		Therefore, with a fixed value $\btheta'$, if we let $\tilde{f} = f_1 \parens{\,\cdot\, \,\vert\, \bZ_{\mathrm{obs}}, \btheta'}$, $G \parens{\btheta, \,\cdot\,}$ is maximized in the second argument, and 
+		\begin{align*}
+			G \parens{\btheta, f_1 \parens{\,\cdot\, \,\vert\, \bZ_{\mathrm{obs}}, \btheta'}} = \log f \parens{\bZ_{\mathrm{obs}} \,\vert\, \btheta'}, 
+		\end{align*}
+		which is exactly the observed data log-likelihood. Maximizing this second argument of $G$ is equivalent to the E-step in Algorithm \ref{algo-em-general}. 
+		
+		\item \textit{EM Algorithm as a Maximization-Maximization Procedure:} The EM algorithm can be viewed as a joint maximization method for $G$ over $\btheta'$ and $\tilde{f}$, by fixing one argument and maximizing over the other. More precisely, 
+		\begin{enumerate}
+			\item the maximizer over $\tilde{f}$ for a fixed $\btheta'$ is $f_1 \parens{\,\cdot\, \,\vert\, \bZ_{\mathrm{obs}}, \btheta'}$, which is the distribution computed by the E-step; 
+			\item in the M-step, we maximize $G \parens{\btheta', \tilde{f}}$ over $\btheta'$ with $\tilde{f} = f_1 \parens{\,\cdot\, \,\vert\, \bZ_{\mathrm{obs}}, \btheta}$ fixed: this is the same as maximizing the first term 
+			\begin{align*}
+				\E_{f_1 \parens{\,\cdot\, \,\vert\, \bZ_{\mathrm{obs}}, \btheta}} \bracks{ \ell_0 \parens{\btheta'; \bZ} } = \E \bracks{ \ell_0 \parens{\btheta'; \bZ} \,\vert\, \bZ_{\mathrm{obs}}, \btheta}, 
+			\end{align*}
+			since the second term in $G$ does \emph{not} involve $\btheta'$. 
+		\end{enumerate}
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{V. MCMC for Sampling from the Posterior}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Goal:} With a Bayesian model, one would like to draw samples from the posterior distribution to make inferences about the parameters. 
+	
+	\item \textbf{Gibbs Sampling:} Suppose we have random variables $U_1, U_2, \cdots, U_K$ and we want to draw a sample from their joint distribution. Suppose drawing from the joint distribution is difficult but drawing from the conditional distribution 
+	\begin{align*}
+		\Pr \parens{U_j \,\vert\, U_1, \cdots, U_{j-1}, U_{j+1}, \cdots, U_K}, \qquad \text{ for all } j = 1, \cdots, K, 
+	\end{align*}
+	is easy. The \emph{Gibbs sampling procedure} alternatively samples from each of these conditional distributions and, when the process stabilizes, provides a sample from the desired joint distribution. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{Gibbs Sampling}\label{algo-gibbs}
+			\begin{algorithmic}[1]
+				\STATE Take initial values for $U_k^{\parens{0}}$, for all $k = 1, \cdots, K$; 
+				\STATE Repeat for $t = 1, 2, \cdots$: 
+				
+				For $k = 1, \cdots, K$, generate $U_k^{\parens{t}}$ from 
+				\begin{align*}
+					\Pr \parens[\big]{U_k^{\parens{t}} \,\vert\, U_1^{\parens{t-1}}, U_2^{\parens{t-1}}, \cdots, U_{k-1}^{\parens{t-1}}, U_{k+1}^{\parens{t-1}}, \cdots, U_K^{\parens{t-1}}}; 
+				\end{align*}
+				
+				\STATE Continue Step 2 until the joint distribution of $\parens{U_1^{\parens{t}}, U_2^{\parens{t}}, \cdots, U_K^{\parens{t}}}$ does \emph{not} change. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\textit{Remarks.}
+	\begin{enumerate}
+		\item Under regularity conditions, it can be shown that this procedure eventually stabilizes, and the resulting random variables are indeed a sample from the joint distribution of $\parens{U_1, U_2, \cdots, U_K}$. This occurs despite the fact that the samples $\parens{U_1^{\parens{t}}, U_2^{\parens{t}}, \cdots, U_K^{\parens{t}}}$ are \emph{not} independent for different values of $t$. 
+		\item Gibbs sampling produces a \emph{Markov chain} whose stationary distribution is the true joint distribution, and hence the term ``Markov chain Monte Carlo''. 
+		\item We do \emph{not} need to know the explicit form of the conditional densities, but just need to be able to sample from them. 
+		\item If the explicit form of the conditional density $\Pr \parens{U_k \,\vert\, U_{l}, l \neq k}$ is available, we can estimate the marginal density of $U_k$ by 
+		\begin{align}\label{eq-estimate-marginal-den}
+			\widehat{\Pr}_{U_k} \parens{u} = \frac{1}{M-m+1} \sum_{t=m}^M \Pr \parens{u \,\vert\, U_{l}^{\parens{t}}, l \neq k}, 
+		\end{align}
+		where we average over the last $M - m + 1$ members of the sequence to allow for an initial ``burn-in'' period before stationarity is reached. 
+	\end{enumerate}
+	
+	\item \textbf{Connection between Gibbs Sampling and EM Algorithm:} We focus on the EM algorithm for the two-component Gaussian mixture model. 
+	\begin{enumerate}
+		\item \textit{Setup:}
+		\begin{enumerate}
+			\item Treat the latent data $\bW$ from the EM algorithm to be another parameter for the Gibbs sampler; 
+			\item We fix the variances $\sigma_1^2$ and $\sigma_2^2$ and the mixing proportion $\pi$ at their maximum likelihood values, denoted by $\hat{\sigma}_1^2$, $\hat{\sigma}_2^2$, and $\hat{\pi}$, respectively, so that the only unknown parameters in the model are the mean parameters $\mu_1$ and $\mu_2$. 
+		\end{enumerate}
+		
+		\item \textit{Gibbs sampling procedure:}
+		
+		\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{Gibbs Sampling for Two-component Gaussian Mixture Model}\label{algo-gibbs-gaussian-mixture}
+			\begin{algorithmic}[1]
+				\STATE Take initial values for $\mu_1^{\parens{0}}$ and $\mu_2^{\parens{0}}$; 
+				\STATE Repeat for $t = 1, 2, \cdots$: \label{algo-gibbs-gaussian-mixture-2}
+				\begin{enumerate}
+					\item \label{algo-gibbs-gaussian-mixture-2-i} For $i = 1, \cdots, n$, generate $\Delta_i^{\parens{t}} \in \sets{0, 1}$ according to the following responsibilities 
+					\begin{align*}
+						\Pr \parens{\Delta_i^{\parens{t}} = 1} = \hat{\gamma}_i \parens{\mu_1^{\parens{t-1}}, \mu_2^{\parens{t-1}}}, \qquad \text{ for all } i = 1, 2, \cdots, n; 
+					\end{align*}
+					
+					\item \label{algo-gibbs-gaussian-mixture-2-ii} Set 
+					\begin{align*}
+						\hat{\mu}_1 = \frac{\sum_{i=1}^n \parens{1 - \Delta_i^{\parens{t}}} Y_i}{\sum_{i=1}^n \parens{1 - \Delta_i^{\parens{t}}}}, \quad \text{ and } \quad \hat{\mu}_2 = \frac{\sum_{i=1}^n \Delta_i^{\parens{t}} Y_i}{\sum_{i=1}^n \Delta_i^{\parens{t}}}, 
+					\end{align*}
+					and generate $\mu_1^{\parens{t}} \sim \Normal \parens{\hat{\mu}_1, \hat{\sigma}_1^2}$ and $\mu_2^{\parens{t}} \sim \Normal \parens{\hat{\mu}_2, \hat{\sigma}_2^2}$; 
+				\end{enumerate}
+				
+				\STATE Continue Step 2 until the joint distribution of $\parens{\Delta_1^{\parens{t}}, \cdots, \Delta_n^{\parens{t}}, \mu_1^{\parens{t}}, \mu_2^{\parens{t}}}$ does \emph{not} change. 
+			\end{algorithmic}
+		\end{algorithm}
+		\end{minipage}
+		
+		\item \textit{Connection:} Note Steps 2(i) and 2(ii) in Algorithm \ref{algo-gibbs-gaussian-mixture} are the same as the E and M steps of the EM algorithm, except that we sample rather than maximize: 
+		\begin{enumerate}
+			\item In Step 2(i), rather than compute the maximum likelihood responsibilities $\gamma_i := \E \bracks{\Delta_i \,\vert\, \btheta, \bZ}$, the Gibbs sampling procedure simulates the latent data $\Delta_i$ from the distributions $\Pr \parens{\Delta_i \,\vert\, \btheta, \bZ}$; 
+			\item In step 2(ii), rather than compute the maximizers of the posterior distribution $\Pr \parens{\mu_1, \mu_2, \Delta_1, \cdots, \Delta_n \,\vert\, \bZ}$, we simulate from the conditional distribution $\Pr \parens{\mu_1, \mu_2 \,\vert\, \Delta_1, \cdots, \Delta_n, \bZ}$. 
+		\end{enumerate}
+		
+		\item \textit{Remarks:} The above mixture model was \emph{simplified}. More realistically, one would 
+		\begin{enumerate}
+			\item put a prior distribution on the variances $\sigma_1^2$ and $\sigma_2^2$ and the mixing proportion $\pi$, and 
+			\item include separate Gibbs sampling steps in which we sample from their posterior distributions, conditional on the other parameters. 
+		\end{enumerate}
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{VI. Bagging}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Let the training data be $\bZ := \sets{\parens{\bx_i, y_i}}_{i=1}^n$, where we assume $\bx_i \in \Real^p$ and $y_i \in \Real$, for all $i = 1, 2, \cdots, n$, and consider a regression problem. Suppose $y_i = f \parens{\bx_i} + \varepsilon_i$ for all $i = 1, \cdots, n$, where $\varepsilon_i \iid \Normal \parens{0, \sigma^2}$. 
+	
+	\item \textbf{Goal:} The goal is to predict $f \parens{\bx_0}$ at some $\bx_0 \in \Real^p$. 
+	
+	\item \textbf{Bagging for Regression:} \textit{Bootstrap aggregation}, or \textit{bagging}, averages the predictions over a collection of bootstrap samples, and can reduce the \textit{variance} of the predictions. 
+	\begin{enumerate}
+		\item \textit{Procedure:} 
+		\begin{enumerate}
+			\item Draw bootstrap samples from $\bZ$, denoted by $\bZ^{\parens{1}}, \cdots, \bZ^{\parens{B}}$; 
+			\item Fit a model on each $\bZ^{\parens{b}}$, denoted by $\hat{f}^{\parens{b}}$, and obtain $\hat{f}^{\parens{b}} \parens{\bx_0}$, for all $b = 1, \cdots, B$; 
+			\item The \textit{bagging estimate} at $\bx_0$ is 
+			\begin{align}\label{eq-bagging}
+				\hat{f}_{\mathrm{bag}} \parens{\bx_0} = \frac{1}{B} \sum_{n=1}^B \hat{f}^{\parens{b}} \parens{\bx_0}. 
+			\end{align}
+		\end{enumerate}
+		
+		\item \textit{A different view:} Let $\widehat{F}$ be the empirical distribution putting equal probability $1/n$ on each data point $\parens{\bx_i, y_i}$. The ``true'' bagging estimate is defined by 
+		\begin{align}
+			\E_{\widehat{F}} \bracks{\hat{f}^{*} \parens{\bx_0}}, 
+		\end{align}
+		where $\bZ^* := \sets{\parens{\bx_i^*, y_i^*}}_{i=1}^n$, each $\parens{\bx_i^*, y_i^*} \iid \widehat{F}$, and $\hat{f}^*$ is the model fit using $\bZ^*$. Then, \eqref{eq-bagging} is a Monte Carlo estimate of the true bagging estimate, approaching it as $B \to \infty$. 
+	\end{enumerate}
+	
+	\item \textbf{Bagging for $W$-class Classification:} 
+	\begin{enumerate}
+		\item \textit{Goal:} To predict the class label of an observation $\bx_0 \in \Real^p$. 
+		\item \textit{Procedure:} Suppose for each model fit on each bootstrap sample $\bZ^{\parens{b}}$, denoted by $\hat{f}^{\parens{b}}: \Real^p \to \Real^W$, we obtain a classifier, i.e., 
+		\begin{align*}
+			\widehat{G}^{\parens{b}} \parens{\bx_0} := \argmax_{w=1, 2, \cdots, W} \hat{f}^{\parens{b}} \parens{\bx_0}. %\in \calW := \sets{1, 2, \cdots, W}. 
+		\end{align*}
+		The bagged estimate $\hat{f}_{\mathrm{bag}} \parens{\bx_0}$ is a $W$-dimensional vector, $\parens{p_1 \parens{\bx_0}, p_2 \parens{\bx_0}, \cdots, p_W \parens{\bx_0}}^\top \in \Real^W$, with $p_w \parens{\bx_0}$ being the proportion of the number of models predicting Class $w$ at $\bx_0$. The \textit{bagged classifier} selects the class with the most ``votes'' from the $B$ models, i.e., 
+		\begin{align*}
+			\widehat{G}_{\mathrm{bag}} \parens{\bx_0} = & \, \argmax_{w=1,2,\cdots,W} \, \hat{f}_{\mathrm{bag}} \parens{\bx_0} \\ 
+			= & \, \argmax_{w=1,2,\cdots,W} \, \parens{p_1 \parens{\bx}, p_2 \parens{\bx}, \cdots, p_W \parens{\bx}}^\top. 
+		\end{align*}
+		
+		\item \textit{An Alternative Procedure:} In the cases where we require the class-probability estimates at $\bx_0$, we assume the model $\hat{f}^{\parens{b}} \parens{\bx_0}$ can produce the $W$-dimensional vector with each component being the predicted class-probability of the corresponding class at $\bx_0$. We can then average these $B$ $W$-dimensional vectors, yielding the bagged estimate of the class-probability. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Benefits of Bagging:} Bagging can dramatically reduce the \emph{variance} of unstable procedures, leading to improved predictions --- this is because averaging can reduce the variance and leave bias unchanged. 
+	
+	We focus on the mean square error (MSE). Assume the training observations $\sets{\parens{\bx_i, y_i}}_{i=1}^n$ are independently drawn from a distribution $\Pr$, and consider the ideal aggregate estimator $f_{\mathrm{ag}} \parens{\bx} := \E_{\Pr} \bracks{\hat{f}^* \parens{\bx}}$. Here, $\bx$ is fixed and the bootstrap dataset $\bZ^*$ consists of observations $\parens{\bx_i^*, y_i^*}$, for all $i = 1, 2, \cdots, n$ sampled from $\Pr$ \footnote{Note that $f_{\mathrm{ag}} \parens{\bx}$ is a bagging estimate, drawing bootstrap samples from the \emph{actual population} $\Pr$ rather than the data. It is \emph{not} an estimate that we can use in practice, but is convenient for analysis.}. We have 
+	\begin{align}
+		\E_{\Pr} \bracks{\parens{Y - \hat{f}^* \parens{\bx}}^2} = & \, \E_{\Pr} \bracks{\parens{Y - f_{\mathrm{ag}} \parens{\bx} + f_{\mathrm{ag}} \parens{\bx} - \hat{f}^* \parens{\bx}}^2} \nonumber \\ 
+		= & \, \E_{\Pr} \bracks{\parens{Y - f_{\mathrm{ag}} \parens{\bx}}^2} + \E_{\Pr} \bracks{\parens{f_{\mathrm{ag}} \parens{\bx} - \hat{f}^* \parens{\bx}}^2} \nonumber \\ 
+		\ge & \, \E_{\Pr} \bracks{\parens{Y - f_{\mathrm{ag}} \parens{\bx}}^2}. 
+	\end{align}
+	Note that the term $\E_{\Pr} \bracks{\parens{f_{\mathrm{ag}} \parens{\bx} - \hat{f}^* \parens{\bx}}^2}$ comes from the \emph{variance} of $\hat{f}^* \parens{\bx}$ around its mean $f_{\mathrm{ag}} \parens{\bx}$. Therefore, true population aggregation never increases MSE and bagging (which draws samples from data) will often decrease mean-squared error.  
+	
+	\textit{Remark.} The argument above does \emph{not} hold for classification under 0-1 loss, due to the non-additivity of bias and variance. In this setting, bagging a good classifier can make it better, but bagging a bad classifier can make it worse. 
+	
+	\item \textbf{Drawback of Bagging:} Note that when we bag a model, any simple structure in the model is \emph{lost}. Thus, the results from bagging are \emph{not} easy to interpret. 
+	
+\end{enumerate}
+
+
+\section*{VII. Model Averaging and Stacking}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Suppose we have a set of candidate models, $\sets{\calM_1, \cdots, \calM_M}$, for the training data $\bZ$. 
+	
+	\item \textbf{Bayesian Model Averaging:} Suppose the quantity $\zeta$ is of interest. The posterior distribution of $\zeta$ is 
+	\begin{align}
+		\Pr \parens{\zeta \,\vert\, \bZ} = \sum_{m=1}^M \Pr \parens{\zeta \,\vert\, \calM_m, \bZ} \Pr \parens{\calM_m \,\vert\, \bZ}, 
+	\end{align}
+	and the posterior mean is 
+	\begin{align}
+		\E \bracks{\zeta \,\vert\, \bZ} = \sum_{m=1}^M \E \bracks{\zeta \,\vert\, \calM_m, \bZ} \Pr \parens{\calM_m \,\vert\, \bZ}. 
+	\end{align}
+	Thus, the Bayesian estimate of $\zeta$ is a weighted average of the individual predictions, with the weights proportional to the posterior probability of each model. 
+	
+	\item \textbf{Committee Method:} \emph{Committee methods} take a simple \emph{unweighted} average of the predictions from each model, essentially giving \emph{equal} probability to each model. 
+	
+	\item \textbf{Frequentist Model Averaging:} Suppose we have predictions $\hat{f}_1 \parens{\bx}, \hat{f}_2 \parens{\bx}, \cdots, \hat{f}_M \parens{\bx}$. To average them, we can seek the weights $\bw := \parens{w_1, w_2, \cdots, w_M}^\top$ to minimize the squared-error loss, i.e., 
+	\begin{align}\label{eq-freq-average}
+		\widehat{\bw} := \argmin_{\bw} \braces[\Bigg]{\E_{\Pr} \bracks[\bigg]{ \parens[\bigg]{Y - \sum_{m=1}^M w_m \hat{f}_{m} \parens{\bx}}^2}}. 
+	\end{align}
+	Here, $\bx$ is fixed and the $n$ observations in $\bZ$ are distributed according to $\Pr$. 
+	
+	The solution to \eqref{eq-freq-average} is 
+	\begin{align}
+		\widehat{\bw} = \E_{\Pr} \bracks{\hat{\boldf} \parens{\bx} \hat{\boldf} \parens{\bx}^\top}^{-1} \E_{\Pr} \bracks{\hat{\boldf} \parens{\bx} Y}, 
+	\end{align}
+	where $\hat{\boldf} \parens{\bx} := \parens{\hat{f}_1 \parens{\bx}, \hat{f}_2 \parens{\bx}, \cdots, \hat{f}_M \parens{\bx}}^\top$. 
+	
+	It follows that the full regression has smaller error than any single model
+	\begin{align*}
+		\E_{\Pr} \bracks[\Bigg]{ \parens[\bigg]{Y - \sum_{m=1}^M \hat{w}_m \hat{f}_{m} \parens{\bx}}^2} \le \E_{\Pr} \bracks[\Big]{ \parens[\big]{Y - \hat{f}_{m} \parens{\bx}}^2}, \qquad \text{ for all } m = 1, \cdots, M, 
+	\end{align*}
+	so combining models \emph{never} makes things worse, at the population level. 
+	
+	\textit{Remarks.} 
+	\begin{itemize}
+		\item This approach can not be used in practice, as $\widehat{\bw}$ depends on the distribution $\Pr$, which is typically unknown. 
+		\item This approach does \emph{not} take the \textit{model complexity} into consideration. 
+	\end{itemize}
+	
+	\item \textbf{Stacked Generalization (Stacking):} Let $\hat{f}_m^{\parens{-i}} \parens{\bx}$ be the prediction at $\bx$, using Model $m$, applied to the dataset with the $i$-th training observation removed. The \emph{stacking estimate} of the weights is obtained from the least squares linear regression of $y_i$ on $\hat{f}_m^{\parens{-i}} \parens{\bx}$, for all $m = 1, 2, \cdots, M$: 
+	\begin{align}\label{eq-stacking}
+		\widehat{\bw}^{\mathrm{stacking}} := \argmin_{\bw} \sum_{i=1}^n \bracks[\Bigg]{y_i - \sum_{m=1}^M w_m \hat{f}_m^{\parens{-i}} \parens{\bx_i}}^2, 
+	\end{align}
+	The final prediction is $\sum_{m=1}^M \hat{w}_m^{\mathrm{stacking}} \hat{f}_m \parens{\bx}$. Note that this $\bx$ may be a new data point not present in the dataset to fit the $M$ models. 
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item \underline{Benefit:} By using the cross-validated predictions $\hat{f}_m^{\parens{-i}} \parens{\bx}$, stacking avoids giving unfairly high weight to models with higher complexity. 
+		\item Better results can be obtained by restricting the weights to be nonnegative, and to sum to 1. 
+	\end{enumerate}
+	
+	\item \textbf{Connection between Stacking and Leave-one-out Cross-validation:} If we restrict the minimization in \eqref{eq-stacking} to weight vectors $\bw$ that have \emph{one} unit weight and the rest zero, this leads to a model choice with the smallest leave-one-out cross-validation error. 
+	
+	\item \textbf{Final Remarks on Stacking:}
+	\begin{enumerate}
+		\item Stacking combines multiple models with the estimated optimal weights. This will often lead to better prediction, but \underline{less interpretability} than the choice of only one of the $M$ models. 
+		\item The stacking idea is actually more general than described above: 
+		\begin{enumerate}
+			\item One can use \emph{any} learning method, not just linear regression, to combine the models; 
+			\item the weights could depend on the input location $\bx$. 
+		\end{enumerate}
+		In this way, learning methods are ``stacked'' on top of one another, to improve prediction performance.
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{VIII. Stochastic Search: Bumping}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Bumping:}
+	\begin{enumerate}
+		\item \textit{Main Idea:} \textit{Bumping} uses bootstrap sampling to move randomly through the model space. 
+		\item \textit{Benefit:} Bumping is helpful in problems where fitting methods finds many local minima, and can help avoid getting stuck in poor solutions. 
+		\item \textit{Procedure:} 
+		\begin{enumerate}
+			\item Draw bootstrap samples $\bZ^{\parens{1}}, \cdots, \bZ^{\parens{B}}$, and fit a model to each, giving predictions $\hat{f}^{\parens{b}} \parens{\bx}$, for all $b = 1, \cdots, B$, at the input point $\bx$; 
+			\item Choose the model that produces the smallest prediction error, averaged over the original \textit{training set}. 
+		\end{enumerate}
+		
+		\item \textit{Example:} Suppose we use the squared-error loss function. Choose the model obtained from bootstrap sample $\hat{b}$, where 
+		\begin{align}
+			\hat{b} := \argmin_{b=1, \cdots, B} \, \braces[\Bigg]{\sum_{i=1}^n \bracks{y_i - \hat{f}^{\parens{b}} \parens{\bx_i}}^2}. 
+		\end{align}
+		The corresponding model predictions are $\hat{f}^{\parens{\hat{b}}} \parens{\bx}$. 
+		
+		\item \textit{A Remark.} We include the original training sample in the set of bootstrap samples, so that the method is free to pick the original model if it has the lowest training error. 
+
+	\end{enumerate}
+	
+	\item \textbf{Caveat:} Since bumping compares different models on the training data, one must ensure that the models have roughly the \emph{same complexity}. 
+	
+	\item \textbf{Other Applications:} Bumping can help in problems where it is \emph{difficult} to optimize the fitting criterion (perhaps because of a lack of smoothness). The trick is to optimize a different, more convenient criterion over the bootstrap samples, and then choose the model producing the best results for the \textit{desired criterion} on the training sample. 
+	
+	\item \textbf{Comparison with Bagging:} Bagging \emph{averages} the outputs  from different models, but bumping only picks the \emph{best} one. 
+	
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

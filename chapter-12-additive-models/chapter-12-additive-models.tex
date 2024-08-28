@@ -1,0 +1,395 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 12, Generalized Additive Models}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Generalized Additive Models}{12}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is produced based on 
+\begin{itemize}
+	\item \textit{Chapter 9, Additive Models, Trees, and Related Methods} in \textcite{Friedman2001-np}, and 
+	\item \textit{Chapter 4, Generalizations of the Lasso Penalty} in \textcite{Hastie2015-rm}. 
+\end{itemize}
+
+
+\section*{I. Generalized Additive Models} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Generalized Additive Model for Gaussian Response:} In the regression setting, the \emph{generalized additive model} has the form 
+	\begin{align}\label{eq-gaussian-gam}
+		\E \bracks{Y \,\vert\, X_1, X_2, \cdots, X_p} = \alpha + f_1 \parens{X_1} + f_2 \parens{X_2} + \cdots + f_p \parens{X_p}, 
+	\end{align}
+	where $X_1, \cdots, X_p$ are the predictors, $Y$ is the response assumed to follow a Gaussian distribution, and $f_j$'s are unspecified smooth functions. 
+	
+	\item \textbf{Generalized Additive Logistic Regression Model:} Suppose that the response variable is binary. 
+	\begin{enumerate}
+		\item \textit{Review of classic logistic regression model:} In the classic logistic regression model, we relate the mean of the binary response $\mu \parens{X} = \Pr \parens{Y = 1 \,\vert\, X}$ to predictors using the \emph{logit} link function 
+		\begin{align}\label{eq-classic-logistic-reg}
+			\log \parens[\bigg]{\frac{\mu \parens{X}}{1 - \mu \parens{X}}} = \alpha + \beta_1 X_1 + \beta_2 X_2 + \cdots + \beta_p X_p. 
+		\end{align}
+		
+		\item \textit{Generalized Additive Logistic Regression Model:} The \emph{generalized additive logistic regression model} replaces each linear term by a more general functional form 
+		\begin{align}\label{eq-gen-logistic-reg}
+			\log \parens[\bigg]{\frac{\mu \parens{X}}{1 - \mu \parens{X}}} = \alpha + f_1 \parens{X_1} + f_2 \parens{X_2} + \cdots + f_p \parens{X_p}, 
+		\end{align}
+		where each $f_j$ is an unspecified smooth function. 
+		
+		\item \textit{Comparison Between \eqref{eq-classic-logistic-reg} and \eqref{eq-gen-logistic-reg}:} 
+		\begin{enumerate}
+			\item The additivity is retained, which makes the interpretation easy; 
+			\item We allow $\log \parens[\big]{\frac{\mu \parens{X}}{1 - \mu \parens{X}}}$ to depend on each of $X_1, \cdots, X_p$ in a nonparametric fashion, allowing the model to be more flexible. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{Generalized Additive Model in General Settings:} We let the conditional mean $\mu \parens{X}$ of a response $Y$ be related to an additive function of the predictors via a \textit{link function} $g$. The resulting generalized additive model is 
+	\begin{align*}
+		g \parens{\mu \parens{X}} = \alpha + f_1 \parens{X_1} + f_2 \parens{X_2} + \cdots + f_p \parens{X_p}. 
+	\end{align*}
+	\textit{Examples:}
+	\begin{itemize}
+		\item $g \parens{\mu} = \mu$ is the \emph{identity link}, used for linear and additive models for Gaussian response data; 
+		\item $g \parens{\mu} = \mathrm{logit} \parens{\mu}$, or $g \parens{\mu} = \mathrm{probit} \parens{\mu}$, the \emph{probit link function}, for modeling binomial probabilities, where the probit function is the inverse Gaussian cumulative distribution function, 
+		\begin{align}
+			\mathrm{probit} \parens{\mu} = \Phi^{-1} \parens{\mu}. 
+		\end{align}
+		\item $g \parens{\mu} = \log \parens{\mu}$ for log-linear or log-additive models for Poisson count data. 
+	\end{itemize}
+	
+	\item \textbf{Some Extensions on $\sets{f_j}_{j=1}^p$:} 
+	\begin{enumerate}
+		\item By letting $f_j$'s to be nonlinear in $X_j$'s, the estimated function can then reveal possible nonlinearities in the effect of $X_1, \cdots, X_p$; 
+		\item \emph{Not} all of the functions $f_j$'s need to be nonlinear. We can mix in linear and other parametric forms with the nonlinear terms. 
+		\item The nonlinear terms are \emph{not} restricted to \emph{main effects} either; we can have nonlinear components in two or more variables, or separate curves in $X_j$ for each level of the factor $X_k$. 
+		\item \textit{Examples:} 
+		\begin{itemize}
+			\item $g \parens{\mu \parens{X}} = X^\top \bbeta + \alpha_k + f \parens{Z}$ --- a semiparametric model, where 
+			\begin{itemize}
+				\item $X$ is a vector of predictors to be modeled linearly, 
+				\item $\alpha_k$ the effect for the $k$-th level of a qualitative predictor, and 
+				\item the effect of predictor $Z$ is modeled nonparametrically; 
+			\end{itemize}
+			\item $g \parens{\mu \parens{X}} = f \parens{X} + g_k \parens{Z}$ --- $k$ indexes the levels of a qualitative input $V$, and thus creates an interaction term $g \parens{V, Z} = g_k \parens{Z}$ for the effects of $V$ and $Z$; 
+			\item $g \parens{\mu \parens{X}} = f \parens{X} + g \parens{Z, W}$, where $g$ is a nonparametric function in two features. 
+		\end{itemize}
+	\end{enumerate}
+	
+	\item \textbf{Fitting Generalized Additive Models Under Squared-error Loss:} 
+	\begin{enumerate}
+		\item \textit{Model specification:} We assume the response $Y$ and the predictors $X_1, \cdots, X_p$ are related by 
+		\begin{align*}
+			Y = \alpha + \sum_{j=1}^p f_j \parens{X_j} + \varepsilon, 
+		\end{align*}
+		where $\varepsilon \sim \Normal \parens{0, \sigma^2}$ and $\sigma^2 > 0$ is unknown. 
+		
+		\item \textit{Fitting criterion:} Let $\sets{\parens{\bx_i, y_i}}_{i=1}^n$ be i.i.d data, where $\bx_i \in \Real^p$. We minimize the penalized residual sum-of-squares (PRSS)
+		\begin{align}\label{eq-prss}
+			& \,\mathrm{PRSS}_{\lambda_1, \cdots, \lambda_p} \parens{\alpha, f_1, \cdots, f_p} \nonumber \\ 
+			& \qquad \qquad := \sum_{i=1}^n \parens[\bigg]{y_i - \alpha - \sum_{j=1}^p f_j \parens{x_{i, j}}}^2 + \sum_{j=1}^p \lambda_j \int \parens{f''_j \parens{t_j}}^2 \diff t_j, 
+		\end{align}
+		where $\lambda_j \ge 0$ are tuning parameters. 
+		
+		\item \textit{Characterizing the Solution to \eqref{eq-prss}:} The minimizer to \eqref{eq-prss} is an \emph{additive cubic spline model}. 
+		\begin{enumerate}
+			\item Each $f_j$ is a cubic spline in the component $X_j$, with knots at each of the unique values of $x_{i,j}$, for all $i = 1, \cdots, n$. Without further restrictions on the model, the solution is \emph{not} unique. 
+			\item The constant $\alpha$ is not identifiable, since we can add or subtract any constants to each of the functions $f_j$, and adjust $\alpha$ accordingly. 
+		\end{enumerate}
+		
+		\item \textit{Restrictions on $f_j$'s:} Assume $\sum_{i=1}^n f_j \parens{x_{i,j}} = 0$ for all $j = 1, \cdots, p$, i.e., the functions average zero over data. Then, 
+		\begin{enumerate}
+			\item the minimizer of $\alpha$ in \eqref{eq-prss} is $\hat{\alpha} = \mathrm{Ave} \parens{y_i}$; 
+			\item if, in addition, the matrix of input values (whose $\parens{i,j}$-th entry is $x_{i,j}$) has full column rank, then \eqref{eq-prss} is a strictly convex criterion and the minimizer is unique. 
+		\end{enumerate}
+		
+		\item \textit{Backfitting algorithm:} Under the restrictions mentioned above, with $\hat{\alpha} = \mathrm{Ave} \parens{y_i}$, we apply a cubic smoothing spline $\calS_j$ to the targets 
+		\begin{align*}
+			y_i - \hat{\alpha} - \sum_{k \neq j} \hat{f}_{k} \parens{x_{i,k}}, \qquad \text{ for all } i = 1, \cdots, n, 
+		\end{align*}
+		to obtain a new estimate $\hat{f}_j$. This procedure is done for each predictor in turn, using the current estimates of $\hat{f}_k$, where $k \neq j$. The process is continued until the estimates $\hat{f}_j$'s stabilize, for all $j = 1, 2, \cdots, p$. 
+		
+		The complete algorithm is provided in Algorithm \ref{algo-backfit}. 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+				\caption{Backfitting Algorithm for Generalized Additive Model}\label{algo-backfit}
+				\begin{algorithmic}[1]
+				
+				\STATE Initialize $\hat{\alpha} = \frac{1}{n} \sum_{i=1}^n y_i$, $\hat{f}_j = 0$ for all $j = 1, \cdots, p$; 
+				\STATE Cycle $j = 1, 2, \cdots, p, 1, 2, \cdots, p, \cdots$, 
+				\begin{align*}
+					\hat{f}_j \quad \leftarrow & \, \quad \calS_j \bracks[\Bigg]{\braces[\bigg]{y_i - \hat{\alpha} - \sum_{k \neq j} \hat{f}_{k} \parens{x_{i, k}}}_{i=1}^n}, \\ 
+					\hat{f}_j \quad \leftarrow & \, \quad \hat{f}_j - \frac{1}{n} \sum_{i=1}^n \hat{f}_j \parens{x_{i,j}}. 
+				\end{align*}
+				until the functions $\hat{f}_j$ change less than a pre-specified threshold. 
+				\end{algorithmic}
+			\end{algorithm}
+		\end{minipage}
+		
+		\item \textit{Degrees of freedom:} If we consider the operation of smoother $\calS_j$ only at the training points, it can be represented by an $n \times n$ operator matrix $\bS_j$. Then the degrees of freedom for the $j$-th term are (approximately) computed as 
+		\begin{align}
+			\mathrm{df}_j = \tr \parens{\bS_j} - 1. 
+		\end{align}
+	\end{enumerate}
+	
+	\item \textbf{Fitting Algorithms in General:} 
+	\begin{enumerate}
+		\item \textit{Criterion:} For the logistic regression model and other generalized additive models, we maximize the \emph{penalized log-likelihood function}. 
+		\item \textit{Backfitting algorithm:} The backfitting procedure is used in conjunction with a likelihood maximizer. The usual Newton-Raphson routine for maximizing log-likelihoods can be recast as an \emph{iteratively reweighted least squares (IRLS)} algorithm. % This involves repeatedly fitting a weighted linear regression of a working response variable on the covariates; each regression yields a new value of the parameter estimates, which in turn give new working responses and weights, and the process is iterated. 
+		\item \textit{Backfitting algorithm for generalized additive logistic model:} 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+				\caption{Local Scoring Algorithm for the Additive Logistic Regression Model}\label{algo-backfit-logistic}
+				\begin{algorithmic}[1]
+				
+				\STATE Compute starting values: $\hat{\alpha} = \log \parens{\bar{y} / \parens{1 - \bar{y}}}$, where $\bar{y} = \mathrm{Ave} \parens{y_i}$, the sample proportion of ones, and set $\hat{f}_j = 0$ for all $j = 1, \cdots, p$. 
+				\STATE Define $\hat{\eta}_i = \hat{\alpha} + \sum_{j=1}^p \hat{f} \parens{x_{i,j}}$ and $\hat{p}_i = 1 / \bracks{ 1 + \exp \parens{ - \hat{\eta}_i }}$. Iterate 
+				\begin{enumerate}
+					\item Construct the working target variable 
+					\begin{align*}
+						z_i = \hat{\eta}_i + \frac{\parens{y_i - \hat{p}_i}}{\hat{p}_i \parens{1 - \hat{p}_i}}; 
+					\end{align*}
+					\item Construct weights $w_i = \hat{p}_i \parens{1 - \hat{p}_i}$; 
+					\item Fit an additive model to the targets $z_i$ with weights $w_i$, using a weighted backfitting algorithm. This gives new estimates $\hat{\alpha}, \hat{f}_j$ for all $j = 1, \cdots, p$. 
+				\end{enumerate}
+				\STATE Continue the preceding step until the change in the functions falls below a pre-specified threshold. 
+				\end{algorithmic}
+			\end{algorithm}
+		\end{minipage}
+	\end{enumerate}
+	
+	\item \textbf{Comments on Generalized Additive Models:} 
+	\begin{enumerate}
+		\item \textit{Advantage:} Generalized additive models provide a useful extension of linear models, making them more flexible while still retaining much of their interpretability. 
+		\item \textit{Disadvantage:} The backfitting algorithm fits \emph{all} predictors, which is \emph{not} feasible or desirable when a large number are available. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{II. Sparse Additive Models}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Motivation and Assumption:} Assume the response variable has zero mean, i.e., $\E \bracks{Y} = 0$. Motivated by sparsity, we assume that there exists a strictly proper, but unknown, subset $S \subset \sets{1, 2, \cdots, p}$ such that the regression function can be approximated by the sum of $f_j$'s for $j \in S$ exclusively; that is, 
+	\begin{align*}
+		\E \bracks{Y \,\vert\, X_1, X_2, \cdots, X_p} = \sum_{j \in S} f_j \parens{X_j}. 
+	\end{align*}
+	
+	\item \textbf{(Naive) Population-version Problem Formulation:} For a given sparsity level $k \subset \sets{1, 2, \cdots, p}$, the \emph{best $k$-sparse approximation} to the regression function is given by 
+	\begin{align*}
+		\argmin_{f_j \in \calF_j \text{ for all } j = 1, 2, \cdots, p, \abs{S} = k} \ \braces[\Bigg]{ \frac{1}{2} \E \bracks[\bigg]{ \parens[\bigg]{Y - \sum_{j \in S} f_j \parens{X_{j}}}^2}}, 
+	\end{align*}
+	where $\calF_j$ is some pre-specified function class, for all $j = 1, 2, \cdots, p$. 
+	
+	\textit{Comment:} This preceding criterion is non-convex and computationally intractable, due to combinatorial number -- namely ${p \choose k}$ -- of possible subsets of size $k$. 
+
+	\item \textbf{Convex Population-version Problem Formulation:} We measure the sparsity of the approximation $f = \sum_{j=1}^p f_j$ by 
+	\begin{align*}
+		\sum_{j=1}^p \norm{f_j}_{2}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\norm{f_j}_2 := \sqrt{\E \bracks{f_j^2 \parens{X_j}}}
+	\end{align*}
+	is the $L_2$ norm applied to the $j$-th component. For a given regularization parameter $\lambda \ge 0$, we minimize the following penalized criterion 
+	\begin{align}\label{eq-spam-formulation}
+		\minimize_{f_j \in \calF_j \text{ for all } j = 1, 2, \cdots, p} \ \braces[\Bigg]{ \frac{1}{2} \E \bracks[\bigg]{ \parens[\bigg]{Y - \sum_{j=1}^p f_j \parens{X_{j}}}^2} + \lambda \sum_{j=1}^p \norm{f_j}_2}. 
+	\end{align}
+	
+	\item \textbf{Solution to \eqref{eq-spam-formulation} and Sparse Backfitting Equations:} Let $\parens{\tilde{f}_1, \tilde{f}_2, \cdots, \tilde{f}_p}$ be the minimizer of \eqref{eq-spam-formulation}. Then, for all $j = 1, 2, \cdots, p$, 
+	\begin{align}\label{eq-spam-backfitting}
+		\tilde{f}_j = \bracks[\bigg]{1 - \frac{\lambda}{\norm{P_j}_2}}_+ P_j, 
+	\end{align}
+	where $\bracks{x}_+ = \max \sets{x, 0}$ denotes the positive part of $x$, 
+	\begin{align*}
+		P_j := \E \bracks[\bigg]{Y - \sum_{k \neq j} \tilde{f}_k \parens{X_k} \,\bigg\vert\, X_j}
+	\end{align*}
+	is the projection of the residual $R_j := Y - \sum_{k \neq j} \tilde{f}_k$ onto $\calF_j$, and $\norm{P_j}_2 = \sqrt{\E \bracks{P_j^2}}$. Equation \eqref{eq-spam-backfitting} is called the \emph{sparse backfitting equation}. 
+	
+	\item \textbf{Backfitting Algorithm for Sparse Additive Models:} Suppose we have data $\sets{\parens{\bx_i, y_i}}_{i=1}^n$, satisfying $\sum_{i=1}^n y_i = 0$. The population-version sparse backfitting equations above motivate the following sample-version sparse backfitting equations 
+	\begin{align}
+		\widehat{P}_j \quad \leftarrow \quad & \, \calS_j \bracks[\Bigg]{\braces[\bigg]{y_i - \sum_{k \neq j} \hat{f}_k \parens{x_{i,j}}}_{i=1}^n}, \\ 
+		\hat{f}_j \quad \leftarrow \quad & \, \bracks[\bigg]{1 - \frac{\lambda}{\norm{\widehat{P_j}}_2}}_+ \widehat{P}_j, 
+	\end{align}
+	for all $j = 1, 2, \cdots, p$. We cycle through all $j = 1, 2, \cdots, p$ and iterate the updates above until convergence. 
+	
+	The complete algorithm is given in Algorithm \ref{algo-spam}. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{Backfitting Algorithm for Sparse Additive Models}\label{algo-spam}
+			\begin{algorithmic}[1]
+			
+			\STATE Initialize $\hat{f}_j = 0$ for all $j = 1, 2, \cdots, p$; 
+			\STATE Iterate until convergence: For each $j = 1, \cdots, p$, 
+			\begin{enumerate}
+			
+				\item[] Step1: Compute the $i$-th residual, 
+				\begin{align*}
+					r_{i,j} = y_i - \sum_{k \neq j} f_j \parens{x_{i,j}}, \qquad \text{ for all } i = 1, 2, \cdots, n; 
+				\end{align*}
+				
+				\item[] Step 2: Estimate $P_j = \E \bracks{R_j \,\vert\, X_j}$ by smoothing
+				\begin{align*}
+					\widehat{P}_j = \calS_j \parens[\big]{ \sets{r_{i,j}}_{i=1}^n }; 
+				\end{align*}
+				
+				\item[] Step 3: Estimate the norm $\norm{P_j}_2$ by 
+				\begin{align*}
+					\norm{\widehat{P}_j}_2 = \sqrt{\frac{1}{n} \sum_{i=1}^p \parens{\widehat{P}_j \parens{x_{i,j}}}^2}
+				\end{align*}
+				
+				\item[] Step 4: Soft-threshold
+				\begin{align}\label{eq-spam-smoothing}
+					\hat{f}_j = \bracks[\Bigg]{1 - \frac{\lambda}{\norm{\widehat{P_j}}_2}}_+ \widehat{P}_j; 
+				\end{align}
+				
+				\item[] Step 5: Center 
+				\begin{align*}
+					\hat{f}_j = \hat{f}_j - \frac{1}{n} \sum_{i=1}^n \hat{f}_j \parens{x_{i,j}}; 
+				\end{align*}
+			\end{enumerate}
+			
+			\STATE Output component functions $\hat{f}_j$ and the estimator $\sum_{i=1}^p \hat{f}_j$. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+
+	\textit{Remark.} This algorithm can be seen as a functional version of the coordinate descent algorithm for solving the lasso problem. In particular, if we solve the lasso by iteratively minimizing with respect to a single coordinate, each iteration is given by the soft-thresholding operator. 
+	
+	\item \textbf{Sparse Additive Model via Basis Functions:} Let $\sets{\varphi_{j,k}}_{k=1}^{\infty}$ be a set of orthonormal basis functions for $\calH_j$ associated with the variable $X_j$. We can express $f_j$ as 
+	\begin{align}\label{eq-spam-orth-expansion}
+		f_j = \sum_{k=1}^{\infty} \beta_{j,k} \varphi_{j,k}, 
+	\end{align}
+	where $\beta_{j,k} = \int f_j \parens{x_j} \varphi_{j,k} \parens{x_j} \diff x_j$. 
+	
+	Also, consider the following truncated sum of \eqref{eq-spam-orth-expansion} 
+	\begin{align*}
+		\tilde{f}_j := \sum_{k=1}^{d_j} \beta_{j,k} \varphi_{j,k}
+	\end{align*}
+	where we only retain the first $d$ terms and ignore the remaining ones, and the choice of $d$ may depend on $n$. 
+	
+	Under this setup, the smoother can be taken to be the least squares projection onto the truncated set of basis functions $\sets{\varphi_{j,1}, \cdots, \varphi_{j,d}}_{j=1}^p$. Let $\bPhi_j$ denote the $n \times d$ matrix whose $\parens{i, k}$-entry is given by $\varphi_{j, k} \parens{x_{i,j}}$. 
+	%The smoothing matrix is the projection matrix $ \bPhi_j \parens{\bPhi_j^\top \bPhi_j }^{-1} \bPhi_j^\top$. 
+	In this case, the backfitting algorithm \ref{algo-spam} is a coordinate descent algorithm for minimizing 
+	\begin{align}\label{eq-spam-sample-formulation}
+		\frac{1}{2n} \norm[\bigg]{\bY - \sum_{j=1}^p \bPhi_j \bbeta_j}_2^2 + \lambda \sum_{j=1}^p \sqrt{\frac{1}{n} \bbeta_j^\top \bPhi_j^\top \bPhi_j \bbeta_j}, 
+	\end{align}
+	where $\bbeta_j := \parens{\beta_{j,1}, \beta_{j,2}, \cdots, \beta_{j,d}}^\top \in \Real^d$. 
+	
+	\textit{Remarks.}
+	\begin{enumerate}
+		\item The formulation \eqref{eq-spam-sample-formulation} is the sample version of \eqref{eq-spam-formulation}. 
+		\item The formulation \eqref{eq-spam-sample-formulation} is the Lagrangian of a second-order cone program, and standard convexity theory implies the existence of a minimizer. 
+	\end{enumerate}
+	
+	\item \textbf{Connections with the Grouped Lasso:} The sparse additive model can be thought of as a functional version of the grouped lasso. 
+	
+	\textit{Review of the Grouped Lasso:} The grouped lasso solves the following optimization problem 
+	\begin{align}\label{eq-group-lasso}
+		\minimize_{\bbeta \in \Real^{p}} \, \braces[\Bigg]{\frac{1}{2} \norm[\bigg]{\bY - \sum_{{\ell}=1}^L \bX_{{\ell}} \bbeta_{\ell} }_2^2 + \lambda \sum_{\ell=1}^L \sqrt{p_{\ell}} \norm{\bbeta_{\ell}}_2 }, 
+	\end{align}
+	where $\bY \in \Real^{n \times 1}$ is the response vector, $L$ denotes the number of groups of variables, $p_{\ell}$ denotes the number of variables in the $\ell$-th group and satisfies $\sum_{\ell=1}^L p_{\ell} = p$, $\bX_{\ell} \in \Real^{n \times p_{\ell}}$ denotes the design matrix of the $\ell$-th group of variables, $\bbeta_{\ell} \in \Real^{p_{\ell}}$ is the corresponding coefficient vector, and $\lambda \ge 0$ is the penalty parameter. We assume $\bY$ and each column of $\bX$ have been centered, and $\bX_{\ell}^\top \bX_{\ell} = \bI_{p_{\ell}}$. In addition, let $\bX := \parens{\bX_1, \bX_2, \cdots, \bX_L} \in \Real^{n \times p}$ be the complete design matrix and $\bbeta := \parens{\bbeta_1^\top, \bbeta_2^\top, \cdots, \bbeta_L^\top}^\top \in \Real^p$ be the complete coefficient vector. 
+	
+	The Karush-Kuhn-Tucker optimality conditions for the grouped lasso are 
+	\begin{align*}
+		- \bX_\ell^\top \parens{\bY - \bX \widehat{\bbeta}} + \frac{\lambda \sqrt{p_{\ell}} \widehat{\bbeta}_{\ell}}{\norm{\widehat{\bbeta}_{\ell}}_2} = \boldzero_{p_{\ell}}, \qquad \text{ for all } \widehat{\bbeta}_{\ell} \neq \boldzero_{p_{\ell}}, \\ 
+		\norm{\bX_\ell^\top \parens{\bY - \bX \widehat{\bbeta}}} \le \lambda \sqrt{p_{\ell}}, \qquad \text{ for all } \widehat{\bbeta}_{\ell} = \boldzero_{p_{\ell}}. 
+	\end{align*}
+	A solution to the KKT conditions above satisfies 
+	\begin{align}\label{eq-group-lasso-kkt}
+		\hat{\bbeta}_\ell = \bracks[\Bigg]{1 - \frac{\lambda \sqrt{p_{\ell}}}{\norm{\bS_\ell}_2}}_+ \bS_\ell, 
+	\end{align}
+	where $\bS_{\ell} := \bX_\ell^\top \parens{\bY - \bX \widehat{\bbeta}_{\backslash \ell}}$ and $\widehat{\bbeta}_{\backslash \ell} := \parens{\widehat{\bbeta}_1^\top, \cdots, \widehat{\bbeta}_{\ell-1}^\top, \boldzero_{p_{\ell}}^\top, \widehat{\bbeta}_{\ell+1}^\top, \cdots, \widehat{\bbeta}_L^\top}^\top$. By iteratively applying \eqref{eq-group-lasso-kkt}, the grouped lasso solution can be obtained. 
+	
+	Compareing \eqref{eq-group-lasso-kkt} with \eqref{eq-spam-smoothing} reveals the similarity of the two. 
+
+\end{enumerate}
+
+
+\section*{III. Component Selection and Smoothing Operator}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Assumptions:} Let $\sets{\parens{\bx_i, y_i}_{i=1}^n}$ be the data. Assume $\sum_{i=1}^n y_i = 0$ and each predictor $X_j$ has been rescaled to the unit interval, i.e., $x_{i,j} \in \bracks{0, 1}$ for all $i = 1, 2, \cdots, n$ and $j = 1, 2, \cdots, p$. 
+	
+	\item \textbf{Problem Formulation:}  The \emph{component selection and smoothing operator}, or COSSO for short, is based on the following minimization problem 
+	\begin{align}\label{eq-cosso-formulation-1}
+		\minimize_{f_j \in \calH_j \text{ for all } j = 1, 2, \cdots, p} \ \braces[\Bigg]{\frac{1}{n} \sum_{i=1}^n \parens[\bigg]{y_i - \sum_{j=1}^p f_j \parens{x_{i,j}}}^2 + \tau \sum_{j=1}^p \norm{f_j}_{\calH_j}}, 
+	\end{align}
+	where each $\calH_j$ is a reproducing kernel Hilbert space (RKHS) of functions over $\bracks{0, 1}$, and, for all $j = 1, 2, \cdots, p$, 
+	\begin{align}\label{eq-cosso-penalty}
+		\norm{f}_{\calH_j}^2 := \parens[\bigg]{\int_0^1 f \parens{t} \diff t}^2 + \parens[\bigg]{\int_0^1 f' \parens{t} \diff t}^2 + \int_0^1 \parens{f'' \parens{t}}^2 \diff t, \qquad \text{ for all } f \in \calH_j. 
+	\end{align}
+	
+	\textit{Remark 1.} Note that the norm used in the penalty term in \eqref{eq-cosso-formulation-1} is the norm itself but not the squared norm. Such a choice encourages the sparsity. In order words, by choosing $\lambda > 0$ appropriately, there exists some $j \in \sets{1, 2, \cdots, p}$ such that $f_j = 0$. 
+	
+	\textit{Remark 2.} With the choice of \eqref{eq-cosso-penalty} as the norm, the associated RKHS is the space of cubic splines over $\bracks{0, 1}$ with knots at the sample values of each $X_j$. 
+	
+	\item \textbf{Characterizing the Solution to \eqref{eq-cosso-formulation-1}:} Let $K_j: \bracks{0, 1} \times \bracks{0, 1} \to \Real$ be the kernel function associated with $\calH_j$, and $\bK_j \in \Real^{n \times n}$ be the Gram matrix whose $\parens{i, \ell}$-th entry being $K_j \parens{x_{i,j}, x_{\ell,j}}$. Then, the solution to \eqref{eq-cosso-formulation-1} can be shown to be of the form 
+	\begin{align*}
+		f_j = \sum_{i=1}^n \theta_{j,i} K_{j} \parens{x_{i,j}, \,\cdot\,}, \qquad \text{ for all } j = 1, 2, \cdots, p. 
+	\end{align*}
+	It then follows that \eqref{eq-cosso-formulation-1} can be written as 
+	\begin{align}\label{eq-cosso-formulation-2}
+		\minimize_{\btheta_j \in \Real^n \text{ for all } j = 1, 2, \cdots, p} \ \braces[\Bigg]{\frac{1}{n} \norm[\bigg]{\bY - \sum_{j=1}^p \bK_j \btheta_j}_2^2 + \tau \sum_{i=1}^p \sqrt{\btheta_j^\top \bK_j \btheta_j} }, 
+	\end{align}
+	where $\bY \in \Real^n$ is the response vector and $\btheta_j := \parens{\theta_{j,1}, \theta_{j,2}, \cdots, \theta_{j,n}}^\top \in \Real^n$ for all $j = 1, 2, \cdots, n$. 
+	
+	\textit{Remark 1.} Even though the original problem \eqref{eq-cosso-formulation-1} is of infinite dimensional, the solution for each coordinate resides in a finite dimensional subspace. Hence, collectively, the solution to \eqref{eq-cosso-formulation-1} is of finite dimensional. 
+	
+	\textit{Remark 2.} Note that \eqref{eq-cosso-formulation-2} is very similar to the objective function in the grouped lasso problem \eqref{eq-group-lasso}. 
+	
+	\item \textbf{Optimality Conditions:} Let $\parens{\widehat{\btheta}_1, \widehat{\btheta}_2, \cdots, \widehat{\btheta}_p}$ be the minimizer of \eqref{eq-cosso-formulation-2}. Then, it satisfies 
+	\begin{align*}
+		\widehat{\btheta}_j = \begin{cases}
+			\boldzero_{n}, & \, \text{ if } \sqrt{\boldr_j^\top \bK_j \boldr_j} < \tau, \\ 
+			\parens[\bigg]{\bK_j + \frac{\tau}{\sqrt{\widehat{\btheta}_j^\top \bK_j \widehat{\btheta}_j}} \bI_n}^{-1} \boldr_j, & \, \text{ otherwise}, 
+		\end{cases}
+	\end{align*}
+	where $\boldr_j := \bY - \sum_{\ell \neq j} \bK_{\ell} \widehat{\btheta}_{\ell}$ corresponds to the $j$-th partial residual. 
+	
+	\textit{Remark.} An algorithm to compute $\parens{\widehat{\btheta}_1, \widehat{\btheta}_2, \cdots, \widehat{\btheta}_p}$ can be obtained by using the spectral decomposition of $\bK_j$, for all $j = 1, 2, \cdots, n$, and a simple one-dimensional search. 
+	
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

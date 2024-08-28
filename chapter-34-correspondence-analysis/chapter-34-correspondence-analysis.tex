@@ -1,0 +1,587 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 34, Correspondence Analysis}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Correspondence Analysis}{34}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 16, Correspondence Analysis} in \textcite{Izenman2009-jk}. 
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Correspondence Analysis:} \emph{Correspondence analysis} is an exploratory multivariate technique for simultaneously displaying scores representing the row categories and column categories of a two-way contingency table as the coordinates of points in a low-dimensional vector space. 
+	
+	The objectives are 
+	\begin{enumerate}
+		\item to clarify the relationship between the row and column variables of the table, and 
+		\item to discover a low-dimensional explanation for possible deviations from independence of those variables. 
+	\end{enumerate}
+	
+	\item \textbf{Categories:}
+	\begin{enumerate}
+		\item For two-way contingency tables, correspondence analysis is known as \emph{simple} correspondence analysis; 
+		\item For three-way and higher contingency tables, it is known as \emph{multiple} correspondence analysis. 
+	\end{enumerate}
+	We focus on simple correspondence analysis. 
+	
+	\item \textbf{Applicability:} Correspondence analysis is applicable 
+	\begin{enumerate}
+		\item when the variables are \emph{discrete} with many categories; and 
+		\item when the variables are continuous and can be segmented into a finite number of ranges. 
+	\end{enumerate}
+	
+	\textit{Remark.} Discretization of a continuous variable usually entails some loss of information. 
+
+\end{enumerate}
+
+
+\section*{II. Simple Correspondence Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Two-way Contingency Table:} A \emph{two-way $r \times c$ contingency table} with $r$ rows (labeled as $A_1, A_2, \cdots, A_r$) and $c$ columns (labeled $B_1, B_2, \cdots, B_c$) has $r \times c$ cells. The $\parens{i, j}$-th cell has the entry $n_{i,j}$, representing the observed frequency in row category $A_i$ and column category $B_j$, for all $i = 1, 2, \cdots, r$ and $j = 1, 2, \cdots, c$. 
+	
+	In addition, a two-way contingency table shows the following quantities 
+	\begin{enumerate}
+		\item the $i$-th marginal row total is $n_{i, \bullet} := \sum_{j=1}^c n_{i,j}$, for all $i = 1, 2, \cdots, r$; 
+		\item the $j$-th marginal column total is $n_{\bullet, j} := \sum_{i=1}^r n_{i,j}$, for all $j = 1, 2, \cdots, c$; and 
+		\item $n := \sum_{i=1}^r \sum_{j=1}^c n_{i,j}$ is the total sample size. 
+	\end{enumerate}
+	An example of a two-way contingency table is shown in Table \ref{table-two-way-contingency}. 
+	
+	\textit{Remark 1.} Such a contingency table is also called a \emph{correspondence table}. 
+	
+	\textit{Remark 2.} For interpretation purposes, it is important to distinguish 
+	\begin{enumerate}
+		\item when the $n$ individuals are randomly selected from a very large population, or 
+		\item when they actually constitute the entire population of interest. 
+	\end{enumerate}
+	
+	\begin{table}
+	\centering
+		\begin{tabular}{ cccccccc}%p{3cm} p{3cm} p{3cm} p{3cm} p{3cm} p{3cm} p{3cm} p{3cm} }
+			\toprule
+			& \multicolumn{7}{c}{Column Variable} \\
+			\midrule 
+			Row Variable & $B_1$ & $B_2$ & $\cdots$ & $B_j$ & $\cdots$ & $B_c$ & Row Total \\ 
+			\midrule 
+			$A_1$ & $n_{1,1}$ & $n_{1,2}$ & $\cdots$ & $n_{1,j}$ & $\cdots$ & $n_{1,c}$ & $n_{1,\bullet}$ \\ 
+			$A_2$ & $n_{2,1}$ & $n_{2,2}$ & $\cdots$ & $n_{2,j}$ & $\cdots$ & $n_{2,c}$ & $n_{2,\bullet}$ \\ 
+			$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\ 
+			$A_i$ & $n_{i,1}$ & $n_{i,2}$ & $\cdots$ & $n_{i,j}$ & $\cdots$ & $n_{i,c}$ & $n_{i,\bullet}$ \\ 
+			$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\ 
+			$A_r$ & $n_{r,1}$ & $n_{r,2}$ & $\cdots$ & $n_{r,j}$ & $\cdots$ & $n_{r,c}$ & $n_{r,\bullet}$ \\ 
+			\midrule 
+			Column Total & $n_{\bullet, 1}$ & $n_{\bullet, 2}$ & $\cdots$ & $n_{\bullet,j}$ & $\cdots$ & $n_{\bullet,c}$ & $n$
+		\end{tabular}
+		\caption{Two-way contingency table, showing the observed cell frequencies, row and column marginal totals, and total sample size.}
+		\label{table-two-way-contingency}
+	\end{table}
+	
+	\item \textbf{Marginal and Cell Probabilities:} Let 
+	\begin{enumerate}
+		\item $\pi_{i, j}$ be the probability that an individual has the properties $A_i$ and $B_j$, for all $i = 1, 2, \cdots, r$ and $j = 1, 2, \cdots, c$; 
+		\item $\pi_{i, \bullet} := n_{i, \bullet} / n$ be the probability that an individual has the property $A_i$, for all $i = 1, 2, \cdots, r$; and 
+		\item $\pi_{\bullet,j} := n_{\bullet,j} / n$ be the probability that an individual has the property $B_j$, for all $j = 1, 2, \cdots, c$. 
+	\end{enumerate}
+	
+	\textit{Remark.} The quantities $\sets{\pi_{i, j}}_{i=1,2,\cdots,r; j=1,2,\cdots,c}$, $\sets{\pi_{i, \bullet}}_{i=1,2,\cdots,r}$, and $\sets{\pi_{\bullet,j}}_{j=1,2,\cdots,c}$ are all population quantities, but \emph{not} the estimates obtained from samples, unless the $n$ individuals constitute the entire population. 
+	
+	\item \textbf{Row and Column Dummy Variables:} Let $\bx_u := \parens{x_{u,1}, x_{u, 2}, \cdots, x_{u,r}}^\top \in \Real^r$ be a binary vector indicating which of row category the $u$-th individual belongs to, i.e., 
+	\begin{align*}
+		x_{u,i} := \begin{cases}
+			1, & \, \text{ if the $u$-th individual belongs to $A_i$} \\ 
+			0, & \, \text{ otherwise}, 
+		\end{cases}
+	\end{align*}
+	for all $u = 1, 2, \cdots, n$. Similarly, let $\by_v := \parens{y_{v,1}, y_{v, 2}, \cdots, y_{v,c}}^\top \in \Real^c$ be a binary vector indicating which of column category the $v$-th individual belongs to, i.e., 
+	\begin{align*}
+		y_{v, j} := \begin{cases}
+			1, & \, \text{ if the $v$-th individual belongs to $B_j$} \\ 
+			0, & \, \text{ otherwise}, 
+		\end{cases}
+	\end{align*}
+	for all $v = 1, 2, \cdots, n$. Up to a column permutation, these binary vectors can be collected into the following two matrices 
+	\begin{align*}
+		\bX := \begin{pmatrix}
+			1 & \cdots & 1 & 0 & \cdots & 0 & \cdots & 0 & \cdots & 0 \\ 
+			0 & \cdots & 0 & 1 & \cdots & 1 & \cdots & 0 & \cdots & 0 \\ 
+			\vdots &  & \vdots & \vdots &  & \vdots &  & \vdots &  & \vdots \\ 
+			0 & \cdots & 0 & 0 & \cdots & 0 & \cdots & 1 & \cdots & 1 \\ 
+		\end{pmatrix} \in \Real^{r \times n}, 
+	\end{align*}
+	and 
+	\begin{align*}
+		\bY := \begin{pmatrix}
+			1 & \cdots & 1 & 0 & \cdots & 0 & \cdots & 0 & \cdots & 0 \\ 
+			0 & \cdots & 0 & 1 & \cdots & 1 & \cdots & 0 & \cdots & 0 \\ 
+			\vdots &  & \vdots & \vdots &  & \vdots &  & \vdots &  & \vdots \\ 
+			0 & \cdots & 0 & 0 & \cdots & 0 & \cdots & 1 & \cdots & 1 \\ 
+		\end{pmatrix} \in \Real^{c \times n}, 
+	\end{align*}
+	where each column of $\bX$ corresponds to $\bx_u$, and each column of $\bY$ corresponds to $\by_v$ for all $u, v = 1, 2, \cdots, n$. 
+	
+	Then, the matrix $\bX \bY^\top \in \Real^{r \times c}$ reproduces the observed cell frequencies of the contingency table 
+	\begin{align}\label{eq-N}
+		\bX \bY^\top = \begin{pmatrix}
+			n_{1,1} & n_{1,2} & \cdots & n_{1, c} \\ 
+			n_{2,1} & n_{2,2} & \cdots & n_{2, c} \\ 
+			\vdots & \vdots & \ddots & \vdots \\ 
+			n_{r,1} & n_{r,2} & \cdots & n_{r, c} \\ 
+		\end{pmatrix} =: \bN. 
+	\end{align}
+	The matrices $\bX \bX^{\top} \in \Real^{r \times r}$ and $\bY \bY^{\top} \in \Real^{c \times c}$ are both diagonal, with $\bX \bX^{\top}$ having the $r$ marginal row totals as diagonal entries  and $\bY \bY^\top$ having the $c$ marginal column totals as diagonal entries; that is, 
+	\begin{align*}
+		\bX \bX^\top = & \, \diag \parens{n_{1,\bullet}, n_{2,\bullet}, \cdots, n_{r,\bullet}}, \\ 
+		\bY \bY^\top = & \, \diag \parens{n_{\bullet,1}, n_{\bullet,2}, \cdots, n_{\bullet,c}}. 
+	\end{align*}
+	
+	\item \textbf{Burt Matrix:} We define the following block matrix 
+	\begin{align}\label{eq-burt-matrix}
+		\begin{pmatrix}
+			\bX \\ \bY
+		\end{pmatrix} 
+		\begin{pmatrix}
+			\bX \\ \bY
+		\end{pmatrix}^\top = \begin{pmatrix}
+			n \bD_r & \bN \\ 
+			\bN^\top & n \bD_c
+		\end{pmatrix} \in \Real^{\parens{r+c} \times \parens{r+c}}, 
+	\end{align}
+	where 
+	\begin{align*}
+		\bD_r := \frac{1}{n} \bX \bX^\top, \qquad \text{ and } \qquad \bD_c := \frac{1}{n} \bY \bY^\top. 
+	\end{align*}
+	The matrix \eqref{eq-burt-matrix} is called the \emph{Burt matrix} for a two-way contingency table. 
+	
+	\textit{Property:} Burt matrix is symmetric and positive semi-definite. 
+	
+	\item \textbf{Correspondence Matrix:} The matrix $\bP := \frac{1}{n} \bN \in \Real^{r \times c}$ is called a \emph{correspondence matrix}. 
+	
+	\textit{Remark.} If the $n$ individuals constitute a random sample, the entry, $p_{i,j} := n_{i,j}/n$, in the $i$-th row and $j$-th column of $\bP$ can be characterized the maximum likelihood estimator of $\pi_{i,j}$. 
+	
+	\item \textbf{Row and Column Profiles:} The \emph{row profile} of $\bN$, denoted by $\bP_r \in \Real^{r \times c}$, consists of the rows of $\bN$ divided by their corresponding row totals, and can be computed as the regression coefficient matrix of $\bY$ on $\bX$; that is, 
+	\begin{align*}
+		\bP_r := \parens{\bX \bX^\top}^{-1} \bX \bY^\top = \bD_r^{-1} \bP = \begin{pmatrix}
+			\ba_1^\top \\ \ba_2^\top \\ \vdots \\ \ba_r^\top, 
+		\end{pmatrix} \in \Real^{r \times c}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\ba_i^\top := \parens[\bigg]{\frac{n_{i,1}}{n_{i,\bullet}}, \frac{n_{i,2}}{n_{i,\bullet}}, \cdots, \frac{n_{i,c}}{n_{i,\bullet}}} \in \Real^c, \qquad \text{ for all } i = 1, 2, \cdots, r. 
+	\end{align*}
+	
+	Similarly, the \emph{column profile} of $\bN$, denoted by $\bP_c \in \Real^{c \times r}$, consists of the columns of $\bN$ divided by their corresponding column totals, and can be computed as the regression coefficient matrix of $\bX$ on $\bY$; that is, 
+	\begin{align*}
+		\bP_c = \parens{\bY \bY^\top}^{-1} \bY \bX^\top = \bD_c^{-1} \bP^\top = \begin{pmatrix}
+			\bb_1^\top \\ \bb_2^\top \\ \vdots \\ \bb_c^\top, 
+		\end{pmatrix} \in \Real^{c \times r}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\bb_j^\top := \parens[\bigg]{\frac{n_{1,j}}{n_{\bullet,j}}, \frac{n_{2,j}}{n_{\bullet,j}}, \cdots, \frac{n_{r,j}}{n_{\bullet,j}}} \in \Real^r, \qquad \text{ for all } j = 1, 2, \cdots, c. 
+	\end{align*}
+	
+	\item \textbf{Row and Column Means:} The \emph{row means} of the contingency table $\bN$ are the row sums of $\bP$ 
+	\begin{align*}
+		\bP \boldone_{c} = \begin{pmatrix}
+			\bar{X}_1 \\ 
+			\bar{X}_2 \\ 
+			\vdots \\ 
+			\bar{X}_r
+		\end{pmatrix} = 
+		\begin{pmatrix}
+			n_{1,\bullet} / n \\ 
+			n_{2,\bullet} / n \\ 
+			\vdots \\ 
+			n_{r,\bullet} / n \\ 
+		\end{pmatrix} = 
+		\begin{pmatrix}
+			p_{1,\bullet} \\ 
+			p_{2,\bullet} \\ 
+			\vdots \\ 
+			p_{r,\bullet} \\
+		\end{pmatrix} =: \boldr \in \Real^r. 
+	\end{align*}
+	Similarly, the \emph{column means} of $\bN$ are the column sums of $\bP$, or equivalently, row sums of $\bP^\top$, 
+	\begin{align*}
+		\bP^\top \boldone_{r} = \begin{pmatrix}
+			\bar{Y}_1 \\ 
+			\bar{Y}_2 \\ 
+			\vdots \\ 
+			\bar{Y}_c
+		\end{pmatrix} = 
+		\begin{pmatrix}
+			n_{\bullet, 1} / n \\ 
+			n_{\bullet, 2} / n \\ 
+			\vdots \\ 
+			n_{\bullet, c} / n \\ 
+		\end{pmatrix} = 
+		\begin{pmatrix}
+			p_{\bullet, 1} \\ 
+			p_{\bullet, 2} \\ 
+			\vdots \\ 
+			p_{\bullet, c} \\
+		\end{pmatrix} =: \bc \in \Real^c. 
+	\end{align*}
+	
+	\textit{Remark 1.} The vectors $\boldr$ and $\bc$ can also be formed from the diagonal elements of $\bD_r$ and $\bD_c$, respectively; that is, 
+	\begin{align*}
+		\bD_r = \diag \parens{\boldr}, \qquad \text{ and } \qquad \bD_c = \diag \parens{\bc}. 
+	\end{align*}
+	
+	\textit{Remark 2.} In correspondence analysis, $\boldr$ is called the \emph{average column profile} and $\bc$ is called the \emph{average row profile} of the contingency table. 
+	
+	\item \textbf{Row and Columns Masses:} The $i$-th element of the vector $\boldr \in \Real^r$, $p_{i,\bullet} := n_{i,\bullet} / n$, is called the \emph{$i$-th row mass}, for all $i = 1, 2, \cdots, r$. 
+	
+	Similarly, the $j$-th element of the $\bc \in \Real^c$, $p_{\bullet,j} := n_{\bullet,j}/n$, is called the \emph{$j$-th column mass}, for all $j = 1, 2, \cdots, c$. 
+	
+	Under random sampling, 
+	\begin{itemize}
+		\item $p_{i,\bullet}$ is an estimate of the unconditional probability of belonging to $A_i$, $\pi_{i, \bullet}$; and 
+		\item $p_{\bullet, j}$ is an estimate of the unconditional probability of belonging to $B_j$, $\pi_{\bullet, j}$. 
+	\end{itemize}
+	
+	\item \textbf{Row and Column Centroids:} The vector $\bc \in \Real^c$ is also referred to as the \emph{row centroid}, because it can be expressed as the weighted average of the row profiles, that is, 
+	\begin{align*}
+		\bc = \sum_{i=1}^r p_{i,\bullet} \ba_i, 
+	\end{align*}
+	where the weights are the row masses. 
+	
+	Similarly, the vector $\boldr \in \Real^r$ is referred to as the \emph{column centroid}, because it can be expressed as the weighted average of the column profiles 
+	\begin{align*}
+		\boldr = \sum_{j=1}^c p_{\bullet,j} \bb_j, 
+	\end{align*}
+	where the weights are the column masses. 
+	
+	\item \textbf{Relationship between $\boldr$ and $\bc$:} The relationship between $\boldr$ and $\bc$ is given by 
+	\begin{align*}
+		\boldr = \bP \bD^{-1}_c \bc, \qquad \text{ and } \qquad \bc = \bP^\top \bD^{-1}_r \boldr. 
+	\end{align*}
+	
+	\begin{proof}
+		The results are obvious by noting $\bD^{-1}_c \bc = \boldone_{c}$ and $\bD^{-1}_r \boldr = \boldone_{r}$. 
+	\end{proof}
+	
+	\item \textbf{Centered Row and Column Profiles:} 
+	\begin{enumerate}
+		\item \textit{Centered Row Profile:} Let $\bc \in \Real^c$ be the row centroid. The \emph{centered row profile matrix} is 
+		\begin{align}\label{eq-centered-row}
+			\bP_r - \boldone_r \bc^\top \in \Real^{r \times c}, 
+		\end{align}
+		where $\bP_r := \bD_r^{-1} \bP$. In particular, the $i$-th row of \eqref{eq-centered-row} is $\parens{\ba_i - \bc}^\top$. 
+		
+		\item \textit{Centered Column Profile:} Let $\boldr \in \Real^r$ be the column centroid. The \emph{centered column profile matrix} is 
+		\begin{align}\label{eq-centered-col}
+			\bP_c - \boldone_c \boldr^\top \in \Real^{c \times r}, 
+		\end{align}
+		where $\bP_c := \bD_c^{-1} \bP^\top$. In particular, the $j$-th row of \eqref{eq-centered-col} is $\parens{\bb_j - \boldr}^\top$. 
+	\end{enumerate}
+	
+	\item \textbf{Row Distances:} 
+	\begin{enumerate}
+		\item \textit{Squared $\chi^2$-distance Between Two Row Profiles:} Consider the $i$-th and $i'$-th row profiles, $\ba_i \in \Real^c$ and $\ba_{i'} \in \Real^c$, respectively. Note that the $j$-th entry of $\ba_i - \ba_{i'}$ is 
+		\begin{align*}
+			\frac{n_{i,j}}{n_{i, \bullet}} - \frac{n_{i',j}}{n_{i', \bullet}}. 
+		\end{align*}
+		The \emph{squared $\chi^2$-distance} between $\ba_i$ and $\ba_{i'}$ is defined as the quadratic form 
+		\begin{align*}
+			d^2 \parens{\ba_i, \ba_{i'}} := & \, \parens{\ba_i - \ba_{i'}}^\top \bD_c^{-1} \parens{\ba_i - \ba_{i'}} \\ 
+			= & \, \sum_{j=1}^c \frac{n}{n_{\bullet, j}} \parens[\bigg]{\frac{n_{i,j}}{n_{i, \bullet}} - \frac{n_{i',j}}{n_{i', \bullet}}}^2. 
+		\end{align*}
+		
+		\textit{Remark.} Note that the inverse of the $j$-th column mass, $n / n_{\bullet,j}$, enters the squared $\chi^2$-distance above. Hence, the categories having fewer observations contribute more to the inter-row profile distances. 
+		
+		\item \textit{Squared $\chi^2$-distance to Row Centroid:} Let $\bc \in \Real^c$ be the row centroid defined earlier. The \emph{squared $\chi^2$-distance} between $\ba_i$ and $\bc$ is 
+		\begin{align*}
+			d^2 \parens{\ba_i, \bc} = & \, \parens{\ba_i - \bc}^\top \bD_c^{-1} \parens{\ba_i - \bc} \\ 
+			= & \, \frac{1}{n_{i,\bullet}} \sum_{j=1}^c \frac{n}{n_{i,\bullet} n_{\bullet,j}} \parens[\bigg]{n_{i,j} - \frac{n_{i,\bullet} n_{\bullet,j}}{n}}^2. 
+		\end{align*}
+		
+		\item \textit{Connection with Pearson's $\chi^2$-statistic:} If we sum $d^2 \parens{\ba_i, \bc}$ over all $i = 1, 2, \cdots, r$ with the weight $np_{i,\bullet}$, we have 
+		\begin{align*}
+			n \sum_{i=1}^r p_{i,\bullet} d^2 \parens{\ba_i, \bc} = \sum_{i=1}^r \sum_{j=1}^c \parens[\bigg]{n_{i,j} - \frac{n_{i,\bullet} n_{\bullet,j}}{n}}^2 \bigg/ \parens[\bigg]{\frac{n_{i,\bullet} n_{\bullet,j}}{n}}, 
+		\end{align*}
+		which is the \emph{Pearson's $\chi^2$ statistics} 
+		\begin{align*}
+			\chi^2 := \sum_{i=1}^r \sum_{j=1}^c \frac{\parens{O_{i,j} - E_{i,j}}^2}{E_{i,j}}, 
+		\end{align*}
+		with 
+		\begin{itemize}
+			\item $O_{i,j} := n_{i,j}$ being the observed cell frequency, and 
+			\item $E_{i,j} := n_{i,\bullet} n_{\bullet,j} / n$ being the expected cell frequency (assuming the independence of row and column variables), 
+		\end{itemize}
+		for all $i = 1, 2, \cdots, r$ and $j = 1, 2, \cdots, s$. 
+		
+		\textit{Approximate Distribution:} Under random sampling, for large $n$, $\chi^2$ has approximately the $\chi^2$ distribution with $\parens{r-1} \parens{c-1}$ degrees of freedom. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Column Distances:} 
+	\begin{enumerate}
+		\item \textit{Squared $\chi^2$-distance Between Two Column Profiles:} Define the squared $\chi^2$-distance between the $j$-th and $j'$-th column profiles, $\bb_j$ and $\bb_{j'}$, as the following quadratic form 
+		\begin{align*}
+			d^2 \parens{\bb_j, \bb_{j'}} = & \, \parens{\bb_j - \bb_{j'}}^\top \bD_r^{-1} \parens{\bb_j - \bb_{j'}} \\ 
+			= & \, \sum_{i=1}^r \frac{n}{n_{i,\bullet}} \parens[\bigg]{\frac{n_{i,j}}{n_{\bullet, j}} - \frac{n_{i,j'}}{n_{\bullet, j'}}}^2. 
+		\end{align*}
+		
+		\item \textit{Squared $\chi^2$-distance to Column Centroid:} The \emph{squared $\chi^2$-distance between the $j$-th column profile and the column centroid} is 
+		\begin{align*}
+			d^2 \parens{\bb_j, \boldr} = & \, \parens{\bb_j - \boldr}^\top \bD_r^{-1} \parens{\bb_j - \boldr} \\ 
+			= & \, \frac{1}{n_{\bullet, j}} \sum_{i=1}^r \frac{n}{n_{i,\bullet} n_{\bullet, j} } \parens[\bigg]{n_{i,j} - \frac{n_{i,\bullet} n_{\bullet, j}}{n}}^2. 
+		\end{align*}
+		
+		\item \textit{Connection with Pearson's $\chi^2$-statistic:} If we sum $d^2 \parens{\bb_j, \boldr}$ over all $j = 1, 2, \cdots, c$ with the weight $np_{\bullet,j}$, we have 
+		\begin{align*}
+			n \sum_{j=1}^c p_{\bullet,j} d^2 \parens{\bb_j, \boldr} = \sum_{i=1}^r \sum_{j=1}^c \parens[\bigg]{n_{i,j} - \frac{n_{i,\bullet} n_{\bullet,j}}{n}}^2 \bigg/ \parens[\bigg]{\frac{n_{i,\bullet} n_{\bullet,j}}{n}}, 
+		\end{align*}
+		which is again Pearson's chi-squared statistic. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Test of Independence in a Contingency Table:} We are interested in testing whether row and column variables in a two-way contingency table are independent or not. 
+	\begin{enumerate}
+		\item \textit{Intuition:} If row and column variables are indeed independent, we expect 
+		\begin{align*}
+			n_{i, j} \approx n_{i, \bullet} \times n_{\bullet, j}, \qquad \text{ for all } i = 1, 2, \cdots, r \text{ and } j = 1, 2, \cdots, c. 
+		\end{align*}
+		Otherwise, we expect to see large deviation between $n_{i, j}$ and the product of $n_{i, \bullet}$ and $n_{\bullet, j}$. 
+		
+		\item \textit{Hypothesis Statement:} We formulate the problem of interest as 
+		\begin{align*}
+			H_0: \text{ Row and column variables are independent }
+		\end{align*}
+		against 
+		\begin{align*}
+			H_1: \text{ Row and column variables are \emph{not} independent}. 
+		\end{align*}
+
+		\item \textit{Test Statistic and Asymptotic Distribution:} We use Pearson's chi-squared statistic, $\chi^2$. For large $n$, $\chi^2$ approximately follows a $\chi^2$ distribution with $\parens{r-1} \parens{c-1}$ degrees of freedom. 
+		
+		We reject $H_0$ if $\chi^2 > \chi^2_{\parens{r-1} \parens{c-1}, 1-\alpha}$, where $\chi^2_{\parens{r-1} \parens{c-1}, 1-\alpha}$ is the $\parens{ 1- \alpha}\cdot 100\%$ percentile of a $\chi^2$ distribution with $\parens{r-1} \parens{c-1}$ degrees of freedom. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Matrix of Residuals:} Consider the observed cell frequency matrix $\bN \in \Real^{r \times c}$ defined in \eqref{eq-N}. Define the \emph{matrix of residuals}, denoted by $\widetilde{\bN}$, as 
+	\begin{align*}
+		\widetilde{\bN} := \bN - n \boldr \bc^\top. 
+	\end{align*}
+	In particular, note that the $\parens{i, j}$-th entry of $\widetilde{\bN}$, denoted by $\tilde{n}_{i,j}$, is given by 
+	\begin{align*}
+		\tilde{n}_{i,j} := \bracks{\widetilde{\bN}}_{i,j} = n_{i,j} - E_{i,j} = n_{i,j} - \frac{n_{i,\bullet} n_{\bullet,j}}{n}. 
+	\end{align*}
+	
+	\textit{Remark 1.} The standard assumption of the contingency table analysis is that the row and column totals are considered fixed and the cell frequencies in $\bN$ are allowed to vary within those constraints. Hence, $\widetilde{\bN}$ is a centered version of $\bN$ by centering the elements of the latter at the values we expect them to have under independence. 
+	
+	\textit{Remark 2.} The matrix $\widetilde{\bN}$ is called the \emph{matrix of residuals} because its $\parens{i, j}$-th entry, $\tilde{n}_{i,j} = O_{i,j} - E_{i,j}$, shows the difference between the observed cell frequency ($O_{i,j}$) and its expected cell frequency ($E_{i,j}$), assuming independence between row and column variables, for all $i = 1, 2, \cdots, r$ and $j = 1, 2, \cdots, s$. 
+	
+	\textit{Remark 3.} Since 
+	\begin{align*}
+		\widetilde{\bN} \boldone_c = \parens{\bN - n \boldr \bc^\top } \boldone_c = \bN \boldone_c - n \boldr \bc^\top \boldone_c = n \boldr - n \boldr = \boldzero_{r}, 
+	\end{align*}
+	the rank of $\widetilde{\bN}$ is at most $c - 1$. 
+	
+	\item \textbf{Relative Frequency Matrix:} Define the \emph{relative frequency matrix} as 
+	\begin{align*}
+		\widetilde{\bP} := \frac{1}{n} \widetilde{\bN} = \frac{1}{n} \bX \parens[\bigg]{\bI_n - \frac{1}{n} \bJ_n} \bY^\top = \bP - \boldr \bc^\top, 
+	\end{align*}
+	where $\bJ_n \in \Real^{n \times n}$ is the matrix with all entries equal to 1. 
+	
+	\textit{Remark.} Similar to $\widetilde{\bN}$, the rank of $\widetilde{\bP}$ is at most $c - 1$ as well. 
+	
+	\item \textbf{An Alternative Expression of Pearson's $\chi^2$ Statistic:} Define the following matrix 
+	\begin{align}\label{eq-matrix-r}
+		\bR := \bD_c^{-\frac{1}{2}} \widetilde{\bP}^\top \bD_r^{-1} \widetilde{\bP} \bD_c^{-\frac{1}{2}}. 
+	\end{align}
+	The $\parens{j,j'}$-th entry of $\bR$, where $j \neq j'$, is given by 
+	\begin{align*}
+		\frac{1}{\sqrt{n_{\bullet,j} n_{\bullet,j'}}} \sum_{i=1}^r \frac{1}{n_{i,\bullet}} \parens[\bigg]{n_{i,j} - \frac{n_{i,\bullet} n_{\bullet,j}}{n}} \parens[\bigg]{n_{i,j'} - \frac{n_{i,\bullet} n_{\bullet,j'}}{n}}, 
+	\end{align*}
+	and the $j$-th diagonal element of $\bR$ is 
+	\begin{align*}
+		\frac{1}{n_{\bullet,j}} \sum_{i=1}^r \frac{1}{n_{i,\bullet}} \parens[\bigg]{n_{i,j} - \frac{n_{i,\bullet} n_{\bullet,j}}{n}}^2. 
+	\end{align*}
+	The trace of $\bR$, which is also the sum of eigenvalues of $\bR$, is 
+	\begin{align}\label{eq-total-inertia}
+		\sum_{j=1}^c \lambda_j = \sum_{i=1}^r \sum_{j=1}^c \frac{1}{n_{i,\bullet} n_{\bullet,j}} \parens[\bigg]{n_{i,j} - \frac{n_{i,\bullet} n_{\bullet,j}}{n}}^2 = \frac{\chi^2}{n}, 
+	\end{align}
+	where $\lambda_1, \lambda_2, \cdots, \lambda_c$ are eigenvalues of $\bR$, and $\chi^2$ is the Pearson's chi-squared statistic. 
+	
+	\item \textbf{Total Inertia:} The quantity $\chi^2/n$ is referred to as the amount of \emph{total inertia} in the contingency table. 
+	
+	Moreover, the eigenvalues of $\bR$ form a decomposition of the total inertia. The accumulated contribution of the first $t$ principal inertias is given by 
+	\begin{align*}
+		\frac{\lambda_1 + \lambda_2 + \cdots + \lambda_t}{\lambda_1 + \lambda_2 + \cdots + \lambda_c}, 
+	\end{align*}
+	which is an analogue of the percentage of total variance explained by the first $t$ principal components. 
+	
+	\item \textbf{Decomposition of $\bR$:} We can decompose the matrix $\bR$ in \eqref{eq-matrix-r} as 
+	\begin{align*}
+		\bR = \bM^\top \bM, 
+	\end{align*}
+	where $\bM := \bD_r^{-\frac{1}{2}} \widetilde{\bP} \bD_c^{-\frac{1}{2}} \in \Real^{r \times c}$ with its $\parens{i, j}$-th entry being \emph{Pearson's residual}
+	\begin{align*}
+		m_{i,j} := \bracks{\bM}_{i,j} = \frac{1}{\sqrt{n_{i,\bullet} n_{\bullet,j}}} \parens[\bigg]{n_{i,j} - \frac{n_{i,\bullet} n_{\bullet,j}}{n}}, 
+	\end{align*}
+	for all $i = 1, 2, \cdots, r$ and $j = 1, 2, \cdots, c$. 
+	
+	\textit{Remark 1.} From \eqref{eq-total-inertia}, the total inertia $\chi^2 / n$ is the sum of squares of all $rc$ Pearson residuals in the contingency table. 
+	
+	\textit{Remark 2.} Since $\rank \parens{\bP} \le c - 1$, it follows that $\bM$ also has rank at most $c - 1$. 
+	
+	\item \textbf{Singular Value Decomposition of $\bM$ and Consequences:} The singular value decomposition of $\bM$ is given by 
+	\begin{align*}
+		\bM = \bU \bD_{\lambda} \bV^\top, 
+	\end{align*}
+	where 
+	\begin{itemize}
+		\item $\bU \in \Real^{r \times c}$ satisfies $\bU ^\top \bU = \bI_c$, with columns being the eigenvectors corresponding to the matrix 
+		\begin{align*}
+			\bM \bM^\top = \bD_r^{-\frac{1}{2}} \widetilde{\bP} \bD^{-1}_c \widetilde{\bP}^\top \bD^{-\frac{1}{2}}_r =: \bR_1, 
+		\end{align*}
+		
+		\item $\bV \in \Real^{c \times c}$ satisfies $\bV^\top \bV = \bI_c$, with columns being the eigenvectors corresponding to the matrix $\bR$, and 
+		\item $\bD_{\lambda} := \diag \parens{\sqrt{\lambda_1}, \sqrt{\lambda_2}, \cdots, \sqrt{\lambda_c}} \in \Real^{c \times c}$ is a diagonal matrix with its principal diagonal having the singular values. 
+	\end{itemize}
+	
+	Using the notation above, we have 
+	\begin{align}\label{eq-svd-tildeP}
+		\widetilde{\bP} = \parens{\bD_r^{\frac{1}{2}} \bU} \bD_{\lambda} \parens{\bV^\top \bD_c^{\frac{1}{2}}} = \bA \bD_{\lambda} \bB^\top, 
+	\end{align}
+	where $\bA := \bD_r^{\frac{1}{2}} \bU$ and $\bB := \bD_c^{\frac{1}{2}} \bV$. 
+	
+	Noticing that 
+	\begin{align*}
+		\bA^\top \bD_r^{-1} \bA = \bI_c, \qquad \text{ and } \qquad \bB^\top \bD_c^{-1} \bB = \bI_c, 
+	\end{align*}
+	we call \eqref{eq-svd-tildeP} the \emph{generalized singular value decomposition} of $\widetilde{\bP}$ in the matrices $\bD_r^{-1}$ and $\bD_c^{-1}$. The columns of $\bA$ and $\bB$ are called the \emph{principal axes} of the row and column profiles, respectively. 
+	
+	\item \textbf{Principal Coordinates of Row and Column Profiles:} 
+	\begin{enumerate}
+		\item \textit{Principal Coordinates of Row Profiles:} The squared $\chi^2$-distance (in the metric $\bD_c^{-1}$) between the centered row profile matrix $\bP_r - \boldone_r \bc^\top$ and $\bB$ is given by 
+		\begin{align*}
+			\bG_P^\top := & \, \parens{\bP_r - \boldone_r \bc^\top} \bD_c^{-1} \bB \\ 
+			= & \, \parens{\bD_r^{-1} \widetilde{\bP} \bD_c^{-1}} \bB \\ 
+			= & \, \bD_r^{-1} \bA \bD_{\lambda} \bB^\top \bD_c^{-1} \bB \\
+			= & \, \bD_r^{-1} \bA \bD_{\lambda} \\ 
+			= & \, \bD_r^{-1} \bD_r^{\frac{1}{2}} \bU \bD_{\lambda} \\ 
+			= & \, \bD_r^{-\frac{1}{2}} \bU \bD_{\lambda}. 
+		\end{align*}
+		The columns of $\bG_P^{\top}$ is called the \emph{principal coordinates of the row profiles}. 
+		
+		\item \textit{Principal Coordinates of Column Profiles:} The squared $\chi^2$-distance (in the metric $\bD_r^{-1}$) between the centered column profile matrix $\bP_c - \boldone_c \boldr^\top$ and $\bA$ is given by 
+		\begin{align*}
+			\bH_P^\top := & \, \parens{\bP_c - \boldone_c \boldr^\top} \bD_r^{-1} \bA = \bD_c^{-\frac{1}{2}} \bV \bD_{\lambda}, 
+		\end{align*}
+		by a similar derivation. The columns of $\bH_P^{\top}$ are called the \emph{principal coordinates of the column profiles}. 
+		
+		\item \textit{Relationships between $\bG_P^{\top}$ and $\bH_P^{\top}$:} Using the notation above, we have 
+		\begin{align*}
+			\bG_P^\top = \bD_{r}^{-1} \bP \bH_P^{\top} \bD_{\lambda}^{-1}, \qquad \text{ and } \qquad \bH_P^\top = \bD_c^{-1} \bP^\top \bG_P^{\top} \bD_{\lambda}^{-1}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Correspondence Map:} 
+	\begin{enumerate}
+		\item \textit{Procedure:} 
+		\begin{enumerate}[label=(\arabic*)]
+			\item Make a scatterplot of each of the $r$ rows of the first two (or three) columns of $\bG_P^{\top}$; 
+			\item On the same scatterplot, plot each of the $c$ rows of the first two (or three) columns of $\bH_P^{\top}$. 
+		\end{enumerate}
+		The resulting scatterplot consisting of $\parens{r + c}$ points is called a \emph{correspondence map}. 
+		
+		\item \textit{Recommendations:} 
+		\begin{enumerate}
+			\item For clearer interpretation, different symbols should be used for the row points and column points; 
+			\item It is useful to identify each point in the plot by a tag showing its corresponding category name; 
+			\item If row or column categories are ordered in some way, it is visually helpful to connect those category points to indicate such order dependence. 
+		\end{enumerate}
+		
+		\item \textit{Interpretation:} 
+		\begin{enumerate}
+			\item If row points are close, then those rows have similar conditional distributions across columns; 
+			\item If column points are close, then those columns have similar conditional distributions across rows; 
+			\item If a row point is close to a column point, then that configuration suggests a particular deviation from independence. 
+		\end{enumerate}
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+%\section*{III. Multiple Correspondence Analysis}
+%
+%\begin{enumerate}
+%
+%	\item \textbf{Introduction:} Multiple correspondence analysis is a generalization of simple correspondence analysis, in the sense that it is designed to deal with the graphical representation of contingency tables that have more than two categorical variables. 
+%	
+%	\item \textbf{Setup and Notation:} 
+%	\begin{enumerate}
+%		\item We assume there are $Q$ categorical variables; 
+%		\item Suppose the $q$-th variable has $J_q$ categories; 
+%		\item Let $J := \sum_{q=1}^Q J_q$ be the total number of categories over all variables; 
+%		\item Suppose there are $n$ individuals in total. 
+%	\end{enumerate}
+%	
+%	\item \textbf{Multivariate Indicator Matrix:} Let the $\parens{i,j}$-th entry of $\bZ \in \Real^{J \times n}$ be defined as 
+%	\begin{align*}
+%		Z_{i,j} = \begin{cases}
+%			1, & \, \text{ if the $j$-th individual belongs to the $i$th category}, \\ 
+%			0, & \, \text{ otherwise}, 
+%		\end{cases}
+%	\end{align*}
+%	for all $i = 1, 2, \cdots, J$ and $j = 1, 2, \cdots, n$. The matrix $\bZ$ is called a \emph{multivariate indicator matrix}. 
+%	
+%	We assume that there is no row of $\bZ$ that is a zero vector. Then, each column of $\bZ$ sums to $Q$ and all $Jn$ entries sum to $nQ$. 
+%	
+%	\item \textbf{Partitioning $\bZ$:} We partition the $J$ rows of $\bZ$ into blocks by variable so that 
+%	\begin{align*}
+%		\bZ = \begin{pmatrix}
+%			\bZ_1 \\ \bZ_2 \\ \cdots \\ \bZ_Q
+%		\end{pmatrix}, 
+%	\end{align*}
+%	where $\bZ_q \in \Real^{J_q \times n}$ corresponds to the $q$-th categorical variable having $J_q$ categories, for all $q = 1, 2, \cdots, Q$. 
+%	
+%\end{enumerate}	
+
+
+\printbibliography
+
+\end{document}

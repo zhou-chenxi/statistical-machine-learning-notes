@@ -1,0 +1,580 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 9, Kernel Smoothing Methods}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Kernel Smoothing Methods}{9}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 6, Kernel Smoothing Methods} in \textcite{Friedman2001-np}. 
+
+\section*{I. One-Dimensional Kernel Smoothers}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Introduction to Kernel Smoothing:} By kernel smoothing, we fit a different but simple model separately at each query point $\bx_0 \in \Real^p$ using only observations close to the target point $\bx_0$. 
+	
+	% This localization is achieved via a weighting function or kernel $K_{\lambda} \parens{\bx_0, \bx_i}$, which assigns a weight to $\bx_i$ based on its distance from $\bx_0$. The kernels $K_{\lambda}$ are typically indexed by a parameter $\lambda > 0$ that dictates the width of the neighborhood. 
+	
+	\item \textbf{Setup:} Throughout this section, we assume that the predictor lies on the real line, i.e., $x \in \Real$. Let $\sets{\parens{x_i, y_i}}_{i=1}^n$ be a set of training data points, and $x_0 \in \Real$ be the target point. 
+	
+	\item \textbf{Review of $k$-nearest Neighbor Regression:} Recall that the $k$-nearest neighbor average is 
+	\begin{align}\label{knn}
+		\hat{f} \parens{x_0} = \mathrm{Ave} \parens[\big]{y_i \,\vert\, x_i \in \mathcal{N}_k \parens{x_0}}, 
+	\end{align} 
+	which is an estimate of the regression function $\E \parens{Y \,\vert\, X = x_0}$. In \eqref{knn}, $\calN_k \parens{x_0}$ is the set of $k$ points nearest to $x$ in the Euclidean distance. However, this estimate is discontinuous in $x_0$. 
+	
+	\item \textbf{Motivation of Kernel Smoothing Methods:} The general idea of the kernel smoothing method to estimate $\E \parens{Y \,\vert\, X = x_0}$ is, similar to the $k$-nearest neighbor, to use the observations close to $x_0$. The localization is achieved via a weighting function or a kernel function $K_{\lambda} \parens{x_0, x_i}$, which assigns a weight to $x_i$ based on its distance to $x_0$. 
+	
+	The choice of the weighting function or the kernel function and its bandwidth (or window size) parameter $\lambda > 0$ controls the width of the neighborhood and the degree of the smoothness of the estimate of the regression function. 
+	
+	\item \textbf{Nadaraya-Watson Kernel-Weighted Average:} With a choice of the kernel function of the form 
+	\begin{align}\label{kernel.function}
+		K_{\lambda} \parens{x_0, x} = D \parens[\bigg]{\frac{\abs{x - x_0}}{\lambda}}, 
+	\end{align}
+	the \textit{Nadaraya-Watson kernel-weighted average} is 
+	\begin{align}\label{eq-nw-kernel-avg}
+		\hat{f}_0\parens{x_0} = & \, \frac{\sum_{i=1}^n K_{\lambda} \parens{x_0, x_i} y_i}{\sum_{j=1}^n K_{\lambda} \parens{x_0, x_j}}
+		= \sum_{i=1}^n \frac{K_{\lambda} \parens{x_0, x_i}}{\sum_{j=1}^n K_{\lambda} \parens{x_0, x_i}} y_i. 
+	\end{align}
+	From the second equality, it is obvious that the weight associated with the $i$-th observation is 
+	\begin{align*}
+		w_i \parens{x_0} = \frac{K_{\lambda} \parens{x_0, x_i}}{\sum_{j=1}^n K_{\lambda} \parens{x_0, x_j}}, \qquad \text{ for all } i = 1, \cdots, n. 
+	\end{align*}
+	
+	In \eqref{kernel.function}, $D: \Real \to [0, \infty)$ is any smooth function such that $D \parens{x} \ge 0$ and satisfies 
+	\begin{align*}
+		\int_{\Real} D \parens{x} \diff x = 1, \qquad \int_{\Real} x D \parens{x} \diff x = 0, \qquad \text{ and } \qquad \int_{\Real} x^2 D \parens{x} \diff x < \infty. 
+	\end{align*}
+	Some choices of the kernel function $D$ are: 
+	\begin{enumerate}
+		\item Epanechnikov quadratic kernel: 
+		\begin{align*}
+			D \parens{t} = \begin{cases}
+				\frac{3}{4} \parens{1-t^2}, & \text{ if } \abs{t} \le 1; \\ 
+				0, & \text{ otherwise}. 
+			\end{cases}
+		\end{align*}
+		
+		\item Tri-cube kernel: 
+		\begin{align*}
+			D \parens{t} = \begin{cases}
+				\parens[\big]{1 - \abs{t}^3}^3, & \, \text{ if } \abs{t} \le 1, \\ 
+				0, & \, \text{ otherwise. }
+			\end{cases}
+		\end{align*}
+		
+		\item Gaussian kernel: 
+		\begin{align*}
+			D \parens{t} = \exp \parens[\bigg]{-\frac{t^2}{2}}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\textit{Remark 1.} The Nadaraya-Watson kernel-weighted average \eqref{eq-nw-kernel-avg} can be characterized as the solution to the following minimization problem 
+	\begin{align*}
+		\minimize_{\alpha \parens{x_0}} \ \braces[\Bigg]{\sum_{i=1}^n K_{\lambda} \parens{x_0, x_i} \parens[\big]{y_i - \alpha \parens{x_0}}^2}. 
+	\end{align*}
+	
+	\textit{Remark 2.} The kernel function can be easily generalized to higher dimensions. 
+	
+	\textit{Remark 3.} In \eqref{knn}, each of the $k$ nearest points is given the equal weight of $1/k$. In Nadaraya-Watson kernel-weighted average, we assign weights that die off smoothly with distance from the target point $x_0$. 
+	
+	\textit{Remark 4.} The fitted function \eqref{eq-nw-kernel-avg} is continuous and smooth. 
+	
+	\item \textbf{More General Kernel Width:} Note that in \eqref{kernel.function}, we use a fixed constant bandwidth parameter.  One can choose a more general function for the kernel width, for example, 
+	\begin{align*}
+		K_{\lambda} \parens{x_0, x} = D \parens[\bigg]{\frac{\abs{x - x_0}}{h_{\lambda}\parens{x_0}}}, 
+	\end{align*}
+	where $h_{\lambda} \parens{x_0}$ is a width function that determines the width of the neighborhood at the specific $x_0$. 
+	
+	\textit{Remark 1.} In \eqref{knn}, the neighborhood size $k$ replaces $\lambda$, and we have $h_k \parens{x_0} = \abs{x_0 - x_{\bracks{k}}}$, where $x_{\bracks{k}}$ is the $k$-th closest $x_i$ to $x_0$. 
+	
+	\textit{Remark 2.} In \eqref{kernel.function}, we have $h_{\lambda} \parens{x} = \lambda$ for all $x \in \Real$. 
+	
+	\item \textbf{Practical Considerations in Applications:} 
+	\begin{itemize}
+		\item The smoothing parameter $\lambda$ determines the width of the local neighborhood. Large $\lambda$ (averaging more observations) implies lower variance but higher bias, and small $\lambda$ (averaging less observations) implies higher variance but lower bias. 
+		
+		\item Issues can arise with $k$-nearest neighbor when there are ties in the $x_i's$. The kernel method is less concerned with this issue. 
+		
+		\item In the Nadaraya-Waston kernel-weighted average, the boundary issue arises. It is typical that the region closer to the boundaries contains fewer observations and the kernel is asymmetric in these boundary regions. This leads to the \emph{bias} in the Nadaraya-Waston kernel-weighted estimates. 
+		
+		\item If the data in the interior of the domain are \emph{not} equally spaced, the Nadaraya-Waston kernel-weighted average can also contain a large bias. 
+
+	\end{itemize}
+	
+	\item \textbf{Local Linear Regression:} \emph{Locally weighted regression} solves a separate weighted least squares problem at each target point $x_0$ 
+	\begin{align}\label{min.llr}
+		\minimize_{\alpha \parens{x_0}, \beta \parens{x_0}} \braces[\Bigg]{\sum_{i=1}^n K_\lambda \parens{x_0, x_i} \parens[\Big]{ y_i - \alpha \parens{x_0} - \beta \parens{x_0} x_i}^2}. 
+	\end{align}
+	The resulting locally linear regression estimate is 
+	\begin{align*}
+		\hat{f} \parens{x_0} = \hat{\alpha} \parens{x_0} + \hat{\beta} \parens{x_0} x_0, 
+	\end{align*}
+	where $\parens{\hat{\alpha} \parens{x_0}, \hat{\beta} \parens{x_0}}$ is the solution to \eqref{min.llr}. 
+	
+	We could write $\hat{f} \parens{x_0}$ in the vector-matrix notation as follows: 
+	\begin{align}
+		\hat{f}\parens{x_0} = & \, \bb \parens{x_0}^\top \parens{\bB^\top \bW \parens{x_0} \bB}^{-1} \bB^\top \bW \parens{x_0} \bY 
+		= \sum_{i=1}^n l_i \parens{x_0} y_i \label{llr.sol}
+	\end{align}
+	where $\bb \parens{x} = \parens{1, x}^\top$ is a vector-valued function, each row of the matrix $\bB \in \Real^{n \times 2}$ is $\bb \parens{x_i}^\top$, and the matrix $\bW \parens{x_0} \in \Real^{n \times n}$ is the diagonal matrix with the $i$-th diagonal element being $K_{\lambda} \parens{x_0, x_i}$. 
+	
+	\textit{Remark 1.} Even though we use the entire data set to estimate $\alpha\parens{x_0}$ and $\beta\parens{x_0}$, we \emph{only} evaluate the fitted value at $x = x_0$. 
+	
+	\textit{Remark 2.} Note from \eqref{llr.sol} that the fitted value at $x = x_0$ is a linear combination of $y_i$'s with the weights $l_i \parens{x_0}$. There weights $l_i \parens{x_0}$'s are referred to as \textit{equivalent kernel}. 
+	
+	\textit{Remark 3.} Local linear regression automatically modifies the kernel to correct the bias exactly to first order, a phenomenon known as \textit{automatic kernel carpentry}. More precisely, consider the following series expansion of the true regression $f$ around $x_0$
+	\begin{equation}
+		\begin{aligned}
+			\E \bracks[\big]{\hat{f} \parens{x_0}} 
+			= & \, \sum_{i=1}^n l_i \parens{x_0} f \parens{x_i} \\ 
+			= & \, f \parens{x_0} \sum_{i=1}^n l_i \parens{x_0} + f' \parens{x_0} \sum_{i=1}^n \parens{x_i - x_0} l_i \parens{x_0} \nonumber \\ 
+			& \qquad \quad + \frac{f''\parens{x_0}}{2} \sum_{i=1}^n \parens{x_i - x_0}^2 l_i\parens{x_0} + R, 
+		\end{aligned}
+	\end{equation}
+	where the remainder term $R$ depends only on the third- and higher-order derivatives of $f$, and is small under suitable smoothness assumptions. Using the definition of $l_i \parens{x_0}$'s, we have 
+	\begin{equation}\label{eq-ex6.2-1}
+		\sum_{i=1}^n l_i \parens{x_0} = 1
+	\end{equation}
+	and 
+	\begin{equation}\label{eq-ex6.2-2}
+		\sum_{i=1}^n \parens{x_i - x_0} l_i \parens{x_0} = 0. 
+	\end{equation}
+	Therefore, the bias $\E \bracks{\hat{f} \parens{x_0}} - f \parens{x_0}$ only depends on \emph{quadratic} and \emph{high-order} terms in the expansion of $f$. 
+	
+	We show \eqref{eq-ex6.2-1} and \eqref{eq-ex6.2-2} hold. By matrix algebra, we have 
+	\begin{align*}
+		\bB^\top \bW \parens{x_0} \bB = \begin{pmatrix}
+			A_{11} & A_{12} \\ 
+			A_{21} & A_{22}
+		\end{pmatrix}
+	\end{align*}
+	where 
+	\begin{align*}
+		A_{11} = \sum_{i=1}^n K_{\lambda} \parens{x_i, x_0}, \quad A_{12} = A_{21} = \sum_{i=1}^n K_{\lambda} \parens{x_i, x_0} x_i, \quad A_{22} = \sum_{i=1}^n K_{\lambda} \parens{x_i, x_0} x_i^2
+	\end{align*}
+	and, hence, 
+	\begin{align*}
+		\parens{\bB^\top \bW \parens{x_0} \bB}^{-1} = \frac{1}{A_{11} A_{22} - A_{12}^2} \begin{pmatrix}
+			A_{22} & -A_{12} \\ -A_{21} & A_{11}. 
+		\end{pmatrix}
+	\end{align*}
+	To show \eqref{eq-ex6.2-1}, we have 
+	\begin{align*}
+		\sum_{i=1}^n l_i \parens{x_0} = & \, \bb \parens{x_0}^\top \parens{\bB^\top \bW \parens{x_0} \bB}^{-1} \bB^\top \bW \parens{x_0} \boldone_n \\ 
+		= & \, \begin{pmatrix}
+			1 \\ x_0
+		\end{pmatrix}^\top \frac{1}{A_{11} A_{22} - A_{12}^2} \begin{pmatrix}
+			A_{22} & -A_{12} \\ -A_{21} & A_{11}
+		\end{pmatrix} \begin{pmatrix}
+			A_{11} \\ A_{12}
+		\end{pmatrix} \\ 
+		= & \, \frac{1}{A_{11} A_{22} - A_{12}^2} \begin{pmatrix}
+			1 \\ x_0
+		\end{pmatrix}^\top \begin{pmatrix}
+			A_{22} A_{11} - A_{12}^2 \\ 
+			-A_{21} A_{11} + A_{11} A_{12}
+		\end{pmatrix} \\ 
+		= & \, \begin{pmatrix}
+			1 \\ x_0
+		\end{pmatrix}^\top \begin{pmatrix}
+			1 \\ 
+			0
+		\end{pmatrix} \\ 
+		= & \, 1. 
+	\end{align*}
+	To show \eqref{eq-ex6.2-2}, we let $\bx := \parens{x_1, \cdots, x_n}^\top \in \Real^n$ and have 
+	\begin{align*}
+		\sum_{i=1}^n l_i \parens{x_0} \parens{x_i - x_0} = & \, \bb \parens{x_0}^\top \parens{\bB^\top \bW \parens{x_0} \bB}^{-1} \bB^\top \bW \parens{x_0} \parens{\bx - x_0 \boldone_n} \\ 
+		= & \, \begin{pmatrix}
+			1 \\ x_0
+		\end{pmatrix}^\top \frac{1}{A_{11} A_{22} - A_{12}^2} \begin{pmatrix}
+			A_{22} & -A_{12} \\ -A_{21} & A_{11}
+		\end{pmatrix} \begin{pmatrix}
+			A_{12} - x_0 A_{11} \\ A_{22} - x_0 A_{12}
+		\end{pmatrix} \\ 
+		= & \, \begin{pmatrix}
+			1 \\ x_0
+		\end{pmatrix}^\top \frac{1}{A_{11} A_{22} - A_{12}^2} \begin{pmatrix}
+			- x_0 \parens{A_{11} A_{22} - A_{12}^2} \\ 
+			A_{11} A_{22} - A_{21}^2 
+		\end{pmatrix} \\ 
+		= & \, \begin{pmatrix}
+			1 \\ x_0
+		\end{pmatrix}^\top \begin{pmatrix}
+			- x_0 \\ 1
+		\end{pmatrix} \\ 
+		= & \, 0. 
+	\end{align*}
+	
+	\item \textbf{Local Polynomial Regression:} We extend the idea above from the linear model to the polynomial model and consider the following optimization problem 
+	\begin{align*}
+		\min_{\alpha\parens{x_0}, \beta_1 \parens{x_0}, \cdots, \beta_d \parens{x_0}} \braces[\Bigg]{\sum_{i=1}^N K_\lambda \parens{x_i, x_0} \parens[\bigg]{ y_i - \alpha \parens{x_0} - \sum_{j=1}^d \beta_j \parens{x_0} x_i^j}^2}, 
+	\end{align*}
+	and the fitted value is 
+	\begin{align*}
+		\hat{f} \parens{x_0} = \hat{\alpha} \parens{x_0} + \sum_{j=1}^d \hat{\beta}_j\parens{x_0} x_0^j. 
+	\end{align*}
+	
+	\textit{Remark 1.} The bias in the local polynomial regression only depends on the ($d$+1)-th and higher order derivatives of the true regression function. 
+	
+	\textit{Remark 2.} With the decreasing bias, increasing $d$ leads to a higher variance. Assume the model is of the form $y_i = f \parens{x_i} + \varepsilon_i$, where $\varepsilon_i$'s are i.i.d with mean 0 and variance $\sigma^2$. Then, 
+	\begin{align*}
+		\var \bracks[\big]{\hat{f} \parens{x_0}} = \sigma^2 \cdot \norm{\bl \parens{x_0}}_2^2, 
+	\end{align*}
+	where $\bl \parens{x_0} \in \Real^n$ is the vector of equivalent kernel weights at $x_0$. In addition, $\norm{\bl \parens{x_0}}_2$ increases with the polynomial degree $d$, and therefore, there is bias-variance tradeoff in selecting polynomial degree. 
+	
+	\textit{Remark 3.} The local polynomial regression yields linear estimators in the sense that the resulting estimate $\hat{f} \parens{x_0}$ can be written as a linear combination of $y_i$'s, for $i = 1, \cdots, n$. 
+\end{enumerate}
+
+\section*{II. Selecting the Width of the Kernel} 
+      
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Effects of the Kernel Width $\lambda$:} 
+	\begin{itemize}
+		\item For the \textit{Epanechnikov} or \textit{tri-cube} kernel with metric width, $\lambda$ is the radius of the support region; 
+		\item For the \textit{Gaussian} kernel, $\lambda$ is the standard deviation. 
+		\item In the $k$-nearest neighbor regression, $k$, the number of nearest neighbors, plays the role of $\lambda$. The larger the value of $k$ is, the more data points we are averaging and the wider the averaging window is. 
+	\end{itemize}
+	
+	\item \textbf{Bias-Variance Tradeoff in Local Polynomial Regression:} There is a natural \textit{bias-variance tradeoff} as we change the width of the averaging window: 
+	\begin{itemize}
+		\item If the window is \textit{narrow}, $\hat{f} \parens{x_0}$ is an average of a small number of $y_i$ close to $x_0$. Its variance will be relatively large and the bias will tend to be small; 
+		\item If the window is \textit{wide}, the variance of $\hat{f} \parens{x_0}$ will be small relative to the variance of any $y_i$, and the bias will be higher. 
+	\end{itemize}
+	
+	\item \textbf{How to Choose $\lambda$:} In practice, one can use the leave-one-out cross-validation, $C_p$, or $k$-fold cross-validation to choose the optimal value of $\lambda$. 
+\end{enumerate}
+
+
+\section*{III. Local Regression in $\Real^p$}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Goal:} We extend the kernel smoothing and local regression to higher dimensions. More precisely, 
+	\begin{enumerate}
+		\item the \emph{Nadarava-Watson kernel smoother} fits locally with weights supplied by a $p$-dimensional kernel; 
+		\item local linear regression fits a hyperplane locally in the sample space, by weighted least squares with weights supplied by a $p$-dimensional kernel. 
+	\end{enumerate}
+	
+	\item \textbf{Notation:} Let $\bb \parens{\bx}$ be a vector of polynomial terms in $\bx \in \Real^p$ of maximum degree $d$. For example, with $d = 2$ and $p = 2$, we have $\bb \parens{\bx} = \parens{1, x_1, x_2, x_1^2, x_2^2, x_1 x_2}^\top \in \Real^6$. Let $\sets{\parens{\bx_i^\top, y_i}^\top}_{i=1}^n$ be the training data, where $\bx_i \in \Real^p$ and $y_i \in \Real$ for all $i = 1, \cdots, n$. 
+	
+	\item \textbf{Problem Statement:} To obtain an estimate at each $\bx_0 \in \Real^p$, we solve the following optimization problem 
+	\begin{align}\label{lpr.rp}
+		\minimize_{\bbeta \parens{\bx_0}} \sets[\Bigg]{\sum_{i=1}^n K_\lambda \parens{\bx_0, \bx_i} \parens[\big]{y_i - b \parens{\bx_i}^\top  \bbeta \parens{\bx_0}}^2}, 
+	\end{align}
+	and the fitted value at $\bx = \bx_0$ is
+	\begin{equation*}
+		\hat{f} \parens{\bx_0} = \bb \parens{\bx_0}^\top \widehat{\bbeta} \parens{\bx_0}, 
+	\end{equation*}
+	where $\widehat{\bbeta} \parens{\bx_0}$ the solution to \eqref{lpr.rp}. 
+	
+	\item \textbf{Kernel Function in $\Real^p$:} Typically, the kernel function in $\Real^p$ is a radial function, such as the \textit{radial} Epanechnikov or tri-cube kernel of the form 
+	\begin{align*}
+		K_\lambda \parens{\bx_0 , \bx} = D \parens[\bigg]{ \frac{\norm{\bx - \bx_0}_2}{\lambda}}, 
+	\end{align*}
+	where $\norm{\,\cdot\,}_2$ denotes the Euclidean norm. 
+	
+	\textit{Remark.} It is suggested to standardize each predictor to unit standard deviation prior to smoothing. 
+	
+	\item \textbf{Caveats:} Local polynomial regression becomes less useful in dimensions higher than two or three for the following reasons: 
+	\begin{enumerate}
+	
+		\item One manifestation of curse of dimensionality is that the fraction of points close to the boundary increases to 1 as the dimensionality increases. Hence, the boundary effects in two or higher dimensional can be a big problem as the fraction of points on the boundary is large, especially when the boundary is irregular; 
+		
+		\item It is impossible maintain low bias (i.e., localness) and low variance (i.e., a sizable sample in the neighborhood) \emph{simultaneously} as the dimension increases, without the total sample size increasing exponentially with $p$; 
+		
+		\item Visualization of $\hat{f}$, which is one of the primary goals of smoothing, in higher dimensions is difficult. 
+
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{IV. Structured Local Regression Models in $\Real^p$}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Structured Kernels:} The previous section proposed to use the kernel that is a function of the Euclidean norm of $\bx - \bx_0$, which puts \emph{equal} weights to each coordinate. One natural modification is to use a positive definite matrix $\bA$ to weigh the different coordinates, leading to the following kernel function  
+	\begin{align*}
+		K_{\lambda, \bA} \parens{\bx_0, \bx} = D \parens[\bigg]{\frac{ \parens{\bx - \bx_0}^\top \bA \parens{\bx - \bx_0}}{\lambda}}. 
+	\end{align*}
+	
+	\begin{itemize}
+		\item If $\bA$ is diagonal, one can increase or decrease the influence of $X_j$ by increasing or decreasing $\bA_{jj}$; 
+		\item If the predictors are highly correlated, one can use the covariance matrix of predictors to tailor $\bA$ so that such correlations among predictors can be alleviated. 
+	\end{itemize}
+	
+	\item \textbf{Structured Regression Functions:} We fit a regression function 
+	\begin{align*}
+		\E \bracks{Y \,\vert\, X} = f \parens{X_1, X_2, \cdots, X_p}, 
+	\end{align*}
+	where $X = \parens{X_1, \cdots, X_p}^\top \in \Real^p$ and every level of interaction is potentially present. One approximation is to use ANOVA decomposition of the form 
+	\begin{equation}\label{srf}
+		f \parens{X_1, X_2, \cdots, X_p} = \alpha + \sum_{j=1}^p g_j \parens{X_j} + \sum_{k<l} g_{kl} \parens{X_k, X_l} + \cdots, 
+	\end{equation}
+	and then introduce certain structures by eliminating some of the higher-order terms. 
+	\begin{itemize}
+		\item \textit{Additive Model:} Additive model only assume \emph{main effect} terms exist, i.e., 
+		\begin{align*}
+			f \parens{X} = \alpha + \sum_{j=1}^p g_j \parens{X_j}. 
+		\end{align*}
+		If we assume that all but the $k$-th term is known, then one can estimate $g_k$ by local regression of $Y - \sum_{j \ne k} g_j \parens{X_j}$ on $X_k$ and continue this process for each coordinate until convergence. 
+		
+		\item \textit{Varying Coefficient Model:} Assume that we divide the predictor vector $X \in \Real^p$ into a set $\parens{X_1, \cdots, X_q}^\top$ with $ q < p $ and a set of the remaining predictors collectively, denoted by $Z \in \Real^{p-q}$. We assume the conditionally linear model 
+		\begin{equation*}
+			f \parens{X} = \alpha \parens{Z} + \beta_1 \parens{Z} X_1 + \beta_2 \parens{Z} X_2 + \cdots + \beta_q \parens{Z} X_q. 
+		\end{equation*}
+		Note that, for a given $Z$, the preceding equation is linear in $X_1, \cdots, X_q$ but each coefficient can vary with $Z$. 
+		
+		We can fit a model by locally weighted least squares formulated as 
+		\begin{align*}
+			\minimize_{\alpha \parens{\bz_0}, \bbeta \parens{\bz_0}} \ \braces[\Bigg]{\sum_{i=1}^n K_\lambda \parens{\bz_0, \bz} \parens[\Big]{y_i - \alpha \parens{\bz_0} - x_{1i} \beta_1 \parens{\bz_0} - \cdots - x_{qi} \beta_q \parens{\bz_0}}^2}. 
+		\end{align*}
+	\end{itemize}
+
+\end{enumerate}
+
+
+\section*{V. Local Likelihood and Other Methods}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Motivation:} The concept of local regression and varying coefficient models is extremely \emph{broad}: any parametric model can be made \emph{local} if the fitting method accommodates observation weights. 
+	
+	\item \textbf{Local Likelihood Models:} Suppose each observation $y_i$ is associated with $\theta_i := \theta \parens{\bx_i} = \bx_i^\top \bbeta$ and we want to estimate $\bbeta$. We can model $\theta \parens{\,\cdot\,}$ in a more flexible manner using the likelihood function local to $\bx_0$ for the inference of $\theta\parens{\bx_0} = \bx_0^\top \bbeta\parens{\bx_0}$ 
+	\begin{align*}
+		\ell \parens{\bbeta \parens{\bx_0}} := \sum_{i=1}^n K_{\lambda} \parens{\bx_i, \bx_0} l \parens{y_i, \bx_i^\top \bbeta \parens{\bx_0}}, 
+	\end{align*}
+	and solve the optimization problem 
+	\begin{align*}
+		\maximize_{\bbeta \parens{\bx_0}} \ \sets[\Big]{ \ell \parens{\bbeta \parens{\bx_0}}}. 
+	\end{align*}
+	% Note that many likelihood models, in particular the family of generalized linear models, involve the covariates in a linear fashion. 
+	Local likelihood model allows a relaxation from a \textit{global} linear model to one that is \textit{locally} linear. 
+	
+	\item \textbf{Local-Likelihood Varying-Coefficient Models:} We consider
+	\begin{align*}
+		l \parens{\theta\parens{\bz_0}} = \sum_{i=1}^n K_\lambda \parens{\bz_i, \bz_0} \cdot l\parens{y_i, \eta\parens{\bx_i, \theta \parens{\bz_0}}}. 
+	\end{align*}
+	This will fit a varying coefficient model $\theta \parens{\bz}$ by maximizing the local likelihood. 
+	
+	\item \textbf{Autoregressive Time Series Models:} Consider the autoregressive time series model of order $k$ of the following form 
+	\begin{align*}
+		y_t = \beta_0 + \beta_1 y_{t-1} + \beta_2 y_{t-2} + \cdots + \beta_k y_{t-k} + \varepsilon_t. 
+	\end{align*}  
+	Denoting the \textit{lag set} by 
+	\begin{align*}
+		\bx_t := \parens{y_{t-1}, y_{t-2}, \cdots, y_{t-k}}^\top, 
+	\end{align*}
+	the model looks like a standard linear model $ y_t = \bx_t^\top \bbeta + \varepsilon_t$, and is typically fit by the \textit{least squares} method. 
+	
+	One can also fit the time series model by \emph{local} least squares with a kernel $K \parens{\bx_0, \bx_t}$ allowing the model to vary according to the \textit{short-term history} of the series. 
+	
+	\item \textbf{Local Likelihood Regression --- Multi-class Linear Logistic Regression Model:} The data set consists of features $\bx_i \in \Real^p$ and an associated categorical response variable $g_i \in \sets{ 1, \cdots, W }$ and the linear model is of the form 
+	\begin{align*}
+		\Pr \parens{ G = w \,\vert\, X = \bx } = \frac{\exp\parens{\beta_{w0} + \bbeta_{w}^\top \bx}}{ 1 + \sum_{u=1}^{W-1} \exp \parens{\beta_{u0} + \bbeta_{u}^\top \bx}}, 
+	\end{align*}
+	where we set $\beta_{W0} = 0$ and $\bbeta_W = \boldzero_p$ in the model. The local log-likelihood for this classification problem is 
+	\begin{align*}
+		& \sum_{i=1}^n K_{\lambda} \parens{\bx_0, \bx_i} \bigg\{ \beta_{g_i 0} \parens{\bx_0} + \bbeta_{g_i} \parens{\bx_0}^\top \parens{\bx_i - \bx_0} \nonumber \\ 
+		& \qquad \qquad \qquad - \log \bracks[\bigg]{ 1 + \sum_{w=1}^{W-1} \exp \parens{\beta_{w0} + \bbeta_w \parens{\bx_0}^\top \parens{\bx_i - \bx_0}} }. 
+		\bigg\}
+	\end{align*}
+	Notice that in the local log-likelihood equation above, we center at $\bx = \bx_0$. 
+%	The fitted probability at $\bx = \bx_0$ of Class $w$ is 
+%	\begin{align}
+%		\widehat{\Pr} \parens{G = w \,\vert\, X = \bx_0} = \frac{\exp\parens{\hat{\beta}_{j0} \parens{\bx_0}}}{1 + \sum_{k=1}^{J-1} \exp \parens{\hat{\beta}_{k0} \parens{\bx_0}}}. 
+%	\end{align}
+\end{enumerate}
+
+
+\section*{VI. Kernel Density Estimation and Classification} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Problem Statement:} Suppose $X$ is a random variable over $\Real$ or a subset of $\Real$ whose probability density function is $f_X$. Suppose we have a random sample $x_1, \cdots, x_n$ drawn from $f_X$. We wish to estimate the value of $f_X$ at a point $x_0$. 
+	
+	\item \textbf{A First Attempt:} A natural local estimate of density has the following form 
+	\begin{align*}
+		\hat{f}_X \parens{x_0} = \frac{\abs[\big]{\sets{x_i \,\vert\, x_i \in \calN \parens{x_0}}}}{n \lambda}, 
+	\end{align*}
+	where $\calN \parens{x_0}$ is a small metric neighborhood around $x_0$ of width $\lambda$. The \textit{problem} of this estimate is that it is bumpy and \textit{not} smooth. 
+	
+	\item \textbf{Smooth Density Estimate:} A smooth estimate is \textit{Parzen estimate} of the form 
+	\begin{align}\label{kde}
+		\hat{f}_X \parens{x_0} = \frac{1}{n \lambda} \sum_{i=1}^n K_{\lambda} \parens{x_i, x_0}, 
+	\end{align}
+	where a popular choice of $K_\lambda$ is the Gaussian kernel 
+	\begin{align*}
+		K_{\lambda} \parens{x, y} = \phi_{\lambda} \parens{x - y} = \exp \parens[\bigg]{- \frac{\parens{x - y}^2}{2 \lambda^2}}, 
+	\end{align*}
+	where $\phi_{\lambda} \parens{z} = \exp \parens{-z^2/\parens{2 \lambda^2}}$ is the probability density function of a normal distribution of mean 0 and variance $\lambda^2 > 0$. 
+	
+	Note that \eqref{kde} can be written as 
+	\begin{align*}
+		\hat{f}_X \parens{x_0} = \frac{1}{n \lambda} \sum_{i=1}^n K_{\lambda} \parens{x_i, x_0} = \frac{1}{n} \sum_{i=1}^n \phi_\lambda \parens{x_0 - x_i} = \parens{\widehat{F}_n * \phi_\lambda} \parens{x_0}, 
+	\end{align*}
+	which is the convolution of the empirical cumulative distribution function $\widehat{F}_n$ and the Gaussian density $\phi_{\lambda}$. Here, the empirical cdf $\widehat{F}_n$ puts mass $\frac{1}{n}$ at each observation $X_i$ and is jumpy. To obtain $\hat{f}_X$, we smooth $\widehat{F}_n$ by adding independent Gaussian noise to each observation $x_i$. 
+	
+	\textit{Extensions to Higher-Dimension:} We can extend the density estimation idea to $\Real^p$ and the result is 
+	\begin{align*}
+		\hat{f}_X \parens{x_0} = \frac{1}{n \parens{2 \lambda^2 \pi}^{\frac{p}{2}}} \sum_{i=1}^n \exp \parens[\bigg]{-\frac{1}{2 \lambda^2} \norm{x_i - x_0}_2^2}. 
+	\end{align*}
+	
+	\item \textbf{Kernel Density Classification:} We use the nonparametric density estimates directly to solve the classification problem. Suppose we have $W$ classes in total. Given the training data set, we fit nonparametric class-conditional density estimates $\hat{f}_w$ for each of $w = 1, \cdots, W$ separately, and also estimate the class prior probabilities $\hat{\pi}_j$. Then, by Bayes' rule, we obtain the posterior probabilities 
+	\begin{align*}
+		\widehat{\Pr} \parens{G = w \,\vert\, X = \bx_0} = \frac{\hat{\pi}_w \hat{f}_w \parens{\bx_0}}{\sum_{u=1}^W \hat{\pi}_u \hat{f}_u \parens{\bx_0}}. 
+	\end{align*}
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item If classification is the ultimate goal, learning the separate class densities may \emph{not} be necessary. 
+		\item When the dimensionality of feature space is large, this approach is not attractive due to difficulties in density estimation. 
+	\end{enumerate}
+	
+	\item \textbf{The Naive Bayes Classifier:} The naive Bayes classifier applies when the dimensionality $p$ of the feature space is \underline{high}, making the (joint) density estimation unattractive. 
+	
+	\textit{Assumption:} Given a class $G = w$, the features $X = \parens{X_1, \cdots, X_p}^\top$ are \emph{independent}, that is, 
+	\begin{align*}
+		f_w \parens{\bx} = \prod_{j=1}^p f_{wj} \parens{x_j}. 
+	\end{align*}
+	Notice that this assumption can reduce the problem dramatically for the following reasons: 
+	\begin{itemize}
+		\item The individual class-conditional marginal densities $f_{wj}$ can each be estimated separately using one-dimensional kernel density estimates, avoiding the difficulties appearing in high-dimensional kernel density estimation; 
+		\item If a component of $\bx$ is discrete, an appropriate histogram estimate can be used. 
+	\end{itemize}
+	
+	\textit{Derivation:} We use Class $W$ as the base class and consider Class $w = 1, \cdots, W-1$: 
+	\begin{align}
+		\log \frac{\Pr \parens{G = w \,\vert\, X = \bx}}{\Pr \parens{G = W \,\vert\, X = \bx}} = & \, \log \frac{\pi_w f_w \parens{\bx}}{\pi_W f_W \parens{\bx}} \nonumber \\
+		= & \, \log \frac{\pi_w \prod_{j=1}^p f_{wj} \parens{x_j}}{\pi_W \prod_{j=1}^p f_{Wj} \parens{x_j}} \nonumber \\
+		= & \, \log \frac{\pi_w}{\pi_W} + \log \frac{\prod_{j=1}^p f_{wj} \parens{x_j}}{\prod_{j=1}^p f_{Wj} \parens{x_j}} \nonumber \\
+		= & \, \log \frac{\pi_w}{\pi_W} + \sum_{j=1}^p \log \frac{f_{wj} \parens{x_j}}{f_{Wj} \parens{x_j}} \nonumber \\
+		= & \, \alpha_w + \sum_{j=1}^p g_{wj} \parens{x_j}, \label{naive.bayes}
+	\end{align}
+	where $\alpha_w = \log \parens{\pi_w / \pi_W}$ and $g_{wj} = \log \parens{f_{wj} \parens{x_j} / f_{Wj} \parens{x_j}}$. Note that \eqref{naive.bayes} is of the form of a generalized additive model. 
+	
+	\textit{Explanation of why Naive Bayes classifier works:} Under the independence assumption, the individual class-conditional density estimates may be biased, but this bias does \emph{not} hurt the posterior probabilities as much, especially near the decision regions. 
+\end{enumerate}
+
+\section*{VII. Radial Basis Functions and Kernels}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Introduction:} \textit{Kernel methods} achieve \underline{flexibility} by fitting simple models in a region local to the target point $\bx_0$. Localization is achieved via a weighting kernel $ K_\lambda $, and individual observations receive weights $ K_\lambda \parens{\bx_0, \bx_i}$. 
+	
+	\textit{Radial basis functions} combine these ideas, by treating the kernel functions $K_\lambda \parens{\bxi, \bx}$ as basis functions. This leads to the model
+	\begin{align*}
+		f \parens{\bx} = \sum_{j=1}^M \beta_j K_{\lambda_j} \parens{\bxi_j, \bx} = \sum_{j=1}^M \beta_j D \parens[\bigg]{\frac{{\norm{\bxi_j - \bx}}}{\lambda_j}}, 
+	\end{align*}
+	where each basis element is indexed by a \textit{location} or \textit{prototype} parameter $\bxi_j$ and a \textit{scale} parameter $\lambda_j$. One popular choice of the kernel function $D$ is the standard Gaussian density function. 
+	
+	\item \textbf{Parameter Estimation:} 
+	\begin{enumerate}
+		\item \textit{Method 1 --- Least Squares Estimation:} We use least squares method for regression to estimate the parameter values $\sets{ \lambda_j, \bxi_j, \beta_j }_{j=1}^M$. We optimize the sum-of-squares with respect to all parameters 
+		\begin{equation}\label{eq-rbf-ls}
+			\minimize_{\sets{ \lambda_j, \bxi_j, \beta_j }_{j=1}^M} \braces[\Bigg]{\sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^M \beta_j \exp \parens[\bigg]{- \frac{\parens{\bx_i - \bxi_j}^\top \parens{\bx_i - \bxi_j}}{\lambda_j^2}}}^2}. 
+		\end{equation}
+		This model is referred to as a radial basis function (RBF) network. 
+		
+		The objective function in \eqref{eq-rbf-ls} is \emph{non-convex} and have multiple local minima, and can be solved by using algorithms in neural networks. 
+		
+		\item \textit{Method 2 --- Two-stage Estimation:} Estimate $\sets{ \lambda_j, \bxi_j }_{j=1}^M$ separately from $\bbeta := \parens{\beta_0, \beta_1, \cdots, \beta_M}$. 
+		\begin{enumerate}
+			\item Given $\sets{ \lambda_j, \bxi_j }_{j=1}^M$, estimating $\bbeta$ is a \textit{least squares} problem; 
+			\item Given $\bbeta$, we can estimate $\sets{ \lambda_j, \bxi_j }_{j=1}^M$ by the following approaches: 
+			\begin{itemize}
+				\item Fit a Gaussian mixture density model to the feature variables in the training data, i.e., $\bx_1, \cdots, \bx_n$, and from here we can obtain both $\sets{ \lambda_j, \bxi_j }_{m=1}^M$; 
+				\item Use clustering methods to locate the prototypes $\bxi_j$ and let $\lambda_j = \lambda$ as a hyper-parameter. 
+			\end{itemize}
+		\end{enumerate}
+		
+		\item \textit{Problem of Treating $\lambda_j = \lambda$:} 
+		\begin{itemize}
+			\item Assuming $\lambda_j = \lambda$ for all $j$ reduces the parameter set and results in a simpler model to fit; 
+			\item This approach creates \emph{holes}, i.e., the regions of $\Real^p$ where none of the kernels has appreciable support. 
+		\end{itemize}
+		A remedy is to use \emph{renormalized radial basis functions} defined as 
+		\begin{align*}
+			h_j \parens{x} = \frac{D \parens{\norm{\bx - \bxi_j}_2/\lambda}}{\sum_{k=1}^M D \parens{\norm{\bx - \bxi_k}_2/\lambda}}. 
+		\end{align*}
+		
+		\textit{Remark.} Recall that the Nadaraya-Watson kernel-weighted average in $\Real^p$ is of the form 
+		\begin{align*}
+			\hat{f} \parens{\bx_0} = \frac{\sum_{i=1}^n K_\lambda \parens{\bx_i, \bx_0} y_i}{\sum_{i=1}^n K_\lambda \parens{\bx_i, \bx_0}} = \sum_{i=1}^n y_i \frac{K_\lambda \parens{\bx_i, \bx_0}}{\sum_{i=1}^n K_\lambda \parens{\bx_i, \bx_0}} = \sum_{i=1}^n y_i h_i\parens{\bx_0},  
+		\end{align*}
+		which can be viewed as an expansion in renormalized radial basis functions. In such an expansion, $\bxi_i = \bx_i$ and $\hat{\beta_i} = y_i$ for all $i = 1, \cdots, n$. 
+	\end{enumerate}
+\end{enumerate}
+
+
+\section*{VIII. Mixture Models for Density Estimation and Classification} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Gaussian Mixture Model:} The \emph{Gaussian mixture model} of $M$ components has the form 
+	\begin{equation}\label{gaumix}
+		f \parens{x} = \sum_{m=1}^M \alpha_m \phi \parens{\bx; \bmu_m, \bSigma_m}, 
+	\end{equation}
+	where $\alpha_m$'s are the mixing weights satisfying $\alpha_m \ge 0$ and $\sum_{m=1}^M \alpha_m = 1$ and $\phi \parens{\,\cdot\,; \bmu, \bSigma}$ is the Gaussian density function with mean $\bmu$ and covariance matrix $\bSigma$. We can use the Gaussian mixture model \eqref{gaumix} to do density estimation. 
+	
+	\item \textbf{Special Cases of Gaussian Mixture Model:} We consider the following two special cases of the Gaussian mixture model: 
+	\begin{itemize}
+		\item If the covariance matrices are a multiple of identity matrix, i.e., 
+		\begin{align*}
+			\bSigma_m = \sigma_m\cdot \bI, 
+		\end{align*}
+		then \eqref{gaumix} has the form of a radial basis expansion; 
+		
+		\item If, additionally, $\sigma_m = \sigma > 0$ is fixed, and $M \nearrow n$, the maximum likelihood estimate for \eqref{gaumix} approaches the kernel density estimate 
+		\begin{align*}
+			\hat{f}_X \parens{\bx_0} = \frac{1}{n \lambda} \sum_{i=1}^n K_\lambda \parens{\bx_0, \bx_i}, 
+		\end{align*}
+		where $\hat{\alpha}_m = \frac{1}{n}$ and $\hat{\bmu}_m = \bx_m$. 
+	\end{itemize}
+	
+	% \item \textbf{Parameter Estimation:} To estimate the parameters $\left\{ \alpha_m, \bmu_m, \bSigma_m \right\}_{m=1}^M$, one can use the EM algorithm. 
+
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

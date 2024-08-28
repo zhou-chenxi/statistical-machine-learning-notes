@@ -1,0 +1,1896 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+%\usepackage[T1]{fontenc}
+%\usepackage{newpxtext,newpxmath}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 5, Linear Methods for Regression}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Linear Methods for Regression}{5}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 3, Linear Methods for Regression} in \textcite{Friedman2001-np}, 
+	\item \textit{Chapter 5, Model Assessment and Selection in Multiple Regression} in \textcite{Izenman2009-jk}, 
+	\item \textit{Chapter 2, The Lasso for Linear Models} in \textcite{Hastie2015-rm}, and
+	\item \textit{Chapter 4, Generalizations of the Lasso Penalty} in \textcite{Hastie2015-rm}. 
+\end{itemize}
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Basic Assumption:} Suppose we have an input vector $X := \parens{X_1, \cdots, X_{p}}^\top \in \calX \subseteq \Real^p$ and wish to predict a real-valued output $Y$. The \emph{linear models} for regression assumes that 
+	\begin{enumerate}
+		\item the regression function $\E \bracks{Y \,\vert\, X}$ is linear in the input vector $X := \parens{X_1, \cdots, X_{p}}^\top$, or 
+		\item the linear model is a \textit{reasonable} approximation. 
+	\end{enumerate}
+	Under this assumption, the linear regression model has the form 
+	\begin{align}\label{eq-linear-model}
+		Y = f \parens{X} + \varepsilon, 
+	\end{align}
+	where 
+	\begin{align}
+		f \parens{X} := \beta_0 + \sum_{j=1}^{p} \beta_{j} X_j, 
+	\end{align}
+	$\varepsilon$ is an unobservable random variable (the \emph{error component}) with mean 0 and variance $\sigma^2$ (typically unknown), and $\parens{\beta_0, \bbeta^\top}^\top$ is the unknown coefficient vector to be estimated with $\bbeta := \parens{\beta_1, \cdots, \beta_{p}}^\top \in \Real^{p}$. 
+	
+	\item \textbf{Advantages of Linear Regression Models:} 
+	\begin{itemize}
+		\item They are simple and provide an adequate and interpretable description of how inputs affect the output; 
+		\item Linear methods can be applied to transformations of inputs and allow more flexibility. 
+	\end{itemize}
+	
+	\item \textbf{Goals:} The goals are the following 
+	\begin{enumerate}
+		\item estimation of the (true) value of the coefficient vector $\parens{\beta_0, \bbeta^\top}^\top$ and $\sigma^2$; 
+		\item selection of a subset of useful independent variables to model $Y$ in the case where too many independent variables are present; 
+		\item prediction of future values of $Y$, given unseen values of the input variables; 
+		\item quantification of the accuracy of the predictions. 
+	\end{enumerate}
+		
+\end{enumerate}
+
+
+\section*{II. Least Squares Regression Function and Linear Regression Model}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Suppose that the input vector, $X := \parens{X_1, \cdots, X_p}^\top \in \calX \subseteq \Real^p$, and the random output variable, $Y \in \calY \subseteq \Real$, are both random and are jointly distributed according to the probability distribution $\Pr_{X, Y}: \calX \times \calY \to \bracks{0, 1}$. Assume 
+	\begin{enumerate}
+		\item $\E \bracks{X} = \bmu_X \in \Real^p$, 
+		\item $\E \bracks{Y} = \mu_Y \in \Real$, 
+		\item the covariance matrix of $X$ is $\bSigma_{XX} \in \Real^{p \times p}$, 
+		\item the variance of $Y$ is $\Sigma_Y = \sigma_Y^2 > 0$, and 
+		\item the covariance between $X$ and $Y$ is $\bSigma_{XY} \in \Real^p$. 
+	\end{enumerate}
+	
+	\item \textbf{Loss Function, Risk, Bayes Rule, and Bayes Risk:} 
+	\begin{enumerate}
+		\item \textit{Loss Function:} Let $f: \calX \to \calY$ be a function. Let $L \parens{y, f \parens{x}}$ be a measurement of the accuracy which gives the loss incurred if $y$ is predicted by $f \parens{x}$. The function $L: \calY \times \calY \to [0, \infty)$ is called the \emph{loss function}. 
+		\item \textit{Risk:} The expected loss is the \textit{risk function} given by 
+		\begin{align}\label{eq-risk}
+			R \parens{f} := \E \bracks[\big]{L \parens{Y, f \parens{X}}}, 
+		\end{align}
+		which measures the quality of $f$ as a predictor. In \eqref{eq-risk}, the expectation is taken under $\Pr_{X, Y}$, the joint distribution of $X$ and $Y$. 
+		
+		\item \textit{Bayes Rule and Bayes Risk:} The \textit{Bayes rule} is the function $f^*$ that minimizes $R \parens{f}$, that is, 
+		\begin{align*}
+			f^* := \argmin_f R \parens{f}, 
+		\end{align*}
+		and the corresponding \textit{Bayes risk} is $R \parens{f^*}$. 
+	\end{enumerate}
+	
+	\item \textbf{Squared Error Loss:} If we let 
+	\begin{align*}
+		L \parens{y, f \parens{\bx}} = \frac{1}{2} \parens{y - f \parens{\bx}}^2, 
+	\end{align*}
+	this particular loss function is called the \textit{squared error loss}. 
+	
+	\item \textbf{Derivation of Regression Function:} Suppose that the loss function is the \textit{squared error loss}. The corresponding risk function is 
+	\begin{align*}
+		R \parens{f} = & \, \E \bracks[\bigg]{\frac{1}{2} \parens{Y - f \parens{X}}^2}
+		= \E_{X} \bracks[\Bigg]{\E_{Y \vert X} \bracks[\bigg]{\frac{1}{2} \parens{Y - f \parens{\bx}}^2 \,\vert\, X = \bx}}. 
+	\end{align*}
+	We can minimize $R \parens{f}$ pointwise at each $X = \bx$. Note that 
+	\begin{align*}
+		Y - f \parens{\bx} = \parens[\big]{Y - \mu \parens{\bx}} + \parens[\big]{\mu \parens{\bx} - f \parens{\bx}}, 
+	\end{align*}
+	where $\mu \parens{\bx} := \E_{Y \vert X} \bracks{Y \,\vert\, X = \bx}$ is the mean of the conditional distribution of $Y$ given $X = \bx$ and is called the \emph{regression function} of $Y$ on $X$. 
+	
+	Then, note the following 
+	\begin{align*}
+		\E_{Y \vert X} \bracks[\big]{ \parens{Y - f \parens{\bx}}^2 \,\vert\, X = \bx} = & \, \E_{Y \vert X} \bracks[\big]{ \parens{Y - \mu \parens{\bx} + \mu \parens{\bx} - f \parens{\bx}}^2 \,\vert\, X = \bx} \\ 
+		= & \, \E_{Y \vert X} \bracks{ \parens{Y - \mu \parens{\bx}}^2 \,\vert\, X = \bx} + \parens{\mu \parens{\bx} - f \parens{\bx}}^2, 
+	\end{align*}
+	which is minimized with respect to $f$ by 
+	\begin{align*}
+		f^* \parens{\bx} = \mu \parens{\bx} = \E_{Y \vert X} \bracks{Y \,\vert\, X = \bx}. 
+	\end{align*}
+	Therefore, the pointwise minimum of $\E_{Y \vert X} \bracks{ \parens{Y - f \parens{\bx}}^2 \,\vert\, X = \bx}$ is 
+	\begin{align*}
+		\E_{Y \vert X} \bracks{ \parens{Y - f^* \parens{\bx}}^2 \,\vert\, X = \bx} = \E_{Y \vert X} \bracks{ \parens{Y - \mu \parens{\bx}}^2 \,\vert\, X = \bx}. 
+	\end{align*}
+	Finally, the Bayes risk is given by 
+	\begin{align*}
+		R \parens{f^*} = \frac{1}{2} \E_{X} \bracks[\big]{\E_{Y \vert X} \bracks{ \parens{Y - \mu \parens{\bx}}^2 \,\vert\, X = \bx}} = \frac{1}{2} \E \bracks[\big]{\parens{Y - \mu \parens{X}}^2}. 
+	\end{align*}
+	
+	\item \textbf{Linear Regression Model:} Suppose that we are in the linear model framework so that the regression function $\mu$ is a linear combination of components of $X$, i.e., 
+	\begin{align}\label{eq-linear-model-random-x}
+		\mu \parens{X} = \beta_0 + \sum_{j=1}^p \beta_j X_j = \beta_0 + \bbeta^\top X, 
+	\end{align}
+	where $\beta_0$ is the intercept, $\bbeta := \parens{\beta_1, \beta_2, \cdots, \beta_p}^\top \in \Real^p$, and both $\beta_0$ and $\bbeta$ are unknown. We choose $\beta_0$ and $\bbeta$ to minimize the following risk function 
+	\begin{align*}
+		\widetilde{R} \parens{\beta_0, \bbeta} := R \parens{\mu} = \E \bracks[\bigg]{\frac{1}{2} \parens{Y - \underbrace{\parens{\beta_0 + \bbeta^\top X}}_{=\mu \parens{X}}}^2}. 
+	\end{align*}
+	Let 
+	\begin{align*}
+		\parens{\beta_0^*, {\bbeta^*}^{\top}}^{\top} := \argmin_{\beta_0, \bbeta} \widetilde{R} \parens{\beta_0, \bbeta}. 
+	\end{align*}
+	Differentiating $\widetilde{R}$ with respect to $\beta_0$ and $\bbeta$ yield 
+	\begin{align*}
+		\frac{\partial \widetilde{R}}{\partial \beta_0} = & \, - \E \bracks{Y - \beta_0 - \bbeta^\top X} \\ 
+		= & \, - \parens[\Big]{\mu_Y - \beta_0 - \bbeta^\top \bmu_X} , \\ 
+		\frac{\partial \widetilde{R}}{\partial \bbeta} = & \, - \E \bracks{X^\top \parens{Y - \beta_0 - \bbeta^\top X}} \\ 
+		= & \, - \parens[\Big]{\E \bracks{X^\top Y} - \beta_0 \E \bracks{X^\top} - \E \bracks{X X^{\top}} \bbeta} \\ 
+		= & \, - \parens[\Big]{\parens[\big]{\bSigma_{XY} + \bmu_X^\top \mu_Y} - \beta_0 \bmu_X^\top - \parens[\big]{\bSigma_{XX} + \bmu_X \bmu_X^\top} \bbeta}. 
+	\end{align*}
+	Setting $\frac{\partial \widetilde{R}}{\partial \beta_0} = 0$ and $\frac{\partial \widetilde{R}}{\partial \bbeta} = \boldzero_p$, we have 
+	\begin{align*}
+		\beta_0^* = & \, \mu_Y - \bmu_X^\top \bbeta^*, \qquad \text{ and } \qquad
+		\bbeta^* = \bSigma_{XX}^{-1} \bSigma_{XY}. 
+	\end{align*}
+	Finally, notice that $\widetilde{R}$ is a convex function of $\parens{\beta_0, \bbeta^\top}^{\top}$, any stationary point must be a global minimum. We conclude that, at $\parens{\beta_0^*, {\bbeta^*}^{\top}}^\top$, $\widetilde{R}$ achieves the global minimum. 
+	
+%	\item \textbf{Estimation of $\beta_0^*$ and $\bbeta^*$:} Suppose that the joint distribution function $\Pr_{X, Y}$ is \emph{not} known and that we have random samples $\sets{\parens{\bx_i, y_i}}_{i=1}^n$ from $\Pr_{X, Y}$. We use these data to estimate $\beta_0^*$ and $\bbeta^*$. 
+%	
+%	With data, we can estimate $\bmu_X$, $\mu_Y$, $\bSigma_{XX}$, $\bSigma_{XY}$, and $\bSigma_{YY}$ by 
+%	\begin{align*}
+%		& \, \widehat{\bmu}_X := \frac{1}{n} \sum_{i=1}^n \bx_i, && \, \widehat{\mu}_Y :=  \frac{1}{n} \sum_{i=1}^n y_i \\ 
+%		& \, \widehat{\bSigma}_{XX} := \frac{1}{n} \sum_{i=1}^n \parens{\bx_i - \widehat{\bmu}_X} \parens{\bx_i - \widehat{\bmu}_X}^\top,  && \, \widehat{\bSigma}_{YY} := \frac{1}{n} \sum_{i=1}^n \parens{y_i - \widehat{\mu}_Y}^2, \\ 
+%		& \, \widehat{\bSigma}_{XY} := \frac{1}{n} \sum_{i=1}^n                                                                                                                                                                                                                                                       \parens{\bx_i - \widehat{\bmu}_X} \parens{y_i - \widehat{\mu}_Y}. 
+%	\end{align*}
+%	As a consequence, we can estimate $\beta_0^*$ and $\bbeta^*$ by 
+%	\begin{align*}
+%		\widehat{\beta}_0^* := \widehat{\mu}_Y - \widehat{\bmu}_X^\top \widehat{\bbeta^*} \qquad \text{ and } \qquad \widehat{\bbeta^*} := \widehat{\bSigma}_{XX}^{-1} \widehat{\bSigma}_{XY}, 
+%	\end{align*}
+%	respectively. 
+%	
+%	\item \textbf{Prediction:} Suppose we have $\parens{X_0, Y_0} \sim \Pr_{X, Y}$, where $X_0$ and $Y_0$ are related by 
+%	\begin{align*}
+%		Y_0 = \mu \parens{X_0} + \varepsilon, 
+%	\end{align*}
+%	with $\mu \parens{X_0} = \beta_0 + X_0^\top \bbeta$, $\E \bracks{\varepsilon} = 0$ and $\var \bracks{\varepsilon} = \sigma^2$. The predicted value of the linear model at $X_0$, denoted by $\widehat{Y}_0$, is 
+%	\begin{align*}
+%		\widehat{Y}_0 = \widehat{\beta}_0^* + X_0^\top \widehat{\bbeta^*}. 
+%	\end{align*}
+%	
+%	The \emph{prediction error} in predicting $Y_0$ using $\widehat{Y}_0$, measured by the mean squared error, is 
+%	\begin{align*}
+%		& \, \E \bracks[\big]{\parens{Y_0 - \widehat{Y}_0}^2} \\ 
+%		= & \, \E \bracks[\big]{\parens{Y_0 - \mu \parens{X_0} + \mu \parens{X_0} - \widehat{Y}_0}^2} \\ 
+%		= & \, \E \bracks[\big]{\parens{Y_0 - \mu \parens{X_0}}^2} + \E \bracks[\big]{\parens{\mu \parens{X_0} - \widehat{Y}_0}^2} + 2 \E \bracks[\big]{\parens{Y_0 - \mu \parens{X_0}} \parens{\mu \parens{X_0} - \widehat{Y}_0}} \\ 
+%		= & \, \E \bracks{\varepsilon^2} + \E \bracks[\big]{\parens[\big]{\parens{\beta_0 + X_0^\top \bbeta} - \parens{\widehat{\beta}_0^* + X_0^\top \widehat{\bbeta^*}}}^2} \\ 
+%		= & \, \sigma^2 + \parens{\widehat{\beta}_0^* - \beta}^2 + 2 \E \bracks{\parens{\widehat{\beta}_0^* - \beta_0} \parens{\widehat{\bbeta^*} - \bbeta}^\top X_0} + \E \bracks[\big]{\parens{\widehat{\bbeta^*} - \bbeta}^\top X_0 X_0^\top \parens{\widehat{\bbeta^*} - \bbeta}} \\ 
+%		= & \, \sigma^2 + \parens{\widehat{\beta}_0^* - \beta}^2 + 2 \parens{\widehat{\beta}_0^* - \beta_0} \parens{\widehat{\bbeta^*} - \bbeta}^\top \bmu_X + \parens{\widehat{\bbeta^*} - \bbeta}^\top \parens{\bSigma_{XX} + \bmu_X \bmu_X^\top} \parens{\widehat{\bbeta^*} - \bbeta}, 
+%	\end{align*}
+%	where the expectation is taken with respect to $\parens{X_0, Y_0}$ \emph{only}. The term $\E \bracks[\big]{\parens{\mu \parens{X_0} - \widehat{Y}_0}^2}$ is called the \emph{expected squared bias}. 
+	
+\end{enumerate}
+
+
+\section*{III. Least Squares Regression with Data}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Data and Assumption:} We assume that we have a set of training data $\sets{\parens{\bx_i, y_i}}_{i=1}^n$, where $\parens{\bx_i, y_i} \iid \Pr_{X, Y}$ and $\Pr_{X, Y}: \calX \times \calY \to \bracks{0, 1}$ denotes the joint distribution of $\parens{X^\top, Y}^\top$. Here, each $\bx_i = \parens{1, x_{i,1}, \cdots, x_{i,p}}^\top \in \Real^{p+1}$ is a vector of feature measurements for the $i$-th case. 
+	
+	We assume that $Y$ and $X$ are related by the linear regression model \eqref{eq-linear-model}. To reiterate, we assume 
+	\begin{align*}
+		Y = \beta_0 + \sum_{j=1}^p \beta_j X_j + \varepsilon, 
+	\end{align*}
+	where $\varepsilon$ is an unobservable random variable (the \emph{error component}) with mean 0 and variance $\sigma^2$. 
+	
+	\item \textbf{Parameter Estimation:} To estimate $\widetilde{\bbeta} := \parens{\beta_0, \bbeta^\top}^\top \in \Real^{p+1}$, we use the \textit{least squares} method and pick the coefficients $\widetilde{\bbeta}$ to minimize the \textit{residual sum of squares}
+	\begin{equation}\label{eq-ls}
+		\mathrm{RSS} \, \parens{\widetilde{\bbeta}} := \frac{1}{2} \sum_{i=1}^n \parens[\big]{y_i - f \parens{\bx_i}}^2 = \frac{1}{2} \sum_{i=1}^n \parens[\Bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{i,j}}^2. 
+	\end{equation}
+%	This method is reasonable 
+%	\begin{enumerate}
+%		\item if $\sets{\parens{\bx_i, y_i}}_{i=1}^n$ represent \textit{independent} random draws from their population, or, 
+%		\item if the $\bx_i$'s were not drawn randomly, the $y_i$'s are \textit{conditionally independent} given the inputs $\bx_i$. 
+%	\end{enumerate}
+
+	\item \textbf{Matrix Form of $\mathrm{RSS}$:} We write \eqref{eq-ls} in the following vector-matrix form 
+	\begin{align*}
+		\mathrm{RSS} \, \parens{\widetilde{\bbeta}} = \parens{\bY - \bX \widetilde{\bbeta}}^\top \parens{\bY - \bX \widetilde{\bbeta}}, 
+	\end{align*}
+	where 
+	\begin{itemize}
+		\item $\bX \in \Real^{n \times \parens{p+1}}$ is the \emph{design matrix} with each row being an input vector for each case $\bx_i$ and each column corresponding to a variate (the first column is a vector of 1), and 
+		\item $\bY := \parens{y_1, \cdots, y_n}^\top \in \Real^{n}$ is the $n$-dimensional vector of outputs in the training set. 
+	\end{itemize}
+	
+	\item \textbf{Least Squares Estimator of $\widetilde{\bbeta}$:} We minimize $\mathrm{RSS}$ over $\Real^{p+1}$ 
+	\begin{align*}
+		\minimize_{\widetilde{\bbeta}} \, \mathrm{RSS} \parens{\widetilde{\bbeta}}, 
+	\end{align*}
+	which is an unconstrained convex optimization problem. 
+	
+	Differentiating $\mathrm{RSS}$ with respect to $\widetilde{\bbeta}$ and setting the derivative to $\boldzero_{p+1}$ yield 
+	\begin{equation}\label{eq-normal-eq}
+		\frac{\partial \mathrm{RSS} \, \parens{\widetilde{\bbeta}}}{\partial \widetilde{\bbeta}} = - \bX^\top \parens{\bY - \bX \widetilde{\bbeta}} \stackrel{\text{set}}{=} 0. 
+	\end{equation} 
+	Assuming that the design matrix $\bX$ is of full column rank, the least squares estimator for $\widetilde{\bbeta}$ is 
+	\begin{align*}
+		\widehat{\bbeta} := \parens{\bX^\top \bX}^{-1} \bX^\top \bY, 
+	\end{align*}
+	and this estimator is unique. 
+	
+	Taking the second derivative of RSS, we obtain 
+	\begin{align*}
+		\frac{\partial^2 \mathrm{RSS} \, \parens{\widetilde{\bbeta}}}{\partial \widetilde{\bbeta} \partial \widetilde{\bbeta}^\top} = \bX^\top \bX \succeq 0, 
+	\end{align*}
+	implying that RSS achieves the minimum at $\bbeta = \widehat{\bbeta}$. 
+	
+	\item \textbf{Fitted Value and Projection Matrix:} The \textit{fitted values} at the training data are 
+	\begin{align*}
+		\widehat{\bY} := \parens{\hat{y}_1, \hat{y}_2, \cdots, \hat{y}_n}^\top = \bX \widehat{\bbeta} = \bX \parens{\bX^\top \bX}^{-1} \bX^\top \bY = \bH \bY, 
+	\end{align*}
+	where the matrix $\bH := \bX \parens{\bX^\top \bX}^{-1} \bX^\top$ is called the \textit{hat} or \textit{projection} matrix. 
+	
+	\item \textbf{Residual Vector:} The residual vector, defined as 
+	\begin{align*}
+		\hat{\beps} := \bY - \widehat{\bY} = \parens{\bI_n - \bH} \bY, 
+	\end{align*}
+	is the least squares estimates of the unobserved errors $\beps := \parens{\varepsilon_1, \cdots, \varepsilon_n}^\top$. 
+	
+	\item \textbf{Geometric Interpretation of Least Squares:} Let 
+	\begin{align*}
+		\bX = \begin{bmatrix}
+			\bc_0 \hspace{10pt} \bc_1 \hspace{10pt} \cdots \hspace{10pt} \bc_p 
+			\end{bmatrix} \in \Real^{n \times \parens{p+1}}, 
+	\end{align*}
+	where $\bc_j \in \Real^n$ denotes the $j$-th column of $\bX$, for all $j = 0, \cdots, p$, and $\bc_0 := \parens{1, \cdots, 1}^\top \in \Real^n$. Then, these $\parens{p+1}$ $n$-dimensional vectors span a subspace of $\Real^n$, called the \emph{column space} of $\bX$. In addition, note that $\bX \widetilde{\bbeta}$ represents a linear combination of columns of $\bX$. 
+	
+	In the least squares, we minimize $\mathrm{RSS} \, \parens{\widetilde{\bbeta}} = \frac{1}{2} \norm{\bY - \bX \widetilde{\bbeta}}_2^2$ by choosing $\widehat{\bbeta}$ so that the \textit{residual vector} $\bY - \widehat{\bY} = \bY - \bX \widehat{\bbeta}$ is orthogonal to the column space of $\bX$ (see \eqref{eq-normal-eq}). Therefore, the resulting estimate $\widehat{\bY}$ is the \emph{orthogonal projection} of $\bY$ onto this column subspace. 
+	
+	\textit{Remark.} Since $\bX \widehat{\bbeta} = \bH \bY$, the hat matrix $\bH$ computes the orthogonal projection. Hence, it is called the \emph{projection matrix}. 
+	
+	\item \textbf{Property of $\bH$:} 
+	\begin{enumerate}
+		\item Both $\bH$ and $\bI_n - \bH$ are symmetric and idempotent; 
+		\item $\bH \parens{\bI_n - \bH} = \boldzero_{n \times n}$; and 
+		\item $\bH \bX = \bX$ and $\parens{\bI_n - \bH} \bX = \boldzero_{n \times n}$. 
+	\end{enumerate}
+	
+	\item \textbf{Variance of $\widehat{\bbeta}$:} 
+	\begin{enumerate}
+		\item \textit{Assumptions:} Assume that 
+		\begin{enumerate}
+			\item the observations $y_i$'s are \textit{uncorrelated} and have \textit{constant variance} $\sigma^2$, and 
+			\item the $\bx_i$'s are fixed (not random). 
+		\end{enumerate}
+		
+		\item \textit{Variance of $\widehat{\bbeta}$:} Since $\widehat{\bbeta} = \parens{\bX^\top \bX}^{-1} \bX^\top \bY$, then
+		\begin{align*}
+			\var \bracks[\big]{\widehat{\bbeta}} = & \, \var \bracks[\big]{\parens{\bX^\top \bX}^{-1} \bX^\top \bY} \\ 
+			= & \, \parens{\bX^\top \bX}^{-1} \bX^\top \var \bracks{\bY} \bX^\top \parens{\bX^\top \bX}^{-1} \\ 
+			= & \, \parens{\bX^\top \bX}^{-1} \bX^\top \parens{\sigma^2 \bI_n} \bX^\top \parens{\bX^\top \bX}^{-1} \\ 
+			= & \, \sigma^2 \parens{\bX^\top \bX}^{-1} \parens{\bX^\top \bX^\top} \parens{\bX^\top \bX}^{-1} \\ 
+			= & \, \sigma^2 \parens{\bX^\top \bX}^{-1}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Estimator of $\sigma^2$:} Typically, the true value of $\sigma^2$ is unknown. We can estimate it by 
+	\begin{align*}
+		\hat{\sigma}^2 = \frac{1}{n-p-1} \sum_{i=1}^n \parens{y_i - \hat{y}_i}^2, 
+	\end{align*}
+	which is an \emph{unbiased} estimator of $\sigma^2$; that is, $\E \bracks{\hat{\sigma}^2} = \sigma^2$. 
+	
+	\item \textbf{Additional Assumptions:} We require the following assumptions to make inferences about the linear regression model \eqref{eq-linear-model}: 
+	\begin{enumerate}
+		\item The linear regression model \eqref{eq-linear-model} is the \emph{correct} model for the mean; that is, the conditional expectation of $Y$ is linear in $X_1, \cdots, X_p$; 
+		\item The deviation of $Y$ around its conditional expectation is \textit{additive} and follows a \textit{normal distribution} with mean 0 and variance $\sigma^2$. 
+	\end{enumerate}
+	Mathematically, we obtain the following model 
+	\begin{align}\label{eq-linear-reg-error}
+		Y = \E \bracks{Y \,\vert\, X_1, \cdots, X_p} + \varepsilon = \beta_0 + \sum_{i=1}^p \beta_j X_j + \varepsilon, 
+	\end{align}
+	where $\varepsilon \sim \Normal \parens{0, \sigma^2}$. 
+	
+	\item \textbf{Statistical Properties of $\widehat{\bbeta}$ and $\hat{\sigma}^2$:} 
+	\begin{enumerate}
+		\item $\widehat{\bbeta}$ follows a multivariate normal distribution with mean $\widetilde{\bbeta}$ and variance $\sigma^2 \parens{\bX^\top \bX}^{-1} $, that is, 
+		\begin{align*}
+			\widehat{\bbeta} \sim \Normal \parens[\big]{\widetilde{\bbeta}, \parens{\bX^\top \bX}^{-1} \sigma^2}. 
+		\end{align*}
+		
+		\item The unbiased estimator $\hat{\sigma}^2$ follows a scaled chi-square distribution with the degrees of freedom $n - p - 1$, that is, 
+		\begin{align*}
+			\parens{n - p - 1} \hat{\sigma}^2 \sim \sigma^2 \chi^2_{n-p-1}. 
+		\end{align*}
+		
+		\item $\widehat{\bbeta}$ and $\hat{\sigma}^2$ are statistically independent. 
+	\end{enumerate}
+	
+	\item \textbf{Hypothesis Testing of a Single Coefficient:} To test 
+	\begin{align*}
+		H_0: \beta_j = 0 \qquad \text{ vs. } \qquad H_1: \beta_j \neq 0, 
+	\end{align*}
+	for $j = 1, \cdots, p$, we use the test statistic
+	\begin{align*}
+		t := \frac{\hat{\beta}_j}{\hat{\sigma}\sqrt{\bracks[\big]{\parens{\bX^\top \bX}^{-1}}_{j,j}}}, 
+	\end{align*}
+	where $\bracks[\big]{\parens{\bX^\top \bX}^{-1}}_{j,j}$ denotes the $\parens{j,j}$-th element of the matrix $\parens{\bX^\top \bX}^{-1}$. 
+	
+	Under the null hypothesis that $\beta_j = 0$, $t$ follows a $t$-distribution with the degrees of freedom $n - p - 1$. 
+	
+	\item \textbf{Confidence Interval of a Single Coefficient:} The pointwise $1 - 2\alpha$ confidence interval for $\beta_j$ is 
+	\begin{equation*}
+		\parens[\bigg]{\hat{\beta}_j - t_{n-p-1, 1 - \frac{\alpha}{2}} \times \hat{\sigma}\sqrt{\bracks[\big]{\parens{\bX^\top \bX}^{-1}}_{j,j}}, \, \hat{\beta}_j + t_{n-p-1, 1-\frac{\alpha}{2}} \times \hat{\sigma} \sqrt{\bracks[\big]{\parens{\bX^\top \bX}^{-1}}_{j,j}}}, 
+	\end{equation*}
+	where $t_{n-p-1, 1 - \frac{\alpha}{2}}$ is the $\parens{1-\frac{\alpha}{2}}$-th percentile of the $t$-distribution with the degrees of freedom $n-p-1$. 
+	
+	\item \textbf{Hypothesis Testing of a Group of Coefficients or Nested Linear Models:} Supposing we want to test whether a group of coefficients is the zero vector or not or compare two \emph{nested} linear models, we use the following test statistic 
+	\begin{equation}\label{eq-f-statistic}
+		F = \frac{\parens{\mathrm{RSS}_0 - \mathrm{RSS}_1} / \parens{p_1 - p_0}}{ \mathrm{RSS}_1 / \parens{n-p-1}}, 
+	\end{equation}
+	where $\mathrm{RSS}_1$ is the residual sum of squares for the least squares fit of the \emph{bigger} model with $p_1 + 1$ parameters, and $\mathrm{RSS}_0$ is the residual sum of squares for the nested \emph{smaller} model with $p_0 + 1$ parameters, and there are $p_1 - p_0$ parameters constrained to be zero. Here, $p_1 > p_0$. 
+	
+	The $F$-statistic measures the change in the residual sum of squares per additional parameter in the bigger model and is normalized by an estimate of $\sigma^2$ under the bigger model. Note that the denominator is the unbiased estimator of $\sigma^2$ under the bigger model. 
+	
+	Under the Gaussian assumption and the null hypothesis that the smaller model is correct, the $F$ statistic \eqref{eq-f-statistic} follows an $F_{p_1-p_0, n-p_1-1}$ distribution. 
+	
+	\item \textbf{Confidence Set for $\widetilde{\bbeta}$:} An approximate confidence set for the entire parameter vector $\widetilde{\bbeta}$ is 
+	\begin{align}\label{eq-conf-region}
+		C_{\widetilde{\bbeta}} := \sets[\bigg]{ \widetilde{\bbeta} \,\, \big\vert\,\, \parens{\widehat{\bbeta} - \widetilde{\bbeta}}^\top \, \bX^\top \bX \, \parens{\widehat{\bbeta} - \widetilde{\bbeta}} \le \hat{\sigma}^2 \parens{p+1} F_{p+1, n-p-1, 1-\alpha}}, 
+	\end{align}
+	where $F_{p+1, n-p-1, 1-\alpha}$ is the $\parens{1 - \alpha}$-percentile of the $F$ distribution with $\parens{p+1, n-p-1}$ degrees of freedom. 
+	
+	Geometrically, the confidence set \eqref{eq-conf-region} is an $\parens{p + 1}$-dimensional ellipsoid with center $\widehat{\bbeta}$ and orientation controlled by the matrix $\bX^\top \bX$. 
+	
+	\item \textbf{Statistical Properties of Fitted Value Vector $\widehat{\bY}$:} Under the model assumption \eqref{eq-linear-reg-error}, we have 
+	\begin{align*}
+		\E \bracks{\widehat{\bY}} = \bY, \qquad \text{ and } \qquad \cov \bracks{\widehat{\bY}} = \sigma^2 \bH. 
+	\end{align*}
+	
+	\item \textbf{More Properties of $\bH$:} 
+	\begin{enumerate}
+		\item The $\parens{i,j}$-th component $h_{i,j}$ of $\bH$ is the amount of leverage (or impact) that the observed value of $y_j$ exerts on the fitted value $\hat{y}_i$. The hat matrix $\bH$ is, therefore, used to identify \emph{high-leverage points}. 
+		\item The diagonal components $h_{i,i}$ satisfy $0 \le h_{i,i} \le 1$; 
+		\item Under the assumption that $\bX$ is of full column rank, the sum of the diagonal elements of $\bH$ is $p+1$; the average leverage magnitude is $\parens{p+1}/n$; 
+		\item One way to define high-leverage points is those points having 
+		\begin{align*}
+			h_{i,i} > \frac{2 \parens{p+1}}{n}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Statistical Properties of Residual Vector $\hat{\beps}$:} Under the model assumption \eqref{eq-linear-reg-error}, we have 
+	\begin{align*}
+		\E \bracks{\hat{\beps}} = \boldzero_n, \qquad \text{ and } \qquad \cov \bracks{\hat{\beps}} = \parens{\bI_n - \bH} \sigma^2. 
+	\end{align*}
+	Hence, $\var \bracks{\hat{\varepsilon}_i} = \parens{1 - h_{i,i}} \sigma^2$, where $\hat{\varepsilon}_i := y_i - \hat{y}_i$ is the $i$-th residual and $h_{i,i}$ is the $i$-th diagonal element of $\bH$. 
+	
+	\item \textbf{Internally Studentized Residuals:} The $i$-th \emph{internally Studentized residual}, denoted by $\tilde{\varepsilon}_i$, is obtained by dividing the residual by its variance, i.e., 
+	\begin{align*}
+		\tilde{\varepsilon}_i = \frac{\hat{\varepsilon}_i}{\hat{\sigma} \sqrt{1 - h_{i,i}}}, 
+	\end{align*}
+	where $h_{i,i}$ is the $i$-th diagonal element of $\bH$. 
+	
+	\item \textbf{Diagnostics:} Because the fitted value vector $\widehat{\bY} = \bH \bY$ and the (raw) residual vector $\hat{\beps} = \parens{\bI_n - \bH} \bY$ have zero covariance and, hence, are uncorrelated, it follows that the regression of $\bY$ on $\hat{\beps}$ has zero slope. 
+	
+	If the multiple regression model is correct, then a scatterplot of residuals (or internally Studentized residuals) against fitted values should show no discernible pattern (i.e., a slope of approximately zero). 
+	
+	\item \textbf{Analysis of Variance (ANOVA):} Let $\bar{y} := \frac{1}{n} \sum_{i=1}^n y_i$. Note the following identity 
+	\begin{align*}
+		y_i - \bar{y} = \parens{y_i - \hat{y}_i} + \parens{\hat{y}_i - \bar{y}}. 
+	\end{align*}
+	Then, we have 
+	\begin{align*}
+		\sum_{i=1}^n \parens{y_i - \bar{y}}^2 = & \, \sum_{i=1}^n \bracks[\big]{\parens{y_i - \hat{y}_i} + \parens{\hat{y}_i - \bar{y}}}^2 \\ 
+		= & \, \sum_{i=1}^n \bracks[\big]{\parens{y_i - \hat{y}_i}^2 + 2 \parens{y_i - \hat{y}_i} \parens{\hat{y}_i - \bar{y}} + \parens{\hat{y}_i - \bar{y}}^2} \\ 
+		= & \, \sum_{i=1}^n \parens{y_i - \hat{y}_i}^2 + 2 \sum_{i=1}^n \parens{y_i - \hat{y}_i} \parens{\hat{y}_i - \bar{y}} + \sum_{i=1}^n \parens{\hat{y}_i - \bar{y}}^2. 
+	\end{align*}
+	We show $\sum_{i=1}^n \parens{y_i - \hat{y}_i} \parens{\hat{y}_i - \bar{y}} = 0$. Note the following 
+	\begin{align*}
+		\sum_{i=1}^n \parens{y_i - \hat{y}_i} \parens{\hat{y}_i - \bar{y}} = & \, \sum_{i=1}^n \parens{y_i - \hat{y}_i} \hat{y}_i - \sum_{i=1}^n \parens{y_i - \hat{y}_i} \bar{y} \\ 
+		= & \, \parens{\bX \widehat{\bbeta}}^\top \parens{\bY - \bX \widehat{\bbeta}} + \parens{\boldone^\top \bY} \boldone^\top \parens{\bY - \bX \widehat{\bbeta}} \\ 
+		= & \, \widehat{\bbeta}^\top \bracks{\bX^\top  \parens{\bY - \bX \widehat{\bbeta}}} + \parens{\boldone_n^\top \bY} \bracks{\boldone_n^\top \parens{\bY - \bX \widehat{\bbeta}} } \\ 
+		= & \, 0, 
+	\end{align*}
+	where $\bX^\top \parens{\bY - \bX \widehat{\bbeta}} = \boldzero_{p+1}$ is due to the normal equation \eqref{eq-normal-eq}, and $\boldone_n^\top \parens{\bY - \bX \widehat{\bbeta}} = 0$ since the first column of $\bX$ is $\boldone_{n}$ and the residual vector $\bY - \bX \widehat{\bbeta}$ must be orthogonal to it, again by the normal equation \eqref{eq-normal-eq}. 
+	
+	As a consequence, we obtain the decomposition 
+	\begin{align*}
+		\mathrm{ToSS} = \mathrm{RegSS} + \mathrm{RSS}, 
+	\end{align*}
+	where
+	\begin{align*}
+		\mathrm{ToSS} := \sum_{i=1}^n \parens{y_i - \bar{y}}^2, 
+	\end{align*}
+	is the \emph{total sum of squares}, 
+	\begin{align*}
+		\mathrm{RegSS} := \sum_{i=1}^n \parens{\hat{y}_i - \bar{y}}^2, 
+	\end{align*}
+	is the \emph{regression sum of squares}, and 
+	\begin{align*}
+		\mathrm{RSS} := \sum_{i=1}^n \parens{y_i - \hat{y}_i}^2
+	\end{align*}
+	is the \emph{residual sum of squares} as before. 
+	
+	We have the following ANOVA table 
+	
+	\begin{center}
+		\begin{tabular}{*{3}{c}}
+			\toprule 
+			Source of Variation & df & Sum of Squares \\
+			\midrule
+			Regression on $X_1, \cdots, X_p$ & $p$ &  $\mathrm{RegSS} = \sum_{i=1}^n \parens{\hat{y}_i - \bar{y}}^2$ \\ 
+			Residuals & $n - p - 1$ & $\mathrm{RSS} = \sum_{i=1}^n \parens{y_i - \hat{y}_i}^2$ \\ 
+			\midrule 
+			Total & $n-1$ & $\mathrm{ToSS} = \sum_{i=1}^n \parens{y_i - \bar{y}}^2$ \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\item \textbf{$R^2$ and Adjusted-$R^2$:} The \emph{squared multiple correlation coefficient} is defined to be 
+	\begin{align*}
+		R^2 := 1 - \frac{\mathrm{RSS}}{\mathrm{ToSS}}, 
+	\end{align*}
+	and is always between 0 and 1, and is used to measured the proportion of the total variation in $Y$ that can be explained by a linear regression model on $X_1, \cdots, X_p$. 
+	
+	Adding more variables to the linear model will \emph{always} increase the $R^2$ value, even if the covariates are useless predictors of $Y$ individually. To guard against this, the adjusted $R^2$ is given by 
+	\begin{align*}
+		\mathrm{adj-}R^2 = 1 - \frac{\mathrm{RSS} / \parens{n-p-1}}{\mathrm{ToSS} / \parens{n-1}}. 
+	\end{align*}
+	The adjusted $R^2$ can become smaller if the variable added does \emph{not} add ``greatly'' to the model. 
+	
+	\textit{Remark.} A small $R^2$ does \emph{not} always imply a bad fit to the model. 
+	
+	\item \textbf{Gauss-Markov Theorem:} Consider to estimate a linear combination of the coefficient vector $\theta = \ba^\top \widetilde{\bbeta}$, where the vector $\ba \in \Real^{p+1}$ is fixed. Under the assumption that $\bX$ is fixed, the least squares estimator of $\theta$ is 
+	\begin{align*}
+		\hat{\theta} := \ba^\top \widehat{\bbeta} = \ba^\top \parens{\bX^\top \bX}^{-1} \bX^\top \bY, 
+	\end{align*}
+	which is a linear function of the response vector $\bY$. Then, we have the following 
+	\begin{enumerate}
+		\item $\ba^\top \widehat{\bbeta}$ is unbiased, since 
+		\begin{align*}
+			\E \bracks[\big]{\ba^\top \widehat{\bbeta}} = \ba^\top \parens{\bX^\top \bX}^{-1} \bX^\top \E \bracks{\bY} = \ba^\top \parens{\bX^\top \bX}^{-1} \bX^\top \bX \widetilde{\bbeta} = \ba^\top \widetilde{\bbeta}; 
+		\end{align*}
+		\item if $\tilde{\theta} = \tilde{\bc}^\top \bY$ is any other linear estimator that is unbiased for $\ba^\top \widetilde{\bbeta}$, then 
+		\begin{align*}
+			\var \bracks[\big]{\ba^\top \widehat{\bbeta}} \le \var \bracks[\big]{\tilde{\bc}^\top \bY}. 
+		\end{align*}
+		To see this, first note, since $\bY = \bX \widetilde{\bbeta} + \beps$, where $\beps := \parens{\varepsilon_1, \varepsilon_2, \cdots, \varepsilon_n}^\top$, we have 
+		\begin{align*}
+			\var \bracks[\big]{\tilde{\bc}^\top \bY} = \E \bracks[\big]{\parens[\big]{\tilde{\bc}^\top \bY - \E \bracks{\tilde{\bc}^\top \bY}}^2} = \E \bracks[\big]{\parens{\tilde{\bc}^\top \beps}^2} = \sigma^2 \bc^\top \bc. 
+		\end{align*}
+		Then, we solve the following minimization problem 
+		\begin{align*}
+			\minimize_{\bc} \, \frac{1}{2} \sigma^2 \bc^\top \bc \qquad \text{ subject to } \bc^\top \bX \widetilde{\bbeta} = \ba^\top \widetilde{\bbeta}, 
+		\end{align*}
+		which is equivalent to the following problem 
+		\begin{align*}
+			\minimize_{\bc} \, \frac{1}{2} \bc^\top \bc \qquad \text{ subject to } \bX^\top \bc = \ba. 
+		\end{align*}
+		Note that this is a convex minimization problem under the equality constraint, and any stationary point must be the global minimizer. 
+		
+		The Lagrangian function is 
+		\begin{align*}
+			\calL \parens{\bc, \boldsymbol{\lambda}} := \frac{1}{2} \bc^\top \bc + \boldsymbol{\lambda}^\top \parens{\bX^\top \bc - \ba}. 
+		\end{align*}
+		Differentiating with respect to $\bc$ and setting the derivative to $\boldzero$ yield 
+		\begin{align*}
+			\frac{\partial \calL}{\partial \bc} \parens{\bc, \boldsymbol{\lambda}} = \bc - \bX \boldsymbol{\lambda} \stackrel{\text{set}}{=} \boldzero, 
+		\end{align*}
+		i.e., $\bc = \bX \boldsymbol{\lambda}$. Plugging into the equality constraint yields 
+		\begin{align*}
+			\bX^\top \bX \boldsymbol{\lambda} - \ba = \boldzero, 
+		\end{align*}
+		yielding $\boldsymbol{\lambda} = \parens{\bX^\top \bX}^{-1} \ba$. It follows the optimal $\bc$ is $\bc^* := \bX \parens{\bX^\top \bX}^{-1} \ba$. Then, $\ba^\top \widehat{\bbeta} = {\bc^*}^\top \bY$. The desired result follows. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Mean Squared Error:} The \textit{mean squared error} of an estimator $\tilde{\theta}$ of $\theta$ is 
+	\begin{align*}
+		\mse \parens{\tilde{\theta}} := & \, \E \bracks[\big]{\parens{\tilde{\theta} - \theta}^2} 
+		= \var \bracks{\tilde{\theta}} + \parens[\big]{\E \bracks{\tilde{\theta}} - \theta}^2. 
+	\end{align*}
+	
+	\textit{Remark 1.} If $\tilde{\theta}$ is an unbiased estimator of $\theta$, i.e., $\E \bracks{\tilde{\theta}} = \theta$, we then have 
+	\begin{align*}
+		\mse \parens{\tilde{\theta}} = \var \bracks{\tilde{\theta}}. 
+	\end{align*}
+	
+	\textit{Remark 2.} Due to the Gauss-Markov Theorem, the least squares estimator has the smallest mean squared error of all linear estimators with no bias. However, there may exist a \emph{biased estimator} with smaller mean squared error, as they trade a little bias for a larger reduction in variance. 
+	
+	\item \textbf{Expected Prediction Error:} Consider the prediction of the new response at $\bx_0$, 
+	\begin{align*}
+		Y_0 = f \parens{\bx_0} + \varepsilon_0. 
+	\end{align*}
+	The expected prediction error of an estimate $\tilde{f} \parens{\bx_0} = \bx_0^\top \widetilde{\bbeta}$ is 
+	\begin{align*}
+		\E \bracks[\big]{\parens{Y_0 - \tilde{f} \parens{\bx_0}}^2} = \sigma^2 + \E \bracks[\big]{\parens{\bx_0^\top \widetilde{\bbeta} - f \parens{\bx_0}}^2} = \sigma^2 + \mse \parens{\tilde{f} \parens{\bx_0}}. 
+	\end{align*}
+	Thus, the expected prediction error and the mean squared error differ only by the constant $\sigma^2$, representing the variance of the new observation $Y_0$. 
+	
+	\item \textbf{Rank Deficiency Case:} 
+	
+	\begin{enumerate}
+		\item \textit{Definition:} The columns of $\bX$ are \emph{not} linearly independent so that $\bX$ is \emph{not} of full rank. Then, $\bX^\top \bX$ is singular. 
+		
+		\item \textit{When This Can Happen?} This may happen when 
+		\begin{enumerate}
+			\item $\bX$ is ill-conditioned, or 
+			\item the columns of $\bX$ are collinear, or 
+			\item there are more variables than observations $(p > n)$. 
+		\end{enumerate}
+
+		\item \textit{Impacts:} In this case, 
+		\begin{enumerate}
+			\item the least squares coefficient vector $\widehat{\bbeta}$ is \emph{not} uniquely determined, but
+			\item the fitted value vector $\widehat{\bY}$ is still the projection of $\bY$ onto the column space of $\bX$ and is uniquely determined. 
+		\end{enumerate}
+		
+		\item \textit{Condition Number:} We can measure the ill-condition of $\bX$ by looking at the \textit{condition number}, 
+		\begin{align*}
+			\kappa \parens{\bX} := \frac{\sigma_1}{\sigma_p}, 
+		\end{align*}
+		where $\sigma_1$ is the largest singular value of $\bX$ and $\sigma_p$ is the smallest singular value of $\bX$. If $\kappa \parens{\bX}$ is large, $\bX$ is said to be \emph{ill-conditioned}. 
+		
+		\textit{Remark.} When exact collinearity occurs, $\kappa \parens{\bX} = \infty$, since $\sigma_p = 0$. 
+		
+		\item \textit{Collinearity Indices and Variance Inflation Factor (VIF):} We can use the \emph{collinearity indices} to measure the degree of collinearity among variables. The \emph{$j$-th collinearity index} is defined to be 
+		\begin{align*}
+			\kappa_j := \sqrt{\mathrm{VIF}_j}, \qquad \text{ for all } j = 1, \cdots, p, 
+		\end{align*}
+		where 
+		\begin{align}
+			\mathrm{VIF}_j := \frac{1}{1 - R_j^2}
+		\end{align}
+		is the $j$-th variance inflation factor and $R_j^2$ is the squared multiple correlation coefficient of the $j$-th column of $\bX$ on the other $p-1$ columns of $\bX$. 
+		
+		\textit{Remark 1.} Large values of $\mathrm{VIF}_j$ (typically, $\mathrm{VIF}_j > 10$) imply that $R_j^2$ is close to unity, which in turn suggests near collinearity may be present. 
+		
+		\textit{Remark 2.} The collinearity indices have value at least one and are invariant under scale changes of the columns of $\bX$. 
+		
+		\item \textit{How to deal with this rank-deficiency issue?}
+		\begin{enumerate}
+			\item Rank deficiency may occur when some columns are linearly dependent. We can drop redundant columns in $\bX$; 
+			\item We can fit \emph{regularized} linear regression model. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{Univariate Linear Regression Without Intercept:} Consider a univariate linear model ($p=1$) with no intercept, 
+	\begin{align*}
+		Y = X \beta + \varepsilon. 
+	\end{align*}
+	Let $\bX = \parens{x_1, \cdots, x_n}^\top \in \Real^n$ be the design matrix and $\bY = \parens{y_1, \cdots, y_n}^\top \in \Real^n$ be the response vector. The least squares estimator of $\beta$ and the residuals are 
+	\begin{align*}
+		\hat{\beta} = \frac{\innerp{\bX}{\bY}}{\norm{\bX}_2^2} = \frac{\sum_{i=1}^n x_i y_i}{\sum_{i=1}^n x_i^2}, \qquad \text{ and } \qquad r_i = y_i - x_i \hat{\beta}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\innerp{\bX}{\bY} = \sum_{i=1}^n x_i y_i, \qquad \text{ and } \qquad \innerp{\bX}{\bX} = \norm{\bX}_2^2 = \sum_{i=1}^n x_i^2. 
+	\end{align*}
+	
+	\item \textbf{From Univariate Linear Regression to Multiple Linear Regression With Orthogonal Columns of $\bX$ and Without Intercept:} Suppose that we have a multiple linear regression model with \emph{no intercept} and that the columns of the design matrix $\bX$, denoted by $\bc_1, \cdots, \bc_p$, are orthogonal, i.e., $\innerp{\bc_i}{\bc_j} = 0$ for all $i \ne j$. Then, the least squares estimator of $\bbeta$ is 
+	\begin{align*}
+		\widehat{\bbeta} = & \, \parens{\bX^\top \bX}^{-1} \bX \bY \\ 
+		= & \, \mathrm{diag} \parens[\Big]{\innerp{\bc_1}{\bc_1}, \innerp{\bc_2}{\bc_2}, \cdots, \innerp{\bc_p}{\bc_p}}^{-1} \bX \bY, 
+	\end{align*}
+	and hence, for all $j = 1, \cdots, p$
+	\begin{align*}
+		\hat{\beta}_j = \frac{\innerp{\bc_j}{\bY}}{\innerp{\bc_j}{\bc_j}}, 
+	\end{align*}
+	which is the univariate estimators. In other words, when the columns in the design matrix are orthogonal, they have \emph{no effect} on each other's parameter estimators in the model. 
+	
+	\item \textbf{Univariate Linear Regression With an Intercept:} Consider a univariate linear model ($p=1$) with an intercept, 
+	\begin{align*}
+		Y = \beta_0 + X \beta_1 + \varepsilon. 
+	\end{align*}
+	The least squares estimator of $\beta_1$ is 
+	\begin{align*}
+		\hat{\beta}_1 = \frac{\innerp{\bX - \bar{x} \boldone_n}{\bY}}{\innerp{\bX - \bar{x} \boldone_n}{\bX - \bar{x} \boldone_n}}, 
+	\end{align*}
+	where $\bX = \parens{x_1, \cdots, x_n}^\top \in \Real^n$, $\bY = \parens{y_1, \cdots, y_n}^\top \in \Real^n$, $\bar{x} = \sum_{i=1}^n x_i$ and $\boldone_n = \parens{1, \cdots, 1}^\top \in \Real^n$. One can view this derivation of $\hat{\beta}_1$ as of two steps: 
+	\begin{enumerate}
+		\item[] Step 1: regress $\bX$ on $\boldone_n$ and produce the residual $\bZ := \bX - \bar{x} \boldone_n$; 
+		\item[] Step 2: %Simple univariate regression without intercept: 
+		regress $\bY$ on the residual $\bZ$ to produce the estimate $\hat{\beta}_1$. 
+	\end{enumerate}
+	
+	\textit{Remark 1.} In Step 1, we orthogonalized $\bX$ with respect to $\bc_0 = \boldone_n$. The orthogonalization does \emph{not} change the subspace spanned by columns but just produces an orthogonal basis for representing this subspace. 
+	
+	\item \textbf{From Univariate Linear Regression to Multiple Linear Regression With an Intercept:} Suppose we have an intercept and $p$ covariates. By mimicking the procedures described above, we have the following algorithm, called the \textit{regression by successive orthogonalization} or the \textit{Gram-Schmidt procedure}. 
+	
+	\begin{minipage}{\linewidth}
+	\begin{algorithm}[H]
+		\caption{Regression by Successive Orthogonalization}\label{suc.ortho}
+		\begin{algorithmic}[1]
+			\STATE Initialize $\bz_0 = \bc_0 = \boldone_n$. 
+			\STATE For $j = 1, \cdots, p$, regress $\bc_j$ on $\bz_0, \bz_1, \cdots, \bz_{j-1}$ to produce coefficients 
+			\begin{align*}
+				\hat{\gamma}_{\ell, j} = \frac{\innerp{\bz_\ell}{\bc_j}}{\innerp{\bz_\ell}{\bz_\ell}}, \qquad \text{ for all } \ell = 0, \cdots, j - 1, 
+			\end{align*}
+			and the residual vector 
+			\begin{align*}
+				\bz_j = \bc_j - \sum_{k=0}^{j-1} \hat{\gamma}_{k,j} \bz_k. 
+			\end{align*}
+			
+			\STATE Regress $\bY$ on the residual $\bz_p$ to obtain the estimate 
+			\begin{align}\label{eq-beta-p}
+				\hat{\beta}_p = \frac{\innerp{\bz_p}{\bY}}{\innerp{\bz_p}{\bz_p}}. 
+			\end{align}
+		\end{algorithmic}
+	\end{algorithm}
+	\end{minipage}
+	
+	\textit{Remark 1.} Each $\bc_j$ is a linear combination of $\bz_0, \bz_1, \cdots, \bz_{j}$. Since the $\bz_j$'s are all orthogonal, they form an \emph{orthogonal basis} for the column space of $\bX$. Hence, the least squares projection onto this column subspace is $\widehat{\bY}$. 
+	
+	\textit{Remark 2.} The $j$-th multiple regression coefficient $\hat{\beta}_j$ represents the additional contribution of $\bc_j$ to $\bY$, \emph{after} $\bc_j$ has been adjusted for $\bc_0, \bc_1, \cdots$, $\bc_{j-1}, \bc_{j+1}, \cdots, \bc_{p}$. 
+	
+	\textit{Remark 3.} If $\bc_p$ is highly correlated with some other $\bc_k$'s, the residual vector $\bz_p$ will be very small and the estimator $\hat{\beta}_p$ will be very \emph{unstable}. From \eqref{eq-beta-p}, the variance of $\hat{\beta}_p$ can be obtained as 
+	\begin{align*}
+		\var \bracks[\big]{\hat{\beta}_p} = \frac{\sigma^2}{\norm{\bz_{p}}_2^2}; 
+	\end{align*}
+	in particular, the precision with which we can estimate $\hat{\beta}_p$ depends on $\norm{\bz_p}_2$, which represents how much of $\bc_p$ is \emph{unexplained} by the other $\bc_k$'s. 
+	
+	\item \textbf{Obtaining $\widehat{\bbeta}$ from Algorithm \ref{suc.ortho}:} Note that Step 2 in Algorithm \ref{suc.ortho} can be written as 
+	\begin{align*}
+		\bX = \bZ \mathbf{\Gamma}, 
+	\end{align*}
+	where the columns of $\bZ \in \Real^{n \times \parens{p+1}}$ are $\bz_1, \cdots, \bz_p$, and $\mathbf{\Gamma} \in \Real^{\parens{p+1} \times \parens{p+1}}$ is the upper triangular matrix with entries $\hat{\gamma}_{k,j}$. Let $\bD = \mathrm{diag} \parens[\big]{\norm{\bz_0}_2, \norm{\bz_1}_2, \cdots, \norm{\bz_p}_2} \in \Real^{\parens{p+1} \times \parens{p+1}}$, and 
+	\begin{align*}
+		\bX = \bZ \bD^{-1} \bD \mathbf{\Gamma} = \bQ \bR, 
+	\end{align*}
+	where $\bQ$ is an $n \times \parens{p+1}$ orthogonal matrix satisfying $\bQ^\top \bQ = \bI_{p+1}$, and $\bR$ is a $\parens{p+1} \times \parens{p+1}$ upper triangular matrix. Under this $\bQ \bR$ decomposition of $\bX$, the least squares solution is 
+	\begin{align*}
+		\widehat{\bbeta} = \bR^{-1} \bQ^\top \bY, \qquad \qquad \widehat{\bY} = \bQ \bQ^\top \bY. 
+	\end{align*}
+	In particular, it is easy to compute $\widehat{\bbeta}$ using this procedure, since $\bR$ is upper triangular. 
+	
+\end{enumerate}
+
+
+\section*{IV. Subset Selection}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Issues with the Least Squares Estimates:} 
+	\begin{itemize}
+		\item \textit{Prediction Accuracy:} 
+		\begin{enumerate}
+			\item The least squares estimates with too many variates included often have \emph{low bias} but \emph{large variance}, and \emph{overfitting} will take place; and 
+			\item The least squares estimates with too few variates included often have \emph{low variance} but \emph{high bias}, and \emph{underfitting} will take place. 
+		\end{enumerate}
+		By shrinking or setting some (but \emph{not} too many) coefficients to zero, we sacrifice a little bit of bias to reduce the variance of the predicted values, in order to improve the overall prediction accuracy. 
+		
+		\item \textit{Interpretation:} We often would like to determine a \textit{smaller} subset that exhibit the strongest effects and sacrifice some small details. 
+	\end{itemize}
+	
+	We describe some techniques to select variables within linear regression. 
+	
+	\item \textbf{Best-Subset Selection:} 
+	\begin{enumerate}
+		\item \textit{Main Idea:} Best subset regression finds, for each $k \in \sets{0, 1, 2, \cdots, p}$, the subset of size $k$ variables that gives the largest or the smallest value of the criterion under consideration. 
+
+		\item \textit{Number of Models to Consider:} There are ${p \choose k}$ different subsets of variables that have $k$ variables. In total, we will need to $2^{p}$ models to fit and consider. It is obvious that when $p$ is large, this method becomes infeasible. 
+
+		\item \textit{Criterion to Choose Model:} If we let $P$ denote the sub-model that has certain $k$ variables, one criterion (or a family of criteria) to assess its performance is of the form 
+		\begin{align}\label{eq-best-subset-cri}
+			\frac{\mathrm{RSS}_P}{n} + \lambda \parens{k + 1} \frac{\hat{\sigma}^2_{\mathrm{full}}}{n}, 
+		\end{align}
+		where 
+		\begin{itemize}
+			\item $\lambda > 0$ is a penalty coefficient, 
+			\item $\hat{\sigma}^2_{\mathrm{full}}$ is the estimate of the variance from the \emph{full} model, 
+			\item $\mathrm{RSS}_P$ is the residual sum of squares for the sub-model $P$, and 
+			\item the term $\lambda \parens{k + 1} \frac{\hat{\sigma}^2_{\mathrm{full}}}{n}$ is called the \emph{model complexity term}. 	
+		\end{itemize}
+		
+		\textit{Special Cases of Criteria \eqref{eq-best-subset-cri}:}
+		\begin{enumerate}
+			\item If we let $\lambda = 2$, we obtain the \emph{Akaike information criterion} (AIC); 
+			\item If we let $\lambda = \log n$, we obtain the \emph{Bayesian information criterion} (BIC). 
+		\end{enumerate}
+		
+	\end{enumerate}
+	
+	\textit{Remark 1.} We cannot choose $\lambda = 0$ in \eqref{eq-best-subset-cri}, which reduces to the residual sum of squares of the model $P$. If we do so, the best-subset curve, by connecting the lowest residual sum of squares for each $k$, is necessarily decreasing, leading us to choose the model with all variables included. 
+	
+	\textit{Remark 2.} The choice of $k$ is a tradeoff between bias and variance, along with the more subjective desire for parsimony. 
+	
+	\item \textbf{Forward-Stepwise Selection:} 
+	\begin{enumerate}
+		\item \textit{Procedures:} Forward-stepwise selection starts with the intercept, and then \textit{sequentially} adds the predictor that most improves the fit. 
+		
+		In order to assess the amount of improvement, we can use the $F$-ratio 
+		\begin{align*}
+			F = \frac{\parens{\mathrm{RSS}_0 - \mathrm{RSS}_1} / 1}{\mathrm{RSS}_1 / \mathrm{df}_1}
+		\end{align*}
+		and add the variable with the largest $F$-ratio, where $\mathrm{df}_1 = n-k-1$ and $k$ is the number of variables in the larger model, $\mathrm{RSS}_0$ and $\mathrm{RSS}_1$ are the residual sums of squares of the smaller and larger models, respectively. After adding the variable, we refit the model. 
+		
+		We stop selecting variables for the model when the $F$-ratio for each variable not currently in the model is smaller than some predetermined value $F_0$. 
+		
+		\item \textit{Comments:} Forward-stepwise selection 
+		\begin{enumerate}
+			\item is a greedy algorithm, producing a nested sequence of models, which might produce a sub-optimal solution compared to the best-subset selection; 
+			\item has lower variance but maybe more bias; and 
+			\item is relatively easy to compute comparing to the best-subset selection. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{Backward-Stepwise Selection:} 
+	\begin{enumerate}
+		\item \textit{Procedures:} Backward-stepwise selection starts with the full model (the model with \emph{all} variables included), and sequentially deletes the predictor that has the least impact on the fit. The candidate variable for dropping is the one with the smallest $Z$-score or the lowest $F$-ratio 
+		\begin{align*}
+			F = \frac{\parens{\mathrm{RSS}_0 - \mathrm{RSS}_1} / 1}{\mathrm{RSS}_1 / \mathrm{df}_1}, 
+		\end{align*}
+		where $\mathrm{RSS}_0$ is the residual sum of squares for the smaller model (with $\mathrm{df}_0$ degrees of freedom), and $\mathrm{RSS}_1$ is the residual sum of squares for the larger model (with $\mathrm{df}_1$ degrees of freedom), the ``smaller'' model is a sub-model of the ``larger'' model. Then, we refit the reduced model and iterate again. Here, $\mathrm{df}_0 - \mathrm{df}_1 = 1$ and $\mathrm{df}_1 = n - k - 1$, where $k$ is the number of variables in the larger model. 
+		
+		\textit{Remark.} Since $t^2_{\nu} = F_{1, \nu}$, dropping the variable with the lowest $Z$ score and dropping the one with lowest $F$-ratio are equivalent. 
+		
+		\item \textit{Comment:} Backward-stepwise selection can only be used when $n > p$,  while forward-stepwise selection can always be used. 
+	\end{enumerate}
+	
+	\item \textbf{Criticisms of Forward- and Backward-Stepwise Selections:}
+	\begin{enumerate}
+		\item Stepwise selection methods ignore multiple testing problems; 
+		\item The maximum or minimum of a set of correlated $F$ statistics is \emph{not} an $F$ statistic. Hence, the decision rules used in stepwise regression to add or drop an input variable can be misleading; % We should be very cautious in evaluating the significance of a regression coefficient when the associated variable is a candidate for inclusion or exclusion in a stepwise regression procedure; 
+		\item There is \emph{no} guarantee that the subsets obtained from forward- and backward-stepwise selection procedures will contain the same variables or even be the ``best'' subset; 
+		\item When there are more variables than observations $p > n$, backward-stepwise selection is typically \emph{not} a feasible procedure; 
+		\item A stepwise procedure produces a \emph{single} answer (a very specific subset) to the variable selection problem, although several different subsets may be equally good for regression purposes. 
+	\end{enumerate}
+	
+	\item \textbf{Forward Stagewise Regression:} 
+	\begin{enumerate}
+		\item \textit{Assumptions and Notation:}
+		\begin{enumerate}
+			\item The response vector $\bY$ has mean zero; 
+			\item The design matrix $\bX$ has been standardized so that each column has zero mean and unit variance; let $\bc_1, \cdots, \bc_p$ be the columns of $\bX$ (note that we do not have the constant unit vector here); 
+			\item Let $\widehat{\bbeta}$ be the ``current'' estimate of the coefficient vector, $\widehat{\bmu} := \bX \widehat{\bbeta}$ be the ``current'' estimate of the response vector, and $\boldr := \bY - \widehat{\bmu}$ be the ``current'' residual vector. 
+		\end{enumerate}
+		
+		\item \textit{Procedures:}
+		\begin{enumerate}[label=\roman*.]
+			\item Initialize $\widehat{\bbeta} = \boldzero_{p+1}$, so that $\widehat{\bmu} = \boldzero_{n}$ and $\boldr = \bY - \widehat{\bmu} = \bY$; 
+			\item \label{algo-forward-stagewise-2} Find the column vector $\bc_{j'}$ that is most highly correlated correlation with $\boldr$, i.e., 
+			\begin{align*}
+				j' := \argmax_{j \in \sets{1, 2, \cdots, p}} \abs{\innerp{\bc_j}{\boldr}}; 
+			\end{align*}
+			\item \label{algo-forward-stagewise-3} Update $\hat{\beta}_{j'} \leftarrow \hat{\beta}_{j'} + \delta_{j'}$ and keep other coordinates unchanged, where $\delta := \varepsilon \cdot \sign \parens{\innerp{\bc_{j'}}{\boldr}}$ and $\varepsilon > 0$ is a small constant that controls the step-length; 
+			\item \label{algo-forward-stagewise-4} Update $\widehat{\bmu} \leftarrow \widehat{\bmu} + \delta_{j'} \bc_{j'}$ and $\boldr \leftarrow \boldr - \delta_{j'} \bc_{j'}$; 
+			\item Repeat Steps \ref{algo-forward-stagewise-2} - \ref{algo-forward-stagewise-4} many times until $\bX^\top \boldr = \boldzero_{p}$. This is the OLS solution. 
+		\end{enumerate}
+		
+		\item \textit{Comments}: 
+		\begin{enumerate}
+			\item In the forward stagewise regression, \emph{no} adjustment of the other variables in the model is made when a new variable is added in --- this is the key difference between the \emph{forward-stepwise regression} and the \emph{forward stagewise regression}; 
+			\item Forward stagewise regression may need \emph{more than} $p$ steps to reach the least squares fit, which is somewhat computationally inefficient. 
+		\end{enumerate}
+
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{V. Shrinkage Methods}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Drawback of Subset Selection Methods:} Subset selection is a \textit{discrete} process --- variables are either retained or discarded --- it often exhibits \underline{high variance}, and doesn't reduce the prediction error of the full model. 
+	
+	Shrinkage methods are a \emph{continuous} process and do \emph{not} suffer high variability. 
+	
+	\item \textbf{A Slight Change of Notation:} In this section \emph{only}, we let 
+	\begin{enumerate}
+		\item $\bX \in \Real^{n \times p}$ whose first column is \emph{not} the constant column vector, and 
+		\item $\bbeta := \parens{\beta_1, \cdots, \beta_p}^\top \in \Real^p$ that does \emph{not} contain the intercept. 
+	\end{enumerate}
+	
+	\item \textbf{Ridge Regression:} 
+	\begin{enumerate}
+		\item \textit{Formulation:} The ridge regression minimizes a penalized residual sum of squares 
+		\begin{align}\label{eq-ridge-lag}
+			& \, \parens{\hat{\beta}^{\mathrm{ridge}}_0, \hat{\beta}^{\mathrm{ridge}}_1, \cdots, \hat{\beta}^{\mathrm{ridge}}_p}^\top \nonumber \\ 
+			& \qquad \qquad := \argmin_{\beta_0, \beta_1, \cdots, \beta_p} \braces[\Bigg]{ \sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{i,j}}^2 + \lambda \sum_{j=1}^p \beta_j^2}, 
+		\end{align}
+		where $\lambda \ge 0$ is a complexity parameter that controls the amount of shrinkage. The larger the value of $\lambda$, the greater the amount of shrinkage. The coefficients are shrunk toward zero. 
+		
+		\item \textit{Equivalent Formulation:} An equivalent formulation of ridge regression problem \eqref{eq-ridge-lag} is 
+		\begin{equation}\label{eq-ridge-con}
+			\begin{aligned}
+				& \, \parens{\hat{\beta}^{\mathrm{ridge}}_0, \hat{\beta}^{\mathrm{ridge}}_1, \cdots, \hat{\beta}^{\mathrm{ridge}}_p}^\top \nonumber \\ 
+				& \qquad = \argmin_{\beta_0, \beta_1, \cdots, \beta_p} \braces[\Bigg]{ \sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{i,j}}^2, \text{ subject to } \sum_{j=1}^p \beta_j^2 \le t}, 
+			\end{aligned}
+		\end{equation}
+		where $t \ge 0$. 
+		
+		\textit{Remark.} There is a one-to-one correspondence between $\lambda$ in \eqref{eq-ridge-lag} and $t$ in \eqref{eq-ridge-con}. 
+		
+		\item \textit{Matrix Formulation:} In the matrix notation, the objective function in \eqref{eq-ridge-lag} can be written as 
+		\begin{align}\label{eq-ridge-mat1}
+			\mathrm{RSS}_{\lambda}^{\mathrm{ridge}} \parens{\beta_0, \bbeta} := \parens{\bY - \beta_0 \boldone_n - \bX \bbeta}^\top \parens{\bY - \beta_0 \boldone_n - \bX \bbeta} + \lambda \norm{\bbeta}_2^2, 
+		\end{align}
+		where $\boldone_n := \parens{1, \cdots, 1}^\top \in \Real^n$. 
+		
+		\item \textit{Solution to $\parens{\hat{\beta}^{\mathrm{ridge}}_0, \hat{\beta}^{\mathrm{ridge}}_1, \cdots, \hat{\beta}^{\mathrm{ridge}}_p}^\top$:} Taking the first derivative of $\mathrm{RSS}_{\lambda}^{\mathrm{ridge}}$ with respect to $\beta_0$ and $\bbeta$, respectively, and setting the derivatives to 0, we have $\hat{\beta}^{\mathrm{ridge}}_{0}$ and $\widehat{\bbeta}^{\mathrm{ridge}} := \parens{\hat{\beta}^{\mathrm{ridge}}_1, \cdots, \hat{\beta}^{\mathrm{ridge}}_p}^\top$ must satisfy  
+		\begin{align}
+			\parens{\bX^\top \bX + \lambda \bI_n} \widehat{\bbeta}^{\mathrm{ridge}} = & \, \bX^\top \parens{\bY - \hat{\beta}^{\mathrm{ridge}}_{0} \boldone_n}, \label{eq-ridgr-beta} \\ 
+			n \hat{\beta}^{\mathrm{ridge}}_{0} = & \, \boldone_n^\top \parens{\bY - \bX \widehat{\bbeta}^{\mathrm{ridge}}}. \label{eq-ridge-beta0}
+		\end{align}
+		
+		\item \textit{Suggestion in Implementation:} The ridge solutions are \emph{not} equi-variant under scaling of the inputs. It is suggested to standardize the covariates before solving \eqref{eq-ridge-lag}. 
+		
+		\item \textit{Another Equivalent Formulation of Ridge Regression:} We show that the ridge regression formulation \eqref{eq-ridge-lag} is equivalent to the following one 
+		\begin{align*}
+			\parens[\Big]{\hat{\beta}_0^c, \widehat{\bbeta}^{\mathrm{ridge}, c}} := \argmin_{\beta^c_0, \bbeta^c} \braces[\Bigg]{\sum_{i=1}^n \parens[\bigg]{y_i - \beta_0^c - \sum_{j=1}^p \beta_j^c \parens{x_{i,j} - \bar{x}_j}}^2 + \lambda \sum_{j=1}^p {\beta_j^c}^2}, 
+		\end{align*}
+		where $\bar{x}_j$ is the sample mean of the $j$-th column in the design matrix. Start from \eqref{eq-ridge-lag}, we have 
+		\begin{align*}
+			\parens[\Big]{\hat{\beta}_0^{\mathrm{ridge}}, \widehat{\bbeta}^{\mathrm{ridge}}} = & \, \argmin_{\beta_0, \bbeta} \braces[\Bigg]{\sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{i,j}}^2 + \lambda \sum_{j=1}^p \beta_j^2} \\ 
+			= & \, \argmin_{\beta_0, \bbeta} \braces[\Bigg]{\sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j \bar{x}_j - \sum_{j=1}^p \beta_j \parens{x_{i,j} - \bar{x}_j}}^2 + \lambda \sum_{j=1}^p \beta_j^2}.  
+		\end{align*}
+		Hence, we have 
+		\begin{align*}
+			\hat{\beta}_{0}^{c} = \hat{\beta}_{0}^{\mathrm{ridge}} + \sum_{j=1}^p \hat{\beta}_{j}^{\mathrm{ridge}} \bar{x}_j, \qquad \text{ and } \qquad \hat{\beta}_{j}^{\mathrm{ridge}, c} = \hat{\beta}_{j}^{\mathrm{ridge}}, 
+		\end{align*}
+		for all $j = 1, \cdots, p$. But, from \eqref{eq-ridge-beta0}, we see that 
+		\begin{align*}
+			\hat{\beta}_{0}^{\mathrm{ridge}} = \frac{1}{n} \boldone_n^\top \parens{\bY - \bX \widehat{\bbeta}^{\mathrm{ridge}}} = \frac{1}{n} \sum_{i=1}^n y_i - \sum_{j=1}^p \hat{\beta}_{j}^{\mathrm{ridge}} \bar{x}_j. 
+		\end{align*}
+		
+		Hence, the solution can be obtained by the following procedure: 
+		\begin{itemize}
+			\item[] Step 1. Center all covariates, i.e., each $x_{i,j}$ is replaced by $x_{i,j} - \bar{x}_{j}$; 
+			\item[] Step 2. Estimate $\beta_0$ by $\bar{y} = \frac{1}{n} \sum_{i=1}^n y_i$; 
+			\item[] Step 3. Remaining coefficients are estimated by a ridge regression without intercept by using the centered covariates. 
+		\end{itemize}
+		
+		\item \textit{Solution to Ridge Regression without an Intercept:} Assume all covariates have been centered so that there is no intercept. The ridge problem amounts to minimizing 
+		\begin{align*}
+			\widetilde{\text{RSS}}_{\lambda}^{\mathrm{ridge}} \parens{\bbeta} := \parens{\bY - \bX \bbeta}^\top \parens{\bY - \bX \bbeta} + \lambda \norm{\bbeta}_2^2. 
+		\end{align*}
+		By taking the derivative with respect to $\bbeta$ and setting the derivative to 0, we solve for $\bbeta$ and obtain 
+		\begin{align}
+			\widehat{\bbeta}^{\mathrm{ridge}} \parens{\lambda} := \parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bX^\top \bY, 
+		\end{align}
+		which again is a linear function in $\bY$. 
+		
+		\textit{Remark.} By adding $\lambda \bI_p$ to $\bX^\top \bX$ with $\lambda > 0$, $\bX^\top \bX + \lambda \bI_p$ is always invertible, even if $\bX^\top \bX$ is singular. 
+		
+		\item \textit{Bayesian Interpretation:} Suppose that $y_i \sim \Normal \parens{\beta_0 + \bbeta^\top \bx_i, \sigma^2}$ and the parameters $\bbeta \sim \Normal_p \parens{\boldzero_p, \tau^2 \bI_p}$, where $\Normal_p \parens{\mu, \Sigma}$ denotes the multivariate normal distribution with mean $\mu$ and covariance matrix $\Sigma$. Then, under the assumption that $\sigma^2$ and $\tau^2$ are known, the negative log-posterior density of $\bbeta$ is 
+		\begin{align*}
+			- \log f \parens{\bbeta; \sigma^2, \tau^2} \propto & \, \frac{1}{\sigma^2} \sum_{i=1}^n \parens{y_i - \beta_0 - \bbeta^\top \bx_i}^2 + \frac{1}{\tau^2} \norm{\bbeta}_2^2 \\ 
+			\propto & \,\sum_{i=1}^n \parens{y_i - \beta_0 - \bbeta^\top \bx_i}^2 + \frac{\sigma^2}{\tau^2} \norm{\bbeta}_2^2, 
+		\end{align*} 
+		where we see $\lambda = \sigma^2 / \tau^2$. Thus, the ridge regression estimator of $\bbeta$ is the \emph{mode} of the posterior distribution. Since the posterior distribution is normal, which is symmetric, we conclude that this estimator is also the posterior mean. 
+		
+		\item \textit{Singular Value Decomposition:} The singular value decomposition (SVD) of the matrix $\bX \in \Real^{n \times p}$ has the form 
+		\begin{align*}
+			\bX = \bU \bD \bV^\top \in \Real^{n \times p}, 
+		\end{align*}
+		where $\bU$ and $\bV$ are $n \times p$ and $p \times p$ orthogonal matrices, respectively, and $\bD$ is a $p \times p$ diagonal matrix with entries $d_1 \ge \cdots \ge d_p$ called the \emph{singular values} of $\bX$. Here $\bU$ spans the column space of $\bX$ and $\bV$ spans the row space of $\bX$. 
+		
+		\item \textit{SVD Analysis of Least Squares Solution:} Consider the least squares solution 
+		\begin{align*}
+			\widehat{\bbeta}^{\mathrm{ls}} := & \, \argmin_{\bbeta} \parens{\bY - \bX \bbeta}^{\top} \parens{\bY - \bX \bbeta}^{\top} \\ 
+			= & \, \parens{\bX^\top \bX}^{-1} \bX^\top \bY, 
+		\end{align*}
+		where we have centered both $\bY$ and each column of $\bX$. 
+		
+		The corresponding least squares fitted values are 
+		\begin{align*}
+			\widehat{\bY} = \bX \widehat{\bbeta}^{\mathrm{ls}} = \bX \parens{\bX^\top \bX}^{-1} \bX^\top \bY = \bU \bU^\top \bY = \sum_{j=1}^p \bu_j \bu_j^\top \bY, 
+		\end{align*}
+		where $\bU^\top \bY$ are the coordinates of $\bY$ with respect to the orthonormal basis $\bU$ and $\bu_j$ denotes the $j$-th column of $\bU$ for all $j = 1, 2, \cdots, p$. 
+		
+		\item \textit{SVD Analysis of Ridge Regression:} The fitted values of the ridge regression is 
+		\begin{align*}
+			\bX \widehat{\bbeta}^{\mathrm{ridge}} \parens{\lambda} = & \, \bX \parens{\bX^\top \bX + \lambda \bI}^{-1} \bX^\top \bY \\ 
+			= & \, \bU \bD \parens{\bD^2 + \lambda \bI}^{-1} \bD \bU ^\top \bY \\ 
+			= & \, \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda} \bu_j \bu_j^\top \bY. 
+		\end{align*}
+		Hence, ridge regression also computes the coordinates of $\bY$ with respect to the orthonormal basis $\bU$, but shrinks by the factors $d_j^2 / \parens{d_j^2 + \lambda}$. 
+		
+		\textit{Remark.} A greater amount of shrinkage is applied to the coordinates of basis vectors with smaller $d_j^2$, which corresponds to the directions in the column space of $\bX$ having smaller variances. 
+		
+		\item \textit{Effective Degrees of Freedom:} Define the \textit{effective degrees of freedom} of the ridge regression to be 
+		\begin{align*}
+			\mathrm{df} \parens{\lambda} = \tr \bracks[\big]{\bX \parens{\bX^\top \bX + \lambda \bI}^{-1} \bX} = \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda}. 
+		\end{align*}
+		This is a monotone decreasing function of $\lambda$. Note that the following two special cases: 
+		\begin{enumerate}
+			\item $\mathrm{df} \parens{\lambda} = p$ if $\lambda = 0$, corresponding to the case with no regularization and the least squares case, and 
+			\item $\mathrm{df} \parens{\lambda} \to 0$ as $\lambda \to \infty$. 
+		\end{enumerate}
+		
+		\item \textit{Bias-Variance Trade-off:} We consider the mean squared error of the ridge regression estimator 
+		\begin{align*}
+			\mathrm{MSE} \parens{\lambda} = & \, \E \bracks[\big]{\parens{\widehat{\bbeta}^{\mathrm{ridge}} \parens{\lambda} - \bbeta}^\top \parens{\widehat{\bbeta}^{\mathrm{ridge}} \parens{\lambda} - \bbeta}} \\ 
+			= & \, \parens[\big]{\mathrm{Bias} \parens{\lambda}}^2 + \var \bracks{\widehat{\bbeta}^{\mathrm{ridge}} \parens{\lambda}}. 
+		\end{align*}
+		For the variance term, we have 
+		\begin{align*}
+			\var \bracks{\widehat{\bbeta}^{\mathrm{ridge}} \parens{\lambda}} = & \, \sigma^2 \tr \parens[\Big]{\parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bX^\top \bX \parens{\bX^\top \bX + \lambda \bI_p}^{-1}} \\ 
+			= & \, \sigma^2 \tr \parens[\big]{\parens{\bD^2 + \lambda \bI_p}^{-1} \bD^2 \parens{\bD^2 + \lambda \bI_p}^{-1}} \\ 
+			= & \, \sigma^2 \sum_{j=1}^p \frac{d_j^2}{\parens{d_j^2 + \lambda}^2}. 
+		\end{align*}
+		For the squared bias term, we first note 
+		\begin{align*}
+			\E \bracks{\parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bX^\top \bY} - \bbeta 
+			= & \, \parens[\big]{\parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bX^\top \bX - \bI_p} \bbeta \\ 
+			= & \, \bV \bracks{\parens{\bD^2 + \lambda \bI_p}^{-1} \bD^2 - \bI_p} \bV^\top \bbeta. 
+		\end{align*}
+		Therefore, if we let $\balpha := \parens{\alpha_1, \alpha_2, \cdots, \alpha_p}^\top = \bV^\top \bbeta$, we have 
+		\begin{align*}
+			\parens[\big]{\mathrm{Bias} \parens{\lambda}}^2 = & \, \bracks[\big]{\E \bracks{\parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bX^\top \bY} - \bbeta}^\top \bracks[\big]{\E \bracks{\parens{\bX^\top \bX + \lambda \bI_p}^{-1} \bX^\top \bY} - \bbeta} \\ 
+			= & \, \balpha^\top \bracks{\bD^2 \parens{\bD^2 + \lambda \bI_p}^{-1} - \bI_p} \bracks{\parens{\bD^2 + \lambda \bI_p}^{-1} \bD^2 - \bI_p} \balpha \\ 
+			= & \, \sum_{j=1}^p \frac{\lambda^2 \alpha_j^2}{\parens{d_j^2 + \lambda}^2}. 
+		\end{align*}
+		Therefore, we have 
+		\begin{align*}
+			\mathrm{MSE} \parens{\lambda} = \sum_{j=1}^p \frac{\lambda^2 \alpha_j^2 + \sigma^2 d_j^2}{\parens{d_j^2 + \lambda}^2}. 
+		\end{align*}
+		Note the following: 
+		\begin{enumerate}
+			\item when $\lambda = 0$, the squared-bias term is zero; 
+			\item the variance term decreases monotonically as $\lambda$ increases from zero, whereas the squared-bias term increases; 
+			\item for large values of $\lambda$, the squared-bias term dominates the mean squared error. 
+		\end{enumerate}
+		
+	\end{enumerate} 
+	
+	\item \textbf{Least absolute shrinkage and selection operator (Lasso):} 
+	\begin{enumerate}
+		\item \textit{Formulation:} The Lagrangian formulation of the lasso regression is 
+		\begin{align}\label{lasso.lag}
+			\parens[\Big]{\hat{\beta}_{0}^{\mathrm{lasso}}, \widehat{\bbeta}^{\mathrm{lasso}}} := \argmin_{\beta_0, \bbeta} \braces[\Bigg]{\frac{1}{2} \sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{i,j}}^2 + \lambda \sum_{j=1}^p \abs{\beta_j}}, 
+		\end{align}
+		where $\widehat{\bbeta}^{\mathrm{lasso}} := \parens{\hat{\beta}_{1}^{\mathrm{lasso}}, \cdots, \hat{\beta}_{p}^{\mathrm{lasso}}}^\top \in \Real^p$, and $\lambda \ge 0$ is a complexity parameter that controls the amount of shrinkage. The \textit{constrained} formulation of the lasso regression is 	
+		\begin{equation}\label{lasso.con}
+			\begin{aligned}
+				\parens[\Big]{\hat{\beta}_{0}^{\mathrm{lasso}}, \widehat{\bbeta}^{\mathrm{lasso}}} = \argmin_{\beta_0, \bbeta} & \, \frac{1}{2} \sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{i,j}}^2, \\
+				\text{subject to} & \, \sum_{j=1}^p \abs{\beta_j} \le t. 
+			\end{aligned}
+		\end{equation}
+		
+		\item \textit{Solution to $\beta_0$:} Suppose that the columns of $\bX$ has been standardized so that each column has zero mean and unit norm. The solution to $\beta_0$ is 
+		\begin{align*}
+			\hat{\beta}_{0}^{\mathrm{lasso}} = \frac{1}{n} \sum_{i=1}^n y_i. 
+		\end{align*}
+		Denote the objective function in \eqref{lasso.lag} by $\mathrm{RSS}^{\mathrm{lasso}}_{\lambda}$. Taking the partial derivative of $\mathrm{RSS}^{\mathrm{lasso}}_{\lambda}$ with respect to $\beta_0$ and setting the result to zero yield 
+		\begin{align*}
+			\hat{\beta}_0^{\mathrm{lasso}} = & \, \sum_{i=1}^n \parens[\bigg]{y_i - \sum_{j=1}^p \hat{\beta}_j^{\mathrm{lasso}} x_{i,j}} \\
+			= & \, \sum_{i=1}^n y_i - \sum_{j=1}^p \hat{\beta}_j^{\mathrm{lasso}} \parens[\bigg]{\sum_{i=1}^n x_{i,j}} \\
+			= & \, \sum_{i=1}^n y_i, 
+		\end{align*}
+		where we obtain the last equality since columns of $\bX$ has zero mean. 
+		
+		Hence, in the sequel, we fit a model without an intercept. 
+		
+		\item \textit{Continuous Variable Selection:} Due to the nature of the constraint, making $t$ in \eqref{lasso.con} sufficiently small or $\lambda$ in \eqref{lasso.lag} sufficiently large will cause some of the coefficients to be exactly zero. Thus, the lasso does a kind of \textit{continuous subset selection}. 
+	
+		\item \textit{Special Choices of $t$:} If $t$ is chosen larger than $t_0 := \sum_{j=1}^p \abs{\hat{\beta}_j}$, where $\hat{\beta}_j$'s are the least squares estimates, then the lasso estimates are equal to the least squares estimates. 
+		
+		\item \textit{Optimality Conditions:} By the theory of convex analysis, the necessary and sufficient conditions for $\widehat{\bbeta}^{\mathrm{lasso}}$ is 
+		\begin{align*}
+			-\frac{1}{n} \innerp[\Big]{\bc_j}{\bY - \bX \widehat{\bbeta}^{\mathrm{lasso}}} + \lambda s_j = 0, \qquad \text{ for all } j = 1, 2, \cdots, p, 
+		\end{align*}
+		where $\bc_j$ denotes the $j$-th column of $\bX$ and 
+		\begin{align*}
+			s_j = \begin{cases}
+				\sign \parens{\hat{\beta}_j^{\mathrm{lasso}}}, & \, \text{ if } \hat{\beta}_j^{\mathrm{lasso}} \neq 0, \\ 
+				\text{any value between $-1$ and $1$}, & \, \text{ if } \hat{\beta}_j^{\mathrm{lasso}} = 0. 
+			\end{cases}
+		\end{align*}
+		
+		\item \textit{Explicit Solution in Single Predictor Case:} Assume we only have one predictor, and both $\sets{y_i}_{i=1}^n$ and $\sets{x_i}_{i=1}^n$ have been standardized so that 
+		\begin{align*}
+			\sum_{i=1}^n y_i = 0, \qquad \sum_{i=1}^n x_i = 0, \qquad \text{ and } \qquad \sum_{i=1}^n x_i^2 = 1. 
+		\end{align*}
+		Consider the lasso problem with only one predictor and with no intercept 
+		\begin{align}\label{eq-lasso-single}
+			\minimize_{\beta} \, \braces[\Bigg]{ \frac{1}{2} \sum_{i=1}^n \parens{y_i - \beta x_i}^2 + \lambda \abs{\beta}}. 
+		\end{align}
+		Denote the objective function in \eqref{eq-lasso-single} by $f \parens{\beta}$, and note 
+		\begin{align*}
+			f \parens{\beta} = & \, \frac{1}{2} \sum_{i=1}^n \parens{y_i^2 - 2 x_i y_i \beta + \beta^2 x_i^2} + \lambda \abs{\beta} \\ 
+			= & \, \frac{1}{2} \parens[\bigg]{\sum_{i=1}^n x_i^2} \beta^2 - \parens[\bigg]{\sum_{i=1}^n x_i y_i} \beta + \lambda \abs{\beta} + \frac{1}{2} \parens[\bigg]{\sum_{i=1}^n y_i^2} \\ 
+			= & \, \frac{1}{2} \beta^2 - \parens[\bigg]{\sum_{i=1}^n x_i y_i} \beta + \lambda \abs{\beta} + \frac{1}{2} \parens[\bigg]{\sum_{i=1}^n y_i^2} \\ 
+			= & \, \frac{1}{2} \beta^2 - \hat{\beta}^{\mathrm{ls}} \beta + \lambda \abs{\beta} + \frac{1}{2} \parens[\bigg]{\sum_{i=1}^n y_i^2}, 
+		\end{align*}
+		by noting that 
+		\begin{align*}
+			\hat{\beta}^{\mathrm{ls}} = \argmin_{\beta} \braces[\Bigg]{\frac{1}{2} \sum_{i=1}^n \parens{y_i - x_i \beta}^2} = \sum_{i=1}^n x_i y_i. 
+		\end{align*}
+		
+		We now only need to consider to minimize 
+		\begin{align*}
+			h \parens{\beta} := \frac{1}{2} \beta^2 - \hat{\beta}^{\mathrm{ls}} \beta + \lambda \abs{\beta}, 
+		\end{align*}
+		since $\frac{1}{2} \sum_{i=1}^n y_i^2$ term does \emph{not} affect $\beta$. 
+		
+		Consider the following two cases: 
+		\begin{itemize}
+			\item if $\hat{\beta}^{\mathrm{ls}} \ge 0$, then it is necessary that the minimizer of $h$ must be nonnegative. Hence, we only need to minimize 
+			\begin{align*}
+				\tilde{h} \parens{\beta} := & \, \frac{1}{2} \beta^2 - \hat{\beta}^{\mathrm{ls}} \beta + \lambda \beta \\ 
+				= & \, \frac{1}{2} \beta^2 - \parens{\hat{\beta}^{\mathrm{ls}} - \lambda} \beta, \qquad \text{ for } \beta \ge 0. 
+			\end{align*}
+			Then, if $\hat{\beta}^{\mathrm{ls}} - \lambda \ge 0$, the minimizer is at $\hat{\beta} := \hat{\beta}^{\mathrm{ls}} - \lambda$; if $\hat{\beta}^{\mathrm{ls}} - \lambda < 0$, the minimizer is at $0$. 
+			
+			\item if $\hat{\beta}^{\mathrm{ls}} < 0$, then it is necessary that the minimizer of $h$ must be negative. Hence, we only need to minimize 
+			\begin{align*}
+				\tilde{h} \parens{\beta} := & \, \frac{1}{2} \beta^2 - \hat{\beta}^{\mathrm{ls}} \beta - \lambda \beta \\ 
+				= & \, \frac{1}{2} \beta^2 - \parens{\hat{\beta}^{\mathrm{ls}} + \lambda} \beta, \qquad \text{ for } \beta < 0. 
+			\end{align*}
+			Then, if $\hat{\beta}^{\mathrm{ls}} + \lambda < 0$, the minimizer is at 
+			\begin{align*}
+				\hat{\beta} := \hat{\beta}^{\mathrm{ls}} + \lambda = - \abs{\hat{\beta}^{\mathrm{ls}}} + \lambda = \sign \parens{\hat{\beta}^{\mathrm{ls}}} \parens{\abs{\hat{\beta}^{\mathrm{ls}}} - \lambda}; 
+			\end{align*}
+			if $\hat{\beta}^{\mathrm{ls}} - \lambda \ge 0$, the minimizer is at $0$. 
+		\end{itemize}
+		Summarizing two cases, we conclude that the minimizer to \eqref{eq-lasso-1predictor}, denoted by $\hat{\beta}^{\mathrm{lasso}}$, is 
+		\begin{align*}
+			\hat{\beta}^{\mathrm{lasso}} = \sign \parens{\hat{\beta}^{\mathrm{ls}}} \parens[\big]{\abs{\hat{\beta}^{\mathrm{ls}}} - \lambda}_+, 
+		\end{align*}
+		which is called the \emph{soft-thresholding operator} and $\parens{x}_+ = \max \sets{x, 0}$. 
+		
+		\item \textit{Soft-thresholding Operator:} We denote the \emph{soft-thresholding operator} as 
+		\begin{align}
+			S \parens{x, \lambda} = \sign \parens{x} \parens{\abs{x} - \lambda}_+, \qquad \text{ for all } x \in \Real \text{ and } \lambda \ge 0.  
+		\end{align}
+		Note that $S \parens{x, \lambda}$ translates its argument $x$ toward zero by the amount $\lambda$ and sets it to zero if $\abs{x} \le \lambda$. 
+		
+		\item \textit{Explicit Solution under Orthonormal Design:} Suppose the design matrix $\bX$ has orthonormal columns, meaning that 
+		\begin{align*}
+			\innerp{\bc_i}{\bc_j} = \begin{cases}
+				0, & \, \text{ if } i \neq j, \\ 
+				1, & \, \text{ if } i = j. 
+			\end{cases}
+		\end{align*}
+		Then, we have, for all $j = 1, 2, \cdots, p$, 
+		\begin{align}\label{eq-lasso-orth-sol}
+			\hat{\beta}_j^{\mathrm{lasso}} = S \parens{\hat{\beta}_j^{\mathrm{ls}}, \lambda} = \sign \parens{\hat{\beta}_j^{\mathrm{ls}}} \parens[\big]{\abs{\hat{\beta}_j^{\mathrm{ls}}} - \lambda}_+, 
+		\end{align}
+		where $\hat{\beta}_j^{\mathrm{ls}}$ denotes the least squares estimate for the $j$-th coefficient. 
+		
+		Recall that the lasso minimizes 
+		\begin{align}
+			\mathrm{RSS}_{\lambda}^{\mathrm{lasso}} = & \, \frac{1}{2} \parens{\bY - \bX \bbeta}^\top \parens{\bY - \bX \bbeta} + \lambda \norm{\bbeta}_1 \nonumber \\ 
+			= & \, \frac{1}{2} \bY^\top \bY - \bY^\top \bX \bbeta + \frac{1}{2} \bbeta^\top \bX^\top \bX \bbeta + \lambda \sum_{j=1}^p \abs{\beta_j} \nonumber \\ 
+			\stackrel{(\mathrm{i})}{=} & \, \frac{1}{2} \bY^\top \bY + \sum_{j=1}^p \parens[\bigg]{\frac{1}{2} \beta_j^2 - \parens{\bY^\top \bc_j} \beta_j + \lambda \abs{\beta_j}} \nonumber \\ 
+			\stackrel{(\mathrm{ii})}{=} & \, \frac{1}{2} \bY^\top \bY + \sum_{j=1}^p \parens[\bigg]{\frac{1}{2} \beta_j^2 - \hat{\beta}_j^{\mathrm{ls}} \beta_j + \lambda \abs{\beta_j}}, \label{eq-lasso-orth}
+		\end{align}
+		where we use the orthonormality of $\bX$ in (i) and $\hat{\beta}_j^{\mathrm{ls}} = \bY^\top \bc_j$ in (ii). To see $\hat{\beta}_j^{\mathrm{ls}} = \bY^\top \bc_j$, note that 
+		\begin{align*}
+			\widehat{\bbeta}^{\mathrm{ls}} = \argmin_{\bbeta} \parens{\bY - \bX \bbeta}^\top \parens{\bY - \bX \bbeta} = \parens{\bX^\top \bX}^{-1} \bX^\top \bY = \bX^\top \bY. 
+		\end{align*}
+		What remains to show is that $S \parens{\hat{\beta}^{\mathrm{ls}}, \lambda}$ minimizes 
+		\begin{align*}
+			h \parens{\beta} = \frac{1}{2} \beta^2 - \hat{\beta}^{\mathrm{ls}} \beta + \lambda \abs{\beta}, 
+		\end{align*}
+		by noting that \eqref{eq-lasso-orth} is separable in each coordinate. The desired result follows from the solution to the single predictor case.  
+		
+		\item \textit{Computation -- Cyclic Coordinate Descent Algorithm:} Explicit solution of the lasso problem under the general case does \emph{not} exist. We develop a \emph{cyclic coordinate descent algorithm} to compute the solution. 
+		
+		\begin{enumerate}
+			\item \underline{Main Idea:} Fix the penalty parameter $\lambda$ in the Lagrangian form of the Lasso problem \eqref{lasso.lag}. We repeatedly cycle through the predictors in order, where at the $j$-th step, we update the coefficient $\beta_j$ by minimizing the objective function in this coordinate while holding all other coefficients fixed at the current value. 
+
+			\item \textit{Derivation of Algorithm:} Let $\hat{\beta}_k \parens{\lambda}$ be the current estimate of $\beta_k$ at the penalty parameter $\lambda$, for $k = 1, \cdots, p$ and $k \neq j$. We can write the objective function for the lasso problem as 
+			\begin{align*}
+				\frac{1}{2} \sum_{i=1}^n \parens[\bigg]{y_i - \sum_{k \neq j} \hat{\beta}_k \parens{\lambda} x_{i,k} - \beta_j x_{i,j}}^2 + \lambda \sum_{k \neq j} \abs{\hat{\beta}_k \parens{\lambda}} + \lambda \abs{\beta_j}. 
+			\end{align*}
+			This can be viewed as a univariate Lasso problem with the response variable being the partial residual 
+			\begin{align*}
+				r_i^{\parens{j}} := y_i - \sum_{k\neq j} \hat{\beta}_k \parens{\lambda} x_{i,k}, 
+			\end{align*}
+			where $\hat{\beta}_k \parens{\lambda}$'s are viewed as fixed. In terms of the partial residuals, $\beta_j$ is updated as 
+			\begin{align*}
+				\hat{\beta}_j = S \parens[\big]{\innerp{\bc_j}{\boldr^{\parens{j}}}, \lambda}, 
+			\end{align*}
+			where $\boldr^{\parens{j}} := \parens{r_1^{\parens{j}}, r_2^{\parens{j}}, \cdots, r_n^{\parens{j}}}^\top \in \Real^n$ and $S \parens{\,\cdot\,, \lambda}$ is the soft-thresholding operator. 
+			
+			In addition, if we let $\hat{\beta}_j \parens{\lambda}$ denote the current value of $\beta_j$, we have 
+			\begin{align*}
+				\innerp{\bc_j}{\boldr^{\parens{j}}} = & \, \innerp{\bc_j}{\boldr^{\parens{j}} - \hat{\beta}_j \parens{\lambda} \bc_j + \hat{\beta}_j \parens{\lambda} \bc_j} \\ 
+				= & \, \innerp{\bc_j}{\boldr + \hat{\beta}_j \parens{\lambda} \bc_j} \\ 
+				= & \, \innerp{\bc_j}{\boldr} + \hat{\beta}_j \parens{\lambda} \innerp{\bc_j}{\bc_j} \\ 
+				= & \, \innerp{\bc_j}{\boldr} + \hat{\beta}_j, 
+			\end{align*}
+			where $\boldr = \parens{r_1, r_2, \cdots, r_n}^\top \in \Real^n$ is the full residual vector with $r_i = y_i - \sum_{j=1}^p \hat{\beta}_j \parens{\lambda} x_{i,j}$ , for all $i = 1, 2, \cdots, n$, and we obtain the last equality since each column $\bc_j$, for all $j = 1, 2, \cdots, p$, has unit norm. 
+			
+			Therefore, we can update the coefficient $\beta_j$ as 
+			\begin{align}\label{eq-lasso-coord-descent-update}
+				\hat{\beta}_j \parens{\lambda} \leftarrow S \parens[\Big]{\hat{\beta}_j \parens{\lambda} + \innerp{\bc_j}{\boldr}, \lambda}, 
+			\end{align}
+			We repeat iteration in \eqref{eq-lasso-coord-descent-update} by cycling each variable in turn until convergence. 
+			
+			\item \underline{Correctness of Algorithm:} Note that the objective function \eqref{lasso.lag} is a convex function of $\bbeta$ and has no local minima. The cyclic coordinate descent algorithm derived above minimizes this convex objective function along each coordinate at a time, and (under certain mild conditions) converges to a global minimum. 
+		\end{enumerate}
+		
+	\end{enumerate}
+	
+	\item \textbf{Comparisons of Subset Selection, Ridge Regression and Lasso:} In the case of the orthonormal design matrix $\bX$, the solutions to three methods are 
+	\begin{itemize}
+		\item \textit{Best Subset Selection of Size $M$:} $\hat{\beta}_j^{\mathrm{ls}} \times \indic \parens{\abs{\hat{\beta}_j^{\mathrm{ls}}} \ge \abs{\hat{\beta}_{(M)}^{\mathrm{ls}}}}$; 
+		\item \textit{Ridge Regression:} $\hat{\beta}_j^{\mathrm{ls}} / \parens{1 + \lambda}$; 
+		\item \textit{Lasso:} $\sign \parens{\hat{\beta}_j^{\mathrm{ls}}} \parens[\big]{\abs{\hat{\beta}_j^{\mathrm{ls}}} - \lambda}_+$, 
+	\end{itemize}
+	where $\hat{\beta}_j^{\mathrm{ls}}$'s are the least squares estimates. We see that 
+	\begin{itemize}
+		\item Ridge regression does a \textit{proportional} shrinkage; 
+		\item Lasso translates each coefficient by a constant factor $\lambda > 0$, truncating at zero. This is called ``soft thresholding''; 
+		\item Best-subset selection drops all variables with coefficients smaller than the $M$-th largest; this is a form of ``hard-thresholding''. 
+	\end{itemize}
+	
+	\item \textbf{Generalizations of Ridge and Lasso:} 
+	
+	\begin{enumerate}
+		\item \textit{Problem Formulation:} Consider the criterion 
+		\begin{align}\label{gen.lag}
+			\parens[\Big]{\tilde{\beta}_{0}, \widetilde{\bbeta}} := \argmin_{\beta_0, \bbeta} \braces[\Bigg]{\frac{1}{2} \sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{i,j}}^2 + \lambda \sum_{j=1}^p \abs{\beta_j}^q}, 
+		\end{align}
+		for $q \ge 0$. 
+		
+		\item \textit{Bayes Estimate Interpretation:} We can think of $\abs{\beta_j}^q$ as the log-prior density for $\beta_j$, where 
+		\begin{itemize}
+			\item $q = 0$ corresponds to the subset selection, 
+			\item $q = 1$ corresponds to the lasso, and 
+			\item $q = 2$ corresponds to the ridge regression. 
+		\end{itemize}
+		In this view, the lasso, ridge regression and best subset selection are \textit{Bayes estimates} with different priors, and they all can be derived as \textit{posterior modes}. 
+		
+		\item \textit{Picking $q \in \parens{1, 2}$:} 
+		\begin{itemize}
+			\item Choosing $q \in \parens{1, 2}$ results in a compromise between the lasso and the ridge; 
+			\item $\abs{\beta_j}^q$ is differentiable at $0$; 
+			\item These choices of $q$ \textit{cannot} set coefficients exactly to 0. 
+		\end{itemize}
+	\end{enumerate}
+		
+	\item \textbf{Elastic Net:} The \textit{elastic net penalty} is 
+	\begin{align*}
+		\lambda \sum_{j=1}^p \parens[\bigg]{\frac{1}{2} \parens{1 - \alpha} \beta_j^2 + \alpha \abs{\beta_j}}, 
+	\end{align*}
+	where $\lambda \ge 0$ and $\alpha \in \bracks{0, 1}$. 
+	
+	\begin{enumerate}
+		\item \textit{Comments:} The elastic net penalty
+		\begin{itemize}
+			\item selects variables like the lasso, and shrinks together the coefficients of correlated predictors like ridge; 
+			\item has considerable computational advantages over the $L_q$ penalties; and 
+			\item for any $\alpha < 1$ and $ \lambda > 0$, the elastic net problem is \textit{strictly convex}, implying a unique solution exists irrespective of the correlations or duplications of predictors. 
+		\end{itemize}
+		
+		\item \textit{Coordinate Descent Algorithm for Solving Elastic Net Problem:} We first center each column of the design matrix $\bX$ so that the sum of all entries in each column is 0, and compute the optimal intercept 
+		\begin{align*}
+			\hat{\beta}_0 = \frac{1}{n} \sum_{i=1}^n y_i. 
+		\end{align*}
+		The update of each coordinate coefficient is 
+		\begin{align}\label{eq-elastic-net-updates}
+			\hat{\beta}_j \leftarrow \frac{S \parens{\sum_{i=1}^n r_{i, j} x_{i, j}, \lambda \alpha}}{\sum_{i=1}^n x_{i,j}^2 + \lambda \parens{1 - \alpha}}, 
+		\end{align}
+		where $S \parens{x, u} = \sign \parens{x} \parens{\abs{x} - u}_+$ is the soft-thresholding operator, and 
+		\begin{align*}
+			r_{i,j} = y_i - \hat{\beta}_0 - \sum_{k \neq j} x_{i,k} \hat{\beta}_k
+		\end{align*}
+		is the partial residual. We cycle over the updates \eqref{eq-elastic-net-updates} until convergence. 
+	\end{enumerate}
+	
+	\item \textbf{Least Angle Regression (LAR):} 
+	\begin{enumerate}
+		\item \textit{Main Idea:} LAR builds a model sequentially, adds one variable at a time ``as much'' of a variable as it deserves -- LAR moves the coefficient of this variable continuously toward its least squares value. 
+		
+		\item \textit{Algorithm Details:} 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+			\caption{Least Angle Regression}
+			\label{algo-lar}
+			\begin{algorithmic}[1]
+				\STATE Standardize the design matrix so that each column has zero mean and unit norm. 
+				
+				\STATE Start with the residual 
+				\begin{align*}
+					\mathbf{r} := \bY - \frac{1}{n} \boldone_n^\top \bY
+				\end{align*}
+				and $\beta_1 = \beta_2 = \cdots = \beta_p = 0$. 
+				
+				\STATE Find the predictor $X_j$ most correlated with $\mathbf{r}$. 
+				
+				\STATE Move $\beta_j$ from 0 towards its least-squares coefficient $\innerp{X_j}{\mathbf{r}}$, until some other competitor $X_k$ has as much correlation with the current residual as does $X_j$. 
+				
+				\STATE \label{algo-lar-step4} Move $\beta_j$ and $\beta_k$ in the direction defined by their joint least squares coefficient of the current residual on $\parens{X_j, X_k}$, until some other competitor $X_l$ has as much correlation with the current residual. 
+	
+				\STATE Continue in this way until all $p$ predictors have been entered. After $\min \parens{n - 1, p}$ steps, we arrive at the full least squares solution. 
+			\end{algorithmic}
+		\end{algorithm}
+		\end{minipage}
+		
+		\vspace{10pt}
+		
+		\item \textit{Update Direction:} Suppose $\calA_k$ is the active set of variables at the beginning of the $k$th step, and let $\bbeta_{\calA_k}$ be the coefficient vector for these variables at this step; there will be $k - 1$ nonzero values, and the one just entered will be zero. 
+		
+		If $\boldr_k := \bY - \bX_{\calA_k} \bbeta_{\calA_k}$ is the current residual, then the direction for this step is 
+		\begin{align*}
+			\boldsymbol{\delta}_k := \parens{\bX_{\calA_k}^\top \bX_{\calA_k}}^{-1} \bX_{\calA_k} \boldr_k, 
+		\end{align*}
+		The coefficient profile evolves as $\bbeta_{\calA_k} \parens{\alpha} := \bbeta_{\calA_k} + \alpha \boldsymbol{\delta}_k$. 
+		
+		Along the direction $\boldsymbol{\delta}_k$, the correlations tie and keep decreasing. 
+		
+		\item \textit{Update of Fitted Value Vector:} If the fitted value vector at the beginning of the $k$-th step is $\widehat{\boldf}_k$, then it evolves as 
+		\begin{align*}
+			\widehat{\boldf}_k \parens{\alpha} = \widehat{\boldf}_k + \alpha \cdot \bu_k, 
+		\end{align*}
+		where $\bu_k := \bX_{\calA_k} \boldsymbol{\delta}_k$ is the new fit direction. 
+		
+		\textit{Remark.} The name ``least angle'' arises from a geometric interpretation of this process: $\bu_k$ makes the smallest (and equal) angle with each of the predictors in the active set $\calA_k$. 
+		
+		\item \textit{Modification of LAR to Compute Lasso Solution:} Modify Step \ref{algo-lar-step4} in Algorithm \ref{algo-lar} to the following. 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+			\caption{Modified Least Angle Regression to Compute Lasso Solution}\label{algo-modified-lar}
+			\begin{algorithmic}
+				\STATE If a non-zero coefficient hits zero, drop its variable from the active set of variables and recompute the current joint least squares direction. 
+			\end{algorithmic}
+		\end{algorithm}
+		\end{minipage}
+		
+		\vspace{5pt}
+		
+		\item \textit{Similarity between LAR and Lasso:} Suppose $\calA$ is the active set of variables at some stage in the algorithm, tied in their absolute inner-product with the current residuals $\bY - \bX \bbeta_{\calA}$. We can express this as 
+		\begin{align}\label{eq-comp-lar-lasso-lar-1}
+			\innerp{\bc_j}{\bY - \bX \bbeta_{\calA}} = \gamma s_j, \qquad \text{ for all } j \in \calA, 
+		\end{align}
+		where $s_j \in \braces{-1, 1}$ indicates the sign of the inner-product, and $\gamma$ is the common correlation value. In addition, we have 
+		\begin{align}\label{eq-comp-lar-lasso-lar-2}
+			\abs[\big]{\innerp{\bx_k}{\bY - \bX \bbeta_{\calA}}} \le \gamma, \qquad \text{ for all } k \notin \calA. 
+		\end{align}
+		
+		Now consider the lasso criterion \eqref{lasso.lag}, which we write the objective function in vector form 
+		\begin{align*}
+			\mathrm{RSS}_{\lambda}^{\mathrm{lasso}} \parens{\bbeta} := \frac{1}{2} \norm{\bY - \bX \bbeta}_2^2 + \lambda \norm{\bbeta}_1. 
+		\end{align*}
+		Let $\calB$ be the active set of variables in the solution for a given value of $\lambda$. For these variables, $\mathrm{RSS}_{\lambda}^{\mathrm{lasso}}$ is differentiable, and the stationarity conditions give 
+		\begin{align}\label{eq-comp-lar-lasso-lasso-1}
+			\innerp{\bx_j}{\bY - \bX \bbeta} = \lambda \cdot \mathrm{sign} \parens{\beta_j}, \qquad \text{ for all } j \in \calB. 
+		\end{align}
+		For variables not in $\calB$, using the subgradient, we have 
+		\begin{align}\label{eq-comp-lar-lasso-lasso-2}
+			\abs[\big]{\innerp{\bx_k}{\bY - \bX \bbeta}} \le \lambda, \qquad \text{ for all } k \notin \calB. 
+		\end{align}
+		
+		Comparing \eqref{eq-comp-lar-lasso-lar-1} with \eqref{eq-comp-lar-lasso-lasso-1}, they are identical only if the sign of $\beta_j$ matches the sign of the inner product. Comparing \eqref{eq-comp-lar-lasso-lar-2} with \eqref{eq-comp-lar-lasso-lasso-2}, they are almost identical. 
+		
+		These reveal the similarity between LAR and Lasso. 
+		
+	\end{enumerate} 
+	
+	\item \textbf{Degrees-of-Freedom Formula for LAR and Lasso:} 
+	\begin{enumerate}
+		\item \textit{Definition in Classical Statistics:} In classical statistics, the \textit{degrees of freedom} means the number of linearly independent parameters. 
+		
+		\textit{Example:} 
+		\begin{enumerate}
+			\item If we fit a linear regression model using a pre-specified subset of $k$ features without reference to the training data, the degrees of freedom used in the fitted model is defined to be $k$. 
+			\item If we carry out a best subset selection to determine the ``optimal'' set of $k$ predictors, the resulting model has $k$ parameters, but in some sense we have used up more than $k$ degrees of freedom. 
+		\end{enumerate}
+		
+		\item \textit{New Definition:} We define the \textit{degrees of freedom} of the fitted value vector $\widehat{\bY} := \parens{\hat{y}_1, \hat{y}_2, \cdots, \hat{y}_n}^\top$ to be 
+		\begin{align}\label{eq-df}
+			\mathrm{df} \parens{\widehat{\bY}} := \frac{1}{\sigma^2} \sum_{i=1}^n \cov \parens{y_i, \hat{y}_i}. 
+		\end{align}
+		Here, $\cov \parens{y_i, \hat{y}_i}$ refers to the sampling covariance between the predicted value $\hat{y}_i$ and its corresponding outcome value $y_i$. 
+		
+		\textit{Intuitive Explanation:} The harder that we fit to the data, the larger this covariance and hence $\mathrm{df} \parens{\widehat{\bY}}$. 
+		
+		\textit{Comment:} One can be applied \eqref{eq-df} to any model prediction $\widehat{\bY}$, including models that are adaptively fitted to the training data. 
+		
+		\item \textit{Examples:}
+		\begin{enumerate}
+			\item \underline{Linear regression model with fixed $k$ variables:} It is easy to obtain $\mathrm{df} \parens{\widehat{\bY}} = k$, by noting 
+			\begin{align*}
+				\mathrm{df} \parens{\widehat{\bY}} = & \, \frac{1}{\sigma^2} \tr \parens{\cov \parens{\widehat{\bY}, \bY}} \\ 
+				= & \, \frac{1}{\sigma^2} \tr \parens[\big]{\cov \parens[\big]{\bX \parens{\bX^\top \bX}^{-1} \bX^\top \bY, \bY}} \\ 
+				= & \, \frac{1}{\sigma^2} \tr \parens[\big]{ \bX \parens{\bX^\top \bX}^{-1} \bX^\top \cov \parens{\bY, \bY}} \\ 
+				= & \, \frac{1}{\sigma^2} \tr \parens[\big]{ \bX \parens{\bX^\top \bX}^{-1} \bX^\top \sigma^2 \bI_n} \\ 
+				= & \, \tr \parens[\big]{ \bX^\top \bX \parens{\bX^\top \bX}^{-1} } \\ 
+				= & \, k. 
+			\end{align*}
+			
+			\item \textit{Ridge regression:} The fitted value vector of the ridge regression for a fixed value of $\lambda$ is 
+			\begin{align*}
+				\widehat{\bY}^{\mathrm{ridge}} = \bX \parens{\bX^\top \bX + \lambda \bI}^{-1} \bX^\top \bY. 
+			\end{align*}
+			Then, 
+			\begin{align*}
+				\mathrm{df} \parens{\widehat{\bY}^{\mathrm{ridge}}} = & \, \frac{1}{\sigma^2} \tr \parens[\big]{\cov \parens{\widehat{\bY}^{\mathrm{ridge}}, \bY}} \\ 
+				= & \, \frac{1}{\sigma^2} \tr \parens[\big]{\cov \parens{\bX \parens{\bX^\top \bX + \lambda \bI}^{-1} \bX^\top \bY, \bY}} \\ 
+				= & \, \frac{1}{\sigma^2} \tr \parens[\big]{\bX \parens{\bX^\top \bX + \lambda \bI}^{-1} \bX^\top \cov \parens{\bY, \bY}} \\ 
+				= & \, \tr \parens[\big]{\bX \parens{\bX^\top \bX + \lambda \bI}^{-1} \bX^\top}. 
+			\end{align*}
+			
+			\item \textit{LAR:} After the $k$-th step of the LAR procedure, the effective degrees of freedom of the fit vector is exactly $k$. 
+			
+			\item \textit{Lasso:} Using Algorithm \ref{algo-modified-lar}, at any stage $\mathrm{df} \parens{\widehat{\bY}}$ approximately equals the number of predictors in the model. 
+			
+		\end{enumerate}
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{VI. Methods Using Derived Input Variables}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{General Ideas of Methods Using Derived Input Variables:} Rather than using a large number of correlated covariates, use a small number of linear combinations, $\sets{Z_k}_{k=1}^M$, of the original variables $\sets{X_j}_{j=1}^p$, with $M < p$ or even $M \ll p$. 
+	
+	\item \textbf{Principal Components Regression:} 
+	\begin{enumerate}
+		\item \textit{Principal Components and Derived Variables:} Let $\bX$ be the centered design matrix with the singular value decomposition $\bX = \bU \bD \bV^\top$. Then, the eigen-decomposition of $\bX^\top \bX$ is 
+		\begin{align*}
+			\bX^\top \bX = \bV \bD^2 \bV^\top. 
+		\end{align*}
+		The eigenvectors $\bv_1, \cdots, \bv_p$, columns of $\bV$, are called the \emph{principal components directions} of $\bX$. Form the derived variables $\bz_1, \cdots, \bz_p$ by 
+		\begin{align*}
+			\bz_j = \bX \bv_j, \qquad \text{ for all } j = 1, \cdots, p. 
+		\end{align*}
+		
+		\item \textit{Orthogonality of $\bz_j$'s:} The vectors $\bz_j$'s are orthogonal. To see this, let $j \neq k$ and notice 
+		\begin{align*}
+			\innerp{\bz_j}{\bz_k} = & \, \bv_j^\top \bX^\top \bX \bv_k = \bv_j^\top \bV \bD^2 \bV^\top \bv_k = {\bI_n^{\parens{j}}}^\top \bD^2 \bI_n^{\parens{k}} = 0, 
+		\end{align*}
+		and 
+		\begin{align*}
+			\innerp{\bz_j}{\bz_j} = & \, \bv_j^\top \bX^\top \bX \bv_j = \bv_j^\top \bV \bD^2 \bV^\top \bv_j = {\bI_n^{\parens{j}}}^\top \bD^2 \bI_n^{\parens{j}} = d_j^2, 
+		\end{align*}
+		where $\bI_n^{\parens{j}}$ denotes the $j$-th column of the $n \times n$ identity matrix $\bI_n$. 
+		
+		\item \textit{Principal Components Regression:} Principal components regression regress $\bY$ on $\bz_1, \cdots, \bz_M$ for some $M \le p$ so that 
+		\begin{align*}
+			\widehat{\bY}^{\mathrm{pcr}} = \frac{1}{n} \boldone_n^\top \bY \boldone_n + \sum_{m=1}^M \hat{\theta}_m \bz_m, 
+		\end{align*} 
+		where $\hat{\theta}_m = \innerp{\bz_m}{\bY} / \innerp{\bz_m}{\bz_m}$. 
+		
+		Since $\bz_m$'s are linear combinations of columns of $\bX$, then 
+		\begin{align*}
+			\sum_{m=1}^M \hat{\theta}_m \bz_m = \sum_{m=1}^M \hat{\theta}_m \bX \bv_m = \bX \sum_{m=1}^M \hat{\theta}_m \bv_m. 
+		\end{align*}
+		Hence, $\widehat{\bbeta}^{\mathrm{pcr}} \parens{M} = \sum_{m=1}^M \hat{\theta}_m \bv_m$. Here, we use the notation ``$\parens{M}$'' to explictly denote that the coefficient vector estimate depends on the number of principal components chosen. 
+		
+		\item \textit{Special Case When $M = p$:} If $M = p$, 
+		\begin{align*}
+			\widehat{\bbeta}^{\mathrm{pcr}} \parens{p} = & \, \sum_{m=1}^p \hat{\theta}_m \bv_m = \sum_{m=1}^p \frac{\innerp{\bz_m}{\bY}}{\innerp{\bz_m}{\bz_m}} \bv_m \\ 
+			= & \, \sum_{m=1}^p \frac{\innerp{\bX \bv_m}{\bY}}{\innerp{\bX \bv_m}{\bX \bv_m}} \bv_m \\ 
+			= & \, \sum_{m=1}^p \frac{\innerp{\bU \bD \bV^\top \bv_m}{\bY}}{\innerp{\bU \bD \bV^\top \bv_m}{\bU \bD \bV^\top \bv_m}} \bv_m  \\ 
+			= & \, \sum_{m=1}^p \frac{\bv_m}{d_m} \bU^\top \bY \\ 
+			= & \, \bV \bD^{-1} \bU^\top \bY. 
+		\end{align*}
+		But, on the other hand, we have the least squares estimate of $\bbeta$, $\widehat{\bbeta}^{\mathrm{ls}}$, is 
+		\begin{align*}
+			\widehat{\bbeta}^{\mathrm{ls}} = \parens{\bX^\top \bX}^{-1} \bX^\top \bY = \bV \bD^{-1} \bU^\top \bY. 
+		\end{align*}
+		That is, when $M = p$, the principal components estimator and the least squares estimator are identical. If $M < p$, we obtain a reduced regression. 
+		
+		\item \textit{Comparison of Principal Components Regression and Ridge Regression:} 
+		\begin{itemize}
+			\item Both principal components regression and ridge regression operate via the principal components of the design matrix. 
+			\item Ridge regression shrinks the coefficients of the principal components  depending on the size of the corresponding eigenvalue; principal components regression discards the $p - M$ smallest eigenvalue components. 
+		\end{itemize}
+	\end{enumerate}
+
+	\item \textbf{Partial Least Squares:} 
+	\begin{enumerate}
+		\item \textit{Assumption:} Each column of the design matrix $\bX$ is standardized to have mean 0 and norm 1. 
+		
+		\item \textit{Main Idea:} In partial least-squares regression, the derived variables are specifically constructed to retain most of the information in the predictors that helps predict $\bY$, while at the same time reducing the dimensionality of the regression. In particular, partial least-squares regression uses data on \emph{both} the input and output variables. 
+		
+		\item \textit{Explanation:} PLS begins by computing $\widehat{\varphi}_{1, j} := \innerp{\bc_j}{\bY}$ for each $j = 1, 2, \cdots, p$. Then, we construct the derived input 
+		\begin{align*}
+			\bz_1 := \sum_{j=1}^p \widehat{\varphi}_{1, j} \bc_j, 
+		\end{align*}
+		which is the first partial least squares direction. Note that in the construction of each $\bz_m$, the inputs are weighted by the \emph{strength} (i.e., covariance) of their univariate effect on $\bY$. The outcome $\bY$ is regressed on $\bz_1$, giving coefficient $\hat{\theta}_1$. 
+		
+		We orthogonalize $\bc_1, \bc_2, \cdots, \bc_p$ with respect to $\bz_1$. We continue this process, until $M \le p$ directions have been obtained. 
+		
+		\textit{Remark.} If we choose $M = p$, we get back to the least squares solution; if $M < p$, this procedure produces a reduced regression. 
+		
+		\item \textit{Algorithm:} The complete algorithm of the partial least squares is shown in Algorithm \ref{algo-partial-ls}. 
+		
+		\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{Partial Least Squares}\label{algo-partial-ls}
+			\begin{algorithmic}[1]
+			\STATE Standardize the design matrix $\bX$ so that each column has mean 0 and norm 1. Let $\bc_1, \bc_2, \cdots, \bc_p$ be columns of $\bX$; 
+			\vspace{5pt}
+			\STATE Set $\widehat{\bY} = \frac{1}{n} \boldone_n^\top \bY \boldone_n$, and $\bc_j^{(0)} = \bc_j$ for all $j = 1, \cdots, p$; 
+			\vspace{5pt}
+			\STATE For $m = 1, \cdots, M$ for some $M \le p$: 
+			\vspace{5pt}
+			\begin{enumerate}
+				\item[i.] $\bz_m = \sum_{j=1}^p \widehat{\varphi}_{m, j} \bc_j^{(m-1)}$, where $\widehat{\varphi}_{m,j} = \innerp{\bc_j^{(m-1)}}{\bY}$; 
+				
+				\vspace{5pt}
+				\item[ii.] Regress $\bY$ on $\bz_m$ and obtain the coefficient 
+				\begin{align*}
+					\hat{\theta}_m = \frac{\innerp{\bz_m}{\bY}}{\innerp{\bz_m}{\bz_m}}; 
+				\end{align*}
+				\vspace{5pt}
+				\item[iii.] Set $\widehat{\bY}^{(m)} = \widehat{\bY}^{(m - 1)} + \hat{\theta}_m \bz_m$; 
+				\vspace{5pt}
+				\item[iv.] Orthogonalize each $\bc_j^{(m-1)}$ with respect to $\bz_m$, i.e., 
+				\begin{align*}
+					\bc_j^{(m)} = \bc_j^{(m-1)} - \frac{\innerp{\bz_m}{\bc_j^{(m-1)}}}{\innerp{\bz_m}{\bz_m}} \bz_m, \qquad \text{ for all } j = 1, 2, \cdots, p. 
+				\end{align*}
+			\end{enumerate}
+			
+			\vspace{5pt}
+			\STATE Output the sequence of fitted vectors $\sets{\widehat{\bY}^{(m)}}_{m=1}^M$. Since $\sets{\bz^{(m)}}_{m=1}^M$ are linear in the original $\bc_j$, so is $\widehat{\bY}^{(m)} = \bX \widehat{\bbeta}^{\mathrm{pls}} (m)$. The coefficients can be recovered from the sequence of the PLS transformation. 
+
+		\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\vspace{10pt}
+	
+	\item \textit{Some Remarks:} 
+	\begin{enumerate}
+		\item Partial least squares seeks directions that have \emph{high variance} \underline{and} have \emph{high correlation} with the response vector $\bY$. 
+		\item If the design matrix $\bX$ is orthogonal, the partial least squares finds the least squares estimates after $m = 1$. Subsequent steps have no effect. 
+		
+		To see this, fix $m = 1$, let $\bc^{\parens{1}}_j = \bc_j$, and note 
+		\begin{align*}
+			\bz_1 = & \, \sum_{j=1}^p \innerp{\bc_j}{\bY} \bc_j, \\ 
+			\innerp{\bz_1}{\bY} = & \, \innerp[\bigg]{\sum_{j=1}^p \innerp{\bc_j}{\bY} \bc_j}{\bY} = \sum_{j=1}^p \parens[\big]{\innerp{\bc_j}{\bY}}^2, \\ 
+			\innerp{\bz_1}{\bz_1} = & \, \innerp[\bigg]{\sum_{j=1}^p \innerp{\bc_j}{\bY} \bc_j}{\sum_{k=1}^p \innerp{\bc_k}{\bY} \bc_k} \\ 
+			= & \, \sum_{j=1}^p \sum_{k=1}^p \innerp{\bc_j}{\bY} \innerp{\bc_k}{\bY} \innerp{\bc_j}{\bc_k} \\ 
+			= & \, \sum_{j=1}^p \parens[\big]{\innerp{\bc_j}{\bY}}^2, 
+		\end{align*}
+		where we use the assumption that columns of $\bX$ are orthogonal and have unit norm to derive the last equality. It follows that $\hat{\theta}_1 = 1$. Then, for any $j = 1, 2, \cdots, m$, we have 
+		\begin{align*}
+			\bc_j^{\parens{2}} = \bc_j - \frac{\innerp{\bz_1}{\bc_j}}{\innerp{\bz_1}{\bz_1}} \bz_1, 
+		\end{align*}
+		where 
+		\begin{align*}
+			\innerp{\bz_1}{\bc_j} = \innerp[\bigg]{\sum_{k=1}^p \innerp{\bc_k}{\bY} \bc_k}{\bc_j} = \sum_{k=1}^p \innerp{\bc_k}{\bY} \innerp{\bc_k}{\bc_j} = \innerp{\bc_j}{\bY}. 
+		\end{align*}
+		
+		Now, proceed to $m=2$. Note that, for any $j = 1, \cdots, p$, 
+		\begin{align*}
+			\widehat{\varphi}_{2,j} = & \, \innerp{\bc_j^{\parens{2}}}{\bY} \\ 
+			= & \, \innerp{\bc_j}{\bY} - \frac{\innerp{\bc_j}{\bY}}{\sum_{j=1}^p \parens{\innerp{\bc_j}{\bY}}^2} \innerp[\Bigg]{\sum_{k=1}^p \innerp{\bc_k}{\bY} \bc_k}{\bY} \\ 
+			= & \, \innerp{\bc_j}{\bY} - \frac{\innerp{\bc_j}{\bY}}{\sum_{j=1}^p \parens{\innerp{\bc_j}{\bY}}^2} \sum_{k=1}^p \parens{\innerp{\bc_k}{\bY} }^2 \\ 
+			= & \, \innerp{\bc_j}{\bY} - \innerp{\bc_j}{\bY} \\ 
+			= & \, 0. 
+		\end{align*}
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{A Summary of Selection and Shrinkage Methods:} 
+	\begin{itemize}
+		\item \textit{Ridge regression} shrinks all directions, but shrinks the low-variance directions more; 
+		\item \textit{Principal components regression} leaves $M$ high-variance directions alone and discards the rest; 
+		\item \textit{Partial least squares regression} tends to shrink the low-variance directions but inflate some of the higher variance directions, which makes it unstable and leads to higher prediction errors; 
+		\item \textit{Lasso} falls between ridge regression and best subset selection.  
+	\end{itemize}
+	
+\end{enumerate}
+
+
+\section*{VII. More on the Lasso and Related Path Algorithms}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Garotte:} Let $\widehat{\bbeta}^{\mathrm{ls}}$ be the least squares estimator and $\bW := \diag \parens{\bw} \in \Real^{p \times p}$ be a diagonal matrix with nonnegative weights $\bw := \parens{w_1, w_2, \cdots, w_p}^\top \in \Real^p$ along the diagonal. The \textit{Garotte} finds $\bw$ that minimizes 
+	\begin{align}\label{eq-garotte}
+		\frac{1}{2} \parens[\big]{\bY - \bX \bW \widehat{\bbeta}^{\mathrm{ls}}}^\top \parens[\big]{\bY - \bX \bW \widehat{\bbeta}^{\mathrm{ls}}}, 
+	\end{align}
+	subject to one of the following two constraints: 
+	\begin{enumerate}
+		\item nonnegative Garotte: $\bw \ge \boldzero_p$ and $\boldone_p^\top \bw = \sum_{j=1}^p w_j \le c$, 
+		\item Garotte: $\bw^\top \bw \le c$. 
+	\end{enumerate}
+	Either version seeks to find some desirable scaling of the regression coefficients. 
+	
+	In particular, as $c$ is decreased, more components of $\bw$ become 0 (thus eliminating those particular variables from the regression function), while the nonzero $\widehat{\bbeta}^{\mathrm{ls}}$ shrink toward 0. 
+	
+	\textit{Special Case --- Orthogonal Design:} Suppose that columns of $\bX$ are orthogonal and that $c$ is in the range where the equality $\sum_{j=1}^p w_j = c$ can be satisfied, the solution to $\bw$ in \eqref{eq-garotte} is given by 
+	\begin{align*}
+		\hat{w}_j = \parens[\Bigg]{1 - \frac{\lambda}{\parens{\hat{\beta}_j^{\mathrm{ls}}}^2}}_+, \qquad \text{ for all } j = 1, 2, \cdots, p, 
+	\end{align*}
+	where $\lambda$ is chosen so that $\sum_{j=1}^p \hat{w}_j = c$. Hence, if $\hat{\beta}_j^{\mathrm{ls}}$ is large, the shrinkage factor will be close to 1, leading to no shrinkage; if it is small, the coefficient will be shrunken to 0. 
+	
+	\textit{Remark.} Both versions of the Garotte depend upon the existence of $\widehat{\bbeta}^{\mathrm{ls}}$ and fail in situations where $p > n$. 
+	
+	\item \textbf{Incremental Forward Stagewise Regression:} 
+	
+	\begin{enumerate}
+	
+	\item \textit{$\mathrm{FS}_{\varepsilon}$ Algorithm:}
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{Incremental Forward Stagewise Regression -- $\mathrm{FS}_{\varepsilon}$}\label{algo-incre-for-stagewise}
+			\begin{algorithmic}[1]
+			\STATE Start with the residual vector $\boldr$ equal to $\bY$ and $\beta_1, \beta_2, \cdots, \beta_p = 0$. All the predictors are standardized to have mean zero and unit norm. 
+			\STATE Find the predictor $X_j$ most correlated with $\boldr$; 
+			\STATE Update 
+			\begin{align*}
+				\beta_j \leftarrow \beta_j + \delta_j, 
+			\end{align*}
+			where $\delta_j = \varepsilon \cdot \sign \parens{ \innerp{\bx_j}{\boldr}}$ and $\varepsilon > 0$ is a small step size, and set 
+			\begin{align*}
+				\boldr \leftarrow \boldr - \delta_j \bx_j. 
+			\end{align*}
+			
+			\STATE Repeat Steps 2 and 3 many times, until the residuals are uncorrelated with all the predictors. 
+		\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\vspace{10pt}
+	
+	\item \textit{Infinitesimal Forward Stagewise Regression, $\mathrm{FS}_0$:} 
+	
+	\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+			\caption{Least Angle Regression -- $\mathrm{FS}_0$ Modification}
+			\begin{algorithmic}[1]
+				\STATE Standardize the variables to have mean zero and unit norm. 
+				\STATE Start with the residual 
+				\begin{align*}
+					\mathbf{r} := \bY - \frac{1}{n} \boldone_n^\top \bY
+				\end{align*}
+				and $\beta_1 = \beta_2 = \cdots = \beta_p = 0$. 
+				\STATE Find the predictor $X_j$ most correlated with $\mathbf{r}$. 
+				\STATE Move $\beta_j$ from 0 towards its least-squares coefficient $\innerp{X_j}{\mathbf{r}}$, until some other competitor $X_k$ has as much correlation with the current residual as does $X_j$. 
+				\STATE \label{algo-fs0-step5} {\color{red}Find the new direction by solving the following constrained least squares problem 
+				\begin{align*}
+					\minimize_b & \, \norm{\boldr - \bX_{\calA} b}_2^2, \\ 
+					& \, \text{subject to } b_j s_j \ge 0, j \in \calA, 
+				\end{align*}
+				where $s_j = \sign \parens{\innerp{\bc_j}{\boldr}}$. } 
+				
+				\begin{flushright}
+					\textit{(Texts in red highlight the difference with Algorithm \ref{algo-lar}.)}
+				\end{flushright}
+
+				\STATE Continue in this way until all $p$ predictors have been entered. After $\min \parens{n - 1, p}$ steps, we arrive at the full least squares solution. 
+			\end{algorithmic}
+		\end{algorithm}
+		\end{minipage}
+		\vspace{10pt}
+		
+		The modification occurs at Step \ref{algo-fs0-step5}, which amounts to solving a non-negative least squares regression problem. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Piecewise-Linear Path Algorithms:} Consider the general problem 
+	\begin{align*}
+		\widehat{\bbeta} \parens{\lambda} := \argmin_{\bbeta} \braces[\Big]{R \parens{\bbeta} + \lambda J \parens{\bbeta}}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		R \parens{\bbeta} := \sum_{i=1}^n L \parens[\bigg]{y_i, \beta_0 + \sum_{j=1}^p \beta_j x_{i, j}}, 
+	\end{align*}
+	and both the loss function $L$ and the penalty function $J$ are convex. 
+	
+	Then, if the following two conditions are satisfied, the solution path $\widehat{\bbeta} \parens{\lambda}$ is piecewise linear: 
+	\begin{enumerate}
+		\item $R$ is quadratic or piecewise-quadratic as a function of $\bbeta$, and
+		\item $J$ is piecewise linear in $\bbeta$. 
+	\end{enumerate}
+	
+	\item \textbf{Dantzig Selector:} 
+	\begin{enumerate}
+		\item \textit{Problem Formulation:} The \textit{Dantzig Selector} solves the following minimization problem 
+		\begin{equation}\label{eq-dantzig-selector}
+		\begin{aligned}
+			& \, \minimize_{\bbeta} \, \norm{\bbeta}_1 \\ 
+			& \qquad \text{ subject to } \norm{\bX^\top \parens{\bY - \bX \bbeta}}_{\infty} \le s. 
+		\end{aligned}
+		\end{equation}
+		Equivalently, \eqref{eq-dantzig-selector} can be written as 
+		\begin{equation}\label{eq-dantzig-selector-1}
+		\begin{aligned}
+			& \, \minimize_{\bbeta} \, \norm{\bX^\top \parens{\bY - \bX \bbeta}}_{\infty} \\ 
+			& \qquad \text{ subject to } \norm{\bbeta}_1 \le t. 
+		\end{aligned}
+		\end{equation}
+		In the formulations above, $\norm{}_{\infty}$ denotes the maximum absolute value of the components of the vector. 
+		
+		The problem \eqref{eq-dantzig-selector-1} can be solved using the linear programming. 
+		
+		\item \textit{Similarity to Lasso:} Note that \eqref{eq-dantzig-selector-1} is very similar to the Lasso problem \eqref{lasso.con}. The difference is that \eqref{eq-dantzig-selector-1} replaces the squared error loss by the maximum absolute value of its gradient. 
+		
+		\item \textit{Remarks:}
+		\begin{enumerate}
+			\item In \eqref{eq-dantzig-selector-1}, as $t$ gets large, both Dantzig selector and Lasso yield the least squares solution if $n > p$; 
+			\item If $p \ge N$, both Dantzig selector and Lasso yield the least squares solution with minimum $L_1$ norm. 
+			\item Dantzig selector tries to minimize the maximum inner product of the current residual with all the predictors. Hence, it can achieve a \emph{smaller} maximum than the lasso. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{Grouped Lasso:} 
+	\begin{enumerate}
+		\item \textit{Motivation:} In some problems, the predictors belong to pre-defined groups. In this situation, it may be desirable to shrink and select the members of a group \emph{together}. The grouped lasso is one way to achieve this. 
+		\item \textit{Setup:} Suppose that the $p$ predictors are divided into $L$ groups, with $p_{\ell}$ predictors in Group ${\ell}$. We use a matrix $\bX_{\ell} \in \Real^{n \times p_{\ell}}$ to represent the predictors corresponding to the ${\ell}$-th group, with corresponding coefficient vector $\bbeta_{\ell} \in \Real^{p_{\ell}}$. 
+		\item \textit{Problem Formulation:} The grouped Lasso solves the following optimization problem 
+		\begin{align}\label{eq-group-lasso}
+			\minimize_{\bbeta \in \Real^{p}} \, \braces[\Bigg]{\frac{1}{2} \norm[\bigg]{\bY - \sum_{{\ell}=1}^L \bX_{{\ell}} \bbeta_{\ell} }_2^2 + \lambda \sum_{\ell=1}^L \sqrt{p_{\ell}} \norm{\bbeta_{\ell}}_2 }, 
+		\end{align}
+		where the $p_{\ell}$ term accounts for the varying group sizes and we center $\bY$ and each column of $\bX$ so that there is no intercept term. 
+		
+		\textit{Remark 1.} Since the Euclidean norm of a vector $\bbeta_{\ell}$ is zero if and only if \emph{all} of its components are zero, this procedure encourages sparsity at both the group and individual levels. That is, for some values of $\lambda$, an \emph{entire} group of predictors may drop out of the model. 
+		
+		\textit{Remark 2.} If $L = p$ and $p_{\ell} = 1$ for all $\ell = 1, 2, \cdots, L$ so that each individual predictor forms a single group, \eqref{eq-group-lasso} becomes the ordinary lasso problem. 
+		
+		\item \textit{Computation:} Differentiating \eqref{eq-group-lasso} with respect to $\bbeta_{\ell}$ for all $\ell = 1, 2, \cdots, L$ and setting the derivatives to zero yield 
+		\begin{align}\label{eq-group-lasso-optimality}
+			- \bX_{\ell}^\top \parens[\bigg]{\bY - \sum_{\ell=1}^L \bX_{\ell} \widehat{\bbeta}_{\ell} } + \lambda \sqrt{p_{\ell}} \hat{\bs}_{\ell} = \boldzero_{p_{\ell}}, \qquad \text{ for all } \ell = 1, \cdots, L, 
+		\end{align}
+		where $\hat{\bs}_{\ell} \in \Real^{p_{\ell}}$ is the subgradient of the norm $\norm{\,\cdot\,}_2$ evaluated at $\widehat{\bbeta}_{\ell}$ and is given by 
+		\begin{align}\label{eq-subgradient-l2-norm}
+			\hat{\bs}_{\ell} = \begin{cases}
+				\widehat{\bbeta}_{\ell} / \norm{\widehat{\bbeta}_{\ell}}_2, & \, \text{ if } \widehat{\bbeta}_{\ell} \neq \boldzero_{p_\ell}, \\ 
+				\text{any vector satisfying } \norm{\widehat{\bbeta}_{\ell}}_2 \le 1, & \, \text{ if } \widehat{\bbeta}_{\ell} = \boldzero_{p_\ell}, 
+			\end{cases}
+		\end{align}
+		and $\parens{\widehat{\bbeta}_1^\top, \cdots, \widehat{\bbeta}_L^\top}^\top$ denote the minimizer of \eqref{eq-group-lasso} with respect to $\parens{\bbeta_1^\top, \cdots, \bbeta_L^\top}^\top$. 
+		
+		One approach to compute $\parens{\widehat{\bbeta}_1^\top, \cdots, \widehat{\bbeta}_L^\top}^\top$ is to use the \textit{block coordinate descent algorithm} --- hold all block vectors $\set{\widehat{\bbeta}_{k}}_{k \neq \ell}$ fixed and solve for $\widehat{\bbeta}_{\ell}$. With all $\set{\widehat{\bbeta}_{k}}_{k \neq \ell}$ fixed, we can rewrite \eqref{eq-group-lasso-optimality} as 
+		\begin{align*}
+			- \bX_{\ell}^\top \parens[\big]{\boldr^{\parens{\ell}} - \bX_{\ell} \widehat{\bbeta}_{\ell}} + \lambda \sqrt{p_{\ell}} \hat{\bs}_{\ell} = \boldzero_{p_{\ell}}, 
+		\end{align*}
+		where $\boldr^{\parens{\ell}} = \bY - \sum_{k \neq \ell} \bX_{k} \widehat{\bbeta}_{k}$ is the $\ell$-th partial residual. 
+		
+		From \eqref{eq-subgradient-l2-norm}, we must have $\widehat{\bbeta}_{\ell} = \boldzero_{p_{\ell}}$ if $\norm{\bX_{\ell}^{\top} \boldr^{\parens{\ell}}}_2 < \lambda$, and, otherwise, $\widehat{\bbeta}_{\ell}$ must satisfy 
+		\begin{align}\label{eq-group-lasso-solution-1}
+			\widehat{\bbeta}_{\ell} = \parens[\Bigg]{\bX_{\ell}^\top \bX_{\ell} + \frac{\lambda \sqrt{p_{\ell}}}{\norm{\widehat{\bbeta}_{\ell}}_2} \bI_{p_{\ell}}}^{-1} \bX_{\ell}^\top \boldr^{\parens{\ell}}, 
+		\end{align}
+		which is similar to the solution to the ridge regression. 
+		
+		\textit{Remark.} Note that \eqref{eq-group-lasso-solution-1} depends on $\norm{\widehat{\bbeta}_{\ell}}_2$ and is not directly applicable to compute $\widehat{\bbeta}_{\ell}$. But, when $\bX_{\ell}$ is orthonormal, we have 
+		\begin{align*}
+			\widehat{\bbeta}_{\ell} = \parens[\Bigg]{1 - \frac{\lambda \sqrt{p_{\ell}}}{\norm{\bX_{\ell}^\top \boldr^{\parens{\ell}}}_2}}_+^{-1} \bX_{\ell}^\top \boldr^{\parens{\ell}}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Sparse Grouped Lasso:}
+	\begin{enumerate}
+	
+		\item \textit{Motivation:} When a group is included in a group lasso, \emph{all} the coefficients in that group are nonzero, which is a consequence of the $L_2$ norm. Sometimes, we want sparsity with respect to both which groups are selected and which coefficients are nonzero within a group. The \textit{sparse grouped lasso} is designed to achieve the \emph{within}-group sparsity. 
+
+		\item \textit{Problem Formulation:} In the sparse grouped lasso, we consider the following optimization problem 
+		\begin{align}\label{eq-sparse-group-lasso}
+			\minimize_{\bbeta \in \Real^{p}} \, \braces[\Bigg]{\frac{1}{2} \norm[\bigg]{\bY - \sum_{\ell=1}^L \bX_{\ell} \bbeta_{\ell}}_2^2 + \lambda \sum_{\ell=1}^L \bracks[\big]{\parens{1 - \alpha} \norm{\bbeta_{\ell}}_2 + \alpha \norm{\bbeta_{\ell}}_1}}, 
+		\end{align}
+		where $\alpha \in \bracks{0, 1}$ and we center $\bY$ and each column of $\bX$ so that there is no intercept term. Note that when $\alpha = 0$,  \eqref{eq-sparse-group-lasso} becomes the grouped lasso problem, and when $\alpha = 1$, \eqref{eq-sparse-group-lasso} becomes the ordinary lasso problem. 
+		
+		\textit{Remark.} Note that \eqref{eq-sparse-group-lasso} is a convex problem. 
+		
+		\item \textit{Optimality Condition:} Differentiating \eqref{eq-sparse-group-lasso} with respect to $\bbeta_{\ell}$ and setting the derivatives to zero yield 
+		\begin{equation}
+			\begin{aligned}
+				& \, - \bX_{\ell}^\top \parens[\bigg]{\bY - \sum_{\ell=1}^L \bX_{\ell} \widehat{\bbeta}_{\ell}} + \lambda \parens{1 - \alpha} \hat{\bs}_{\ell} + \lambda \alpha \hat{\bt}_{\ell} = \boldzero_{p_{\ell}}, \\ 
+				& \qquad \qquad \qquad \qquad \qquad \qquad \qquad \qquad \qquad \text{ for all } \ell = 1, 2, \cdots, L, 
+			\end{aligned}
+		\end{equation}
+		where $\hat{\bs}_{\ell} \in \Real^{p_{\ell}}$ belongs to the subdifferential of $\norm{\,\cdot\,}_2$ evaluated at $\widehat{\bbeta}_{\ell}$ and $\hat{\bt}_{\ell} \in \Real^{p_{\ell}}$ belongs to the subdifferential of $\norm{\,\cdot\,}_1$ evaluated at $\widehat{\bbeta}_{\ell}$. 
+		
+		\item \textit{Computation:} We can use the \emph{block coordinate descent algorithm} to solve \eqref{eq-sparse-group-lasso}. % compute $\parens{\widehat{\bbeta}_1^\top, \cdots, \widehat{\bbeta}_L^\top}^\top$. 
+		Let 
+		\begin{align*}
+			\boldr^{\parens{\ell}} = \bY - \sum_{k \neq \ell} \bX_{k} \widehat{\bbeta}_{k}
+		\end{align*}
+		be the $\ell$-th partial residual. Then, $\widehat{\bbeta}_{\ell} = \boldzero_{p_{\ell}}$ if and only if the equation 
+		\begin{align*}
+			\bX_{\ell}^\top \boldr^{\parens{\ell}} = \lambda \parens{1 - \alpha} \hat{\bs}_{\ell} + \alpha \hat{\bt}_{\ell}
+		\end{align*}
+		has a solution with $\norm{\hat{\bs}_{\ell}}_2 \le 1$ and each component of $\hat{\bt}_{\ell}$ is between $-1$ and $1$, inclusively, and if and only if 
+		\begin{align*}
+			\norm{S \parens{\bX_{\ell}^\top \boldr^{\parens{\ell}}, \lambda \alpha}}_2 \le \lambda \parens{1 - \alpha}, 
+		\end{align*}
+		where $S \parens{\cdot, \lambda \alpha}$ is the soft-thresholding operator applied to each component of $\bX_{\ell}^\top \boldr^{\parens{\ell}}$. 
+		
+		After we have checked $\widehat{\bbeta}_{\ell} \neq \boldzero_{p_\ell}$, finding $\widehat{\bbeta}_{\ell}$ amounts to solving the following subproblem 
+		\begin{align}\label{eq-sparse-group-lasso-subprob}
+			\minimize_{\bbeta_{\ell} \in \Real^{p_{\ell}}} \, \braces[\Bigg]{\frac{1}{2} \norm{\boldr^{\parens{\ell}} - \bX_{\ell} \bbeta_{\ell}}_2^2 + \lambda \parens{1 - \alpha} \norm{\bbeta_{\ell}}_2 + \lambda \alpha \norm{\bbeta_{\ell}}_1}. 
+		\end{align}
+		The problem \eqref{eq-sparse-group-lasso-subprob} can be solved by iterating 
+		\begin{align*}
+			\bome \leftarrow & \, \bbeta_\ell + \nu \bX_{\ell}^{\top} \parens{\boldr^{\parens{\ell}} - \bX_{\ell} \bbeta_{\ell}}, \\ 
+			\bbeta_{\ell} \leftarrow & \, \parens[\bigg]{1 - \frac{\nu \lambda \parens{1 - \alpha}}{\norm{S \parens{\bome, \lambda \alpha}}_2}}_+ S \parens{\bome, \lambda \alpha}, 
+		\end{align*}
+		until convergence, where $\nu > 0$ is the step size. 
+
+	\end{enumerate}
+	
+	\item \textbf{Relaxed Lasso:} 
+	\begin{enumerate}
+		\item \textit{Main Idea:} Use cross-validation to estimate the initial penalty parameter for the lasso, and then again for a second penalty parameter applied to the selected set of predictors. 
+
+		\item \textit{Motivation:}  Since the variables in the second step have less ``competition'' from noise variables, cross-validation will tend to pick a smaller value for $\lambda$, and hence their coefficients will be shrunken \emph{less} than those in the initial estimate. 
+		
+		\item \textit{Procedure:} 
+		\begin{enumerate}
+			\item Use the Lasso to select the set of non-zero predictors; and 
+			\item Apply the lasso again, but using only the selected predictors from the first step. 
+		\end{enumerate}
+		
+	\end{enumerate}
+	
+	\item \textbf{Adaptive Lasso:} The \emph{adaptive lasso} uses a weighted penalty of the form 
+	\begin{align}\label{eq-adaptive-lasso}
+		\sum_{j=1}^p w_j \abs{\beta_j}, \qquad \text{ where } w_j = \frac{1}{\abs{\hat{\beta}_j}^{\nu}}, 
+	\end{align}
+	and $\hat{\beta}_j$ is the ordinary least squares estimate and $\nu > 0$. 
+	
+	\textit{Remarks.}
+	\begin{enumerate}
+		\item The adaptive Lasso \eqref{eq-adaptive-lasso} is a practical approximation to the $\abs{\bbeta}^q$ penalties ($q = 1 - \nu$ here); 
+		\item The adaptive lasso yields consistent estimates of the parameters while retaining the attractive convexity property of the lasso. 
+	\end{enumerate}
+
+	
+	\item \textbf{Fused Lasso:} 
+	\begin{enumerate}
+		\item \textit{Motivation:} In real applications, we assume that the regression function is piecewise-constant over contiguous regions. 
+		\item \textit{Problem Formulation:} The fused lasso solves the following optimization problem 
+		\begin{align}\label{eq-fused-lasso}
+			\minimize_{\btheta \in \Real^n} \braces[\Bigg]{\frac{1}{2} \sum_{i=1}^n \parens{y_i - \theta_i}^2 + \lambda_1 \sum_{i=1}^n \abs{\theta_i} + \lambda_2 \sum_{i=2}^n \abs{\theta_{i} - \theta_{i-1}}}, 
+		\end{align}
+		where both $\lambda_1$ and $\lambda_2$ are nonnegative. Note there are two penalization terms: 
+		\begin{enumerate}
+			\item The first penalty term, $\lambda_1 \sum_{i=1}^n \abs{\theta_i}$ is the usual $L_1$ penalty and attempts to shrinks each individual $\theta_i$ toward 0, and 
+			\item the second penalty term, $\lambda_2 \sum_{i=2}^n \abs{\theta_{i} - \theta_{i-1}}$, encourages neighboring coefficient $\theta_i$ to be similar and will cause some to be identical. 
+		\end{enumerate}
+		This second penalty term is known as the \textit{total-variation denoising}. 
+		
+		\item \textit{Extension:} A possible extension of the fused lasso problem in \eqref{eq-fused-lasso} is 
+		\begin{align*}
+			\minimize_{\parens{\beta_0, \bbeta^\top}^\top} \, \braces[\Bigg]{\frac{1}{2} \sum_{i=1}^n \parens[\bigg]{y_i - \beta_0 - \sum_{j=1}^p \beta_j x_{i,j}}^2 + \lambda_1 \sum_{j=1}^p \abs{\beta_j} + \lambda_2 \sum_{j=2}^p \abs{\beta_j - \beta_{j-1}} }. 
+		\end{align*}
+		\item \textit{Fitting the Fused Lasso:} Note that \eqref{eq-fused-lasso} is \emph{not} a separable function of $\theta_1, \cdots, \theta_n$. Hence, the coordinate descent algorithm is \emph{not} applicable. 
+		
+		Let $\widehat{\btheta} \parens{\lambda_1, \lambda_2}$ be the optimal solution of \eqref{eq-fused-lasso}. We have the following lemma: 
+		
+		\begin{lemma}
+			For any $\lambda_1' > \lambda_1$, we have 
+			\begin{align*}
+				\widehat{\theta}_i \parens{\lambda_1', \lambda_2} = S \parens[\big]{\widehat{\theta}_i \parens{\lambda_1, \lambda_2}, \lambda_1' - \lambda_1}, \qquad \text{ for all } i = 1, 2, \cdots, n, 
+			\end{align*}
+			where $S$ is the soft-thresholding operator $S \parens{x, \lambda} := \sign \parens{x} \parens{\abs{x} - \lambda}_+$. 
+		\end{lemma}
+		One special case is the following 
+		\begin{align*}
+			\widehat{\theta}_i \parens{\lambda_1, \lambda_2} = S \parens[\big]{\widehat{\theta}_i \parens{0, \lambda_2}, \lambda_1}. 
+		\end{align*}
+		Consequently, if we solve the fused lasso problem with $\lambda_1 = 0$, all other solutions can be obtained immediately by soft thresholding. 
+		
+		Hence, we consider the problem in the sequel 
+		\begin{align}\label{eq-fused-lasso-2}
+			\minimize_{\btheta \in \Real^n} \braces[\Bigg]{\frac{1}{2} \sum_{i=1}^n \parens{y_i - \theta_i}^2 + \lambda_2 \sum_{i=2}^n \abs{\theta_{i} - \theta_{i-1}}}. 
+		\end{align}
+		
+		\item \textit{Reparametrization:} Let $\bgamma = \bM \btheta$ for an invertible matrix $\bM \in \Real^{n \times n}$ such that 
+		\begin{align*}
+			\gamma_1 = \theta_1, \qquad \text{ and } \qquad \gamma_i = \theta_i - \theta_{i-1} \text{ for all } i = 2, \cdots, n. 
+		\end{align*}
+		Then, we can rewrite \eqref{eq-fused-lasso-2} as 
+		\begin{align}\label{eq-fused-lasso-3}
+			\minimize_{\bgamma} \, \braces[\bigg]{\frac{1}{2} \norm{\bY - \bM^{-1} \bgamma}_2^2 + \lambda \norm{\bgamma}_1}. 
+		\end{align}
+		The \textit{benefit} of introducing this reparametrization is that the penalty term is now additive. 
+		
+		We can solve \eqref{eq-fused-lasso-3} by coordinate descent algorithm or projected gradient descent algorithm. 
+		
+		\item \textit{Dual Path Algorithm:} We can rewrite \eqref{eq-fused-lasso-2} as 
+		\begin{equation}\label{eq-fused-lasso-4}
+			\begin{aligned}
+				\minimize_{\parens{\bgamma, \bz} \in \Real^{n \times \parens{n-1}}} & \, \braces[\bigg]{\frac{1}{2} \norm{\bY - \btheta}_2^2 + \lambda \norm{\bz}_1}, \\ 
+				& \qquad \text{ subject to } \bD \btheta = \bz, 
+			\end{aligned}
+		\end{equation}
+		where $\bD \in \Real^{\parens{n-1} \times n}$ is the matrix of the first differences given by 
+		\begin{align*}
+			\bD = \begin{pmatrix}
+				-1 &  1 &  0 & 0  & \cdots & 0  & 0 \\ 
+				0  & -1 &  1 & 0  & \cdots & 0  & 0 \\ 
+				0  &  0 & -1 & 1  & \cdots & 0  & 0 \\ 
+				\vdots & \vdots & \vdots & \vdots & \ddots & \vdots & \vdots \\ 
+				0 & 0 & 0 & 0 & \cdots & -1 & 1 \\ 
+			\end{pmatrix}
+		\end{align*}
+		and $\bz \in \Real^{n-1}$ is an auxlliary variable. 
+		
+		The Lagrangian function associated with \eqref{eq-fused-lasso-4} is 
+		\begin{align*}
+			L \parens{\btheta, \bz; \bu} := \frac{1}{2} \norm{\bY - \btheta}_2^2 + \lambda \norm{\bz}_1 + \bu^\top \parens{\bD \btheta - \bz}, 
+		\end{align*}
+		where $\bu \in \Real^{n-1}$ is a vector of Lagrangian multipliers. Then, the Lagrangian dual function is 
+		\begin{align*}
+			Q \parens{\bu} := \inf_{\parens{\bgamma, \bz} \in \Real^{n \times \parens{n-1}}} L \parens{\btheta, \bz; \bu} = \begin{cases}
+				-\frac{1}{2} \norm{\bY - \bD^\top \bu}_2^2, & \, \text{ if } \norm{\bu}_{\infty} \le \lambda, \\ 
+				-\infty, & \, \text{ otherwise.} 
+			\end{cases}
+		\end{align*}
+		The Lagrangian dual problem is to maximize $Q$ with respect to $\bu$; given an optimal $\widehat{\bu} := \argmax_{\bu} Q \parens{\bu}$, we can recover an optimal solution to $\btheta$ as $\widehat{\btheta} = \bY - \bD^\top \widehat{\bu}$. 
+	\end{enumerate}
+	
+	\item \textbf{Nearly Isotonic Regression:} 
+	\begin{enumerate}
+		\item \textit{Review of the Classic Isotonic Regression:} The \textit{classic isotonic regression} solves the following optimization problem 
+		\begin{equation}\label{eq-isotonic}
+			\begin{aligned}
+				\minimize_{\btheta \in \Real^n} & \, \braces[\bigg]{\sum_{i=1}^n \parens{y_i - \theta_i}^2}  \\ 
+				& \qquad \text{ subject to } \theta_1 \le \theta_2 \le \cdots \le \theta_n. 
+			\end{aligned}
+		\end{equation}
+		The resulting solution to \eqref{eq-isotonic} gives the best non-increasing fit to the data. The solution to \eqref{eq-isotonic} is unique and can be obtained by using the \textit{pool adjacent violators algorithm}. 
+		
+		\item \textit{Problem Formulation for Nearly Isotonic Regression:} The \textit{nearly isotonic regression} is a relaxation of the classic isotonic regression problem and solves the following problem 
+		\begin{align}\label{eq-nearly-isotonic}
+			\minimize_{\btheta \in \Real^n} & \, \braces[\Bigg]{\sum_{i=1}^n \parens{y_i - \theta_i}^2 + \lambda \sum_{i=1}^n \parens{\theta_i - \theta_{i+1}}_+}.  
+		\end{align}
+		
+		\item \textit{How the Penalty Term in \eqref{eq-nearly-isotonic} Works:} Note that the penalty term penalizes adjacent pairs that violate the monotonicity property, i.e., $\theta_i > \theta_{i+1}$. Note that
+		\begin{enumerate}
+			\item as $\lambda = 0$, the solution interpolates the data, and 
+			\item as $\lambda \to \infty$, we recover the the solution to the classic isotonic regression problem \eqref{eq-isotonic}. 
+		\end{enumerate}
+		Intermediate values of $\lambda$ yield non-monotone solutions that trade off monotonicity with goodness of fit. 
+		
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\printbibliography
+
+
+\end{document}

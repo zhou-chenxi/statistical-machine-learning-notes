@@ -1,0 +1,59 @@
+This is BibTeX, Version 0.99d (TeX Live 2016)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: /Users/chenxizhou/Desktop/LaTex Files/The Elements of Statistical Learning_Friedman, Tibshirani & Robert/chapter_5_basis_expansions_and_regularization/.texpadtmp/chapter_5.aux
+The style file: alpha.bst
+Database file #1: ../noteref.bib
+Name 1 in "Trevor Hastie, and Robert Tibshirani, and Jerome Friedman" has a comma at the end for entry elements
+while executing---line 1185 of file alpha.bst
+Name 2 in "Trevor Hastie, and Robert Tibshirani, and Jerome Friedman" has a comma at the end for entry elements
+while executing---line 1185 of file alpha.bst
+Name 1 in "Trevor Hastie, and Robert Tibshirani, and Jerome Friedman" has a comma at the end for entry elements
+while executing---line 1185 of file alpha.bst
+Name 2 in "Trevor Hastie, and Robert Tibshirani, and Jerome Friedman" has a comma at the end for entry elements
+while executing---line 1185 of file alpha.bst
+Name 1 in "Trevor Hastie, and Robert Tibshirani, and Jerome Friedman" has a comma at the end for entry elements
+while executing---line 1250 of file alpha.bst
+Name 2 in "Trevor Hastie, and Robert Tibshirani, and Jerome Friedman" has a comma at the end for entry elements
+while executing---line 1250 of file alpha.bst
+You've used 1 entry,
+            2543 wiz_defined-function locations,
+            565 strings with 4944 characters,
+and the built_in function-call counts, 410 in all, are:
+= -- 37
+> -- 25
+< -- 0
++ -- 10
+- -- 9
+* -- 29
+:= -- 81
+add.period$ -- 4
+call.type$ -- 1
+change.case$ -- 6
+chr.to.int$ -- 1
+cite$ -- 1
+duplicate$ -- 15
+empty$ -- 26
+format.name$ -- 10
+if$ -- 79
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 2
+newline$ -- 8
+num.names$ -- 3
+pop$ -- 7
+preamble$ -- 1
+purify$ -- 8
+quote$ -- 0
+skip$ -- 12
+stack$ -- 0
+substring$ -- 8
+swap$ -- 1
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 4
+warning$ -- 0
+while$ -- 3
+width$ -- 2
+write$ -- 16
+(There were 6 error messages)

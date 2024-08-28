@@ -1,0 +1,711 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 32, Matrix Decompositions, Approximations, and Completion}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Matrix Decompositions, \\ Approximations, and Completion}{32}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 7, Matrix Decompositions, Approximations, and Completion} in \textcite{Hastie2015-rm}. 
+
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Question of Main Interest:} Given a matrix $\bZ \in \Real^{m \times n}$, we find a matrix $\widehat{\bZ}$ that approximates $\bZ$ in a suitable sense. Examples include: 
+	\begin{enumerate}
+		\item the approximation $\widehat{\bZ}$ is much simpler (in certain sense) than $\bZ$ so that we can gain a better understanding of $\bZ$, and 
+		\item we impute or fill in any missing entries in $\bZ$, which is known as \emph{matrix completion}. 
+	\end{enumerate}
+	
+	\item \textbf{General Approach:} The general approach is to consider estimators based on an optimization problem of the form 
+	\begin{align*}
+		\minimize_{\bM \in \Real^{m \times n}} & \ \norm{\bZ - \bM}_{\mathrm{F}}^2 \\ 
+		\text{subject to } & \ \Phi \parens{\bM} \le c, 
+	\end{align*}
+	where 
+	\begin{enumerate}
+		\item $\norm{}_{\mathrm{F}}^2$ is the squared Frobenius norm of a matrix, and 
+		\item $\Phi$ is a constraint function that encourages the solution of the optimization problem to be sparse in some general sense.  
+	\end{enumerate}
+	
+	\item \textbf{Summary of Various Methods:} 
+	
+	\begin{center}
+		\begin{tabular}{cll}
+			\toprule
+			& \textbf{Constraint} & \textbf{Method} \\
+			\midrule
+			(a) & $\norm{\bM}_{1} \le c$ & Sparse matrix approximation \\
+			(b) & $\rank \parens{\bM} \le k$ & Singular value decomposition \\
+			(c) & $\norm{\bM}_* \le c$ & Convex matrix approximation \\
+			(d) & $\bM = \bU \bD \bV^\top, \Phi_1 \parens{\bu_j} \le c_1, \Phi_2 \parens{\bv_k} \le c_2$ & Penalized singular value decompositon \\
+			(e) & $\bM = \bL \bR^\top, \Phi_1 \parens{\bL} \le c_1, \Phi_2 \parens{\bR} \le c_2$ & Max-margin matrix factorization \\
+			(f) & $\bM = \bL + \bS, \Phi_1 \parens{\bL} \le c_1, \Phi_2 \parens{\bS} \le c_2$ & Additive matrix decomposition \\
+			\bottomrule
+		\end{tabular}
+	\end{center}
+	
+	\begin{enumerate}
+		\item The constraint is $\norm{\bM}_{1} \le c$, that is, we put an $L^1$-norm constraint on all entries in $\bM$. This constraint leads to a soft-threshold version of the original matrix and the solution $\widehat{\bZ}$ takes the form 
+		\begin{align*}
+			\widehat{z}_{i,j} = \sign \parens{z_{i,j}} \parens{\abs{z_{i,j}} - \gamma}_+, \qquad \text{ for all } i = 1, 2, \cdots, m \text{ and } j = 1, 2, \cdots, n, 
+		\end{align*}
+		where the scalar $\gamma > 0$ is chosen so that $\sum_{i=1}^m \sum_{j=1}^n \abs{\widehat{z}_{i,j}} = c$. 
+		
+		\textit{Remark.} The resulting $\widehat{\bZ}$ is useful in sparse covariance matrix estimation. 
+		
+		\item The constraint is that the rank of $\bM$ does \emph{not} exceed a pre-specified value $k$, which is equivalent to the number of non-zero singular values in $\bM$ not exceeding $k$. 
+		
+		The optimal solution can be found by computing the singular value decomposition (SVD) and truncating it to its top $k$ components. 
+		
+		\textit{Remark.} The formulation of the constraint $\rank \parens{\bM} \le k$ leads to a \emph{non-convex} optimization problem. 
+		
+		\item The constraint $\norm{\bM}_* \le c$, where $\norm{}_*$ is the \emph{nuclear norm} and is equal to the sum of the singular values of a matrix, is a relaxation of $\rank \parens{\bM} \le k$. 
+		
+		\textit{Remark.} The nuclear norm is a convex matrix function, so the associated problem is convex and can be solved by computing the SVD, and soft-thresholding its singular values. 
+		
+		\item The constraints $\Phi_1 \parens{\bu_j} \le c_1$ and $\Phi_2 \parens{\bv_k} \le c_2$ impose penalties on the left and right singular vectors. Examples include the usual $L^1$- or $L^2$-norms, with the former choice yielding sparsity in the elements of the singular vectors. 
+		
+		\textit{Remark.} Sparse singular vectors are useful for problems where the interpretation of the singular vectors is important. 
+		
+		\item The constraint 
+		\begin{align*}
+			\bM = \bL \bR^\top, \Phi_1 \parens{\bL} \le c_1, \Phi_2 \parens{\bR} \le c_2
+		\end{align*}
+		imposes penalties directly on the components of the LR-matrix factorization. 
+
+		\item The constraint 
+		\begin{align*}
+			\bM = \bL + \bS, \Phi_1 \parens{\bL} \le c_1, \Phi_2 \parens{\bS} \le c_2 
+		\end{align*}
+		seeks an additive decomposition of the matrix, imposing penalties on both components in the sum. 
+		
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{II. Singular Value Decomposition}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Singular Value Decomposition:} Given a matrix $\bZ \in \Real^{m \times n}$ with $\rank \parens{\bZ} = r \le \min \braces{m, n}$, its singular value decomposition is given by 
+	\begin{align*}
+		\bZ = \bU \bD \bV^\top, 
+	\end{align*}
+	where 
+	\begin{enumerate}
+		\item $\bU \in \Real^{m \times r}$ is an orthogonal matrix satisfying $\bU^\top \bU = \bI_r$ whose columns $\bu_j \in \Real^m$ are called the \emph{left singular vectors}, for $j = 1, 2, \cdots, r$, 
+		\item $\bV \in \Real^{n \times r}$ is an orthogonal matrix satisfying $\bV^\top \bV = \bI_r$ whose columns $\bv_j \in \Real^n$ are called the \emph{right singular vectors}, for $j = 1, 2, \cdots, r$, and 
+		\item $\bD \in \Real^{r \times r}$ is diagonal, with diagonal elements $d_1 \ge d_2 \ge \cdots \ge d_r \ge 0$ known as the \emph{singular values}. 
+	\end{enumerate}
+	
+	\textit{Remark 1.} If the diagonal entries $d_1, d_2, \cdots, d_r$ are unique, then so are $\bU$ and $\bV$, up to column-wise sign flips. 
+	
+	\textit{Remark 2.} By convention, singular values are always non-negative, which should be distinguished from the eigenvalues that could be negative. 
+	
+	\item \textbf{Rank Constrained Optimization Problem:} Let $\bZ \in \Real^{m \times n}$ be given and $r_0 \le \rank \parens{\bZ}$ be given as well. We assume that $m \le n$ and $\rank \parens{\bZ} = m$. 
+	
+	Consider the following optimization problem 
+	\begin{align}\label{eq-rank-r-prob}
+		\minimize_{\rank \parens{\bM} = r_0} \norm{\bZ - \bM}_{\mathrm{F}}^2. 
+	\end{align}
+	We show that the solution to \eqref{eq-rank-r-prob} is 
+	\begin{align*}
+		\widehat{\bZ}_{r_0} := \argmin_{\rank \parens{\bM} = r_0} \norm{\bZ - \bM}_{\mathrm{F}}^2 = \bU \bD_{r_0} \bV^\top
+	\end{align*}
+	where $\bD_{r_0} \in \Real^{n \times n}$ is the same as the matrix $\bD$ except all but the first $r_0$ diagonal elements are set to 0. 
+	
+	We first note that any matrix $\bM$ of rank $r_0$ can be factored as $\bM = \bQ \bA$, where $\bQ \in \Real^{m \times r_0}$ is an orthogonal matrix satisfying $\bQ^\top \bQ = \bI_{r_0}$ and $\bA \in \Real^{r_0 \times n}$. Then, given $\bQ$, the optimal value for $\bA$ is $\bQ^\top \bZ$. To see this, notice that 
+	\begin{align*}
+		\norm{\bZ - \bM}_{\mathrm{F}}^2 = & \, \norm{\bZ - \bQ \bA}_{\mathrm{F}}^2 \\ 
+		= & \, \trace \parens[\big]{\bZ^\top \bZ - \bZ^\top \bQ \bA - \bA^\top \bQ^\top \bZ + \bA^\top \bQ^\top \bQ \bA} \\ 
+		= & \, \trace \parens[\big]{\bZ^\top \bZ - \bZ^\top \bQ \bA - \bA^\top \bQ^\top \bZ + \bA^\top \bA} \\ 
+		= & \, \trace \parens[\big]{ \parens{\bA - \bQ^\top \bZ}^\top \parens{\bA - \bQ^\top \bZ} - \parens{\bQ^\top \bZ}^\top \parens{\bQ^\top \bZ} + \bZ^\top \bZ} \\ 
+		\ge & \, \trace \parens{ - \bZ^\top \bQ \bQ^\top \bZ + \bZ^\top \bZ}. 
+	\end{align*}
+	Hence, the optimal value for $\bA$ is $\bQ^\top \bZ$. With the optimal $\bA = \bQ^\top \bZ$, the objective function $\norm{\bZ - \bM}_{\mathrm{F}}^2$ can be written as 
+	\begin{align*}
+		\norm{\bZ - \bM}_{\mathrm{F}}^2 = & \, \norm{\bZ - \bQ \bQ^\top \bZ}_{\mathrm{F}}^2 
+		= \trace \parens{- \bZ^\top \bQ \bQ^\top \bZ + \bZ^\top \bZ}. 
+	\end{align*}
+	Since the term $\bZ \bZ^\top$ does \emph{not} depend on $\bQ$, we can ignore it and have 
+	\begin{align*}
+		\argmin_{\bQ} \norm{\bZ - \bQ \bQ^\top \bZ}_{\mathrm{F}}^2 = & \, \argmin_{\bQ} \trace \parens{- \bZ^\top \bQ \bQ^\top \bZ} \\ 
+		= & \, \argmax_{\bQ} \trace \parens{\bZ^\top \bQ \bQ^\top \bZ} \\ 
+		= & \, \argmax_{\bQ} \trace \parens{\bQ^\top \bZ \bZ^\top \bQ}, 
+	\end{align*}
+	subject to the constraint $\bQ^\top \bQ = \bI_{r_0}$. 
+	
+	By the singular value decomposition $\bZ = \bU \bD \bV^\top$, we have 
+	\begin{align*}
+		\bZ \bZ^\top = \bU \bD^2 \bU^\top. 
+	\end{align*}
+	Then, 
+	\begin{align*}
+		\bQ^\top \bZ \bZ^\top \bQ = \parens{\bU^\top \bQ}^\top \bD^2 \parens{\bU^\top \bQ} = \widetilde{\bQ}^\top \bD^2 \widetilde{\bQ}, 
+	\end{align*}
+	where $\widetilde{\bQ} = \bU^\top \bQ$. Since $\bU \in \Real^{m \times m}$ is an orthogonal matrix, we have $\bU \bU^\top = \bI_m$, and hence, 
+	\begin{align*}
+		\widetilde{\bQ}^\top \widetilde{\bQ} = \bQ^\top \bU \bU^\top \bQ = \bQ^\top \bQ. 
+	\end{align*}
+	Hence, the problem of interest can be transformed as 
+	\begin{equation}\label{eq-rank-r-prob1}
+		\begin{aligned}
+			\maximize_{\bQ \in \Real^{m \times r_0}} & \ \trace \parens{\bQ^\top \bD^2 \bQ} \\ 
+			\text{ subject to } & \ \bQ^\top \bQ = \bI_{r_0}. 
+		\end{aligned}
+	\end{equation}
+	Now, if we let $\bH = \bQ \bQ^\top \in \Real^{m \times m}$, it is plain to see $\bH = \bH^\top$ and 
+	\begin{align*}
+		\bH \bH = \bQ \bQ^\top \bQ \bQ^\top = \bQ \bQ^\top = \bH. 
+	\end{align*}
+	Hence, if we let $h_{i,i}$ denote the $i$-th diagonal element of $\bH$, for $i = 1, 2, \cdots, m$, we have 
+	\begin{align*}
+		h_{i,i} = \sum_{j=1}^m h_{i,j} h_{j,i} = \sum_{j=1}^m h_{i,j}^2 = h_{i,i}^2 + \sum_{j \neq i} h_{i,j}^2 \ge h_{i,i}^2. 
+	\end{align*}
+	Hence, we have $h_{i,i} \in \bracks{0, 1}$, for all $i = 1, 2, \cdots, m$. In addition, note that 
+	\begin{align*}
+		\sum_{i=1}^m h_{i,i} = \trace \parens{\bH} = \trace \parens{\bQ \bQ^\top} = \trace \parens{\bQ^\top \bQ} = \trace \parens{\bI_{r_0}} = r_0, 
+	\end{align*}
+	and, by simple algebra, 
+	\begin{align*}
+		\trace \parens{\bQ^\top \bD^2 \bQ} = \sum_{i=1}^m h_{i,i} d_i^2
+	\end{align*}
+	
+	Therefore, the problem \eqref{eq-rank-r-prob1} is equivalent to the following one 
+	\begin{equation}\label{eq-rank-r-prob2}
+		\maximize_{h_{i,i} \in \bracks{0,1}, \sum_{i=1}^m h_{i,i} = r_0} \sum_{i=1}^m h_{i,i} d_i^2. 
+	\end{equation}
+	Finally, suppose $d_1^2 \ge d_2^2 \ge \cdots \ge d_m^2 \ge 0$ be the squared singular values of $\bZ$. The solution to \eqref{eq-rank-r-prob2} is obtained by setting $h_{1,1} = h_{2,2} = \cdots = h_{r_0,r_0} = 1$ and all remaining to be 0. An optimal choice of $\bQ$ that satisfies such conditions is $\bU_{r_0}$, the matrix formed by the first $r_0$ columns of $\bU$. 
+	
+	\textit{Remark.} If the singular values of $\bZ$ satisfy 
+	\begin{align*}
+		d_1^2 > d_2^2 > \cdots > d_m^2 \ge 0, 
+	\end{align*}
+	the solution to \eqref{eq-rank-r-prob2} is unique. 
+
+\end{enumerate}
+
+
+\section*{III. Missing Data and Matrix Completion}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Matrix Completion:} Let $\bZ \in \Real^{m \times n}$ be a matrix containing missing values. \emph{Matrix completion} refers to the problem of filling in or imputing missing values. 
+	
+	\item \textbf{Problem Constraint:} The matrix completion problem is ill-specified unless additional constraints on the unknown matrix $\bZ$ are imposed. We will specify the constraints related to the rank. 
+	
+	\item \textbf{Notation:} We let 
+	\begin{align*}
+		\Omega \subset \sets{1, 2, \cdots, m} \times \sets{1, 2, \cdots, n}
+	\end{align*}
+	denote the indices of the observed entries of the matrix $\bZ \in \Real^{m \times n}$. 
+	
+	\item \textbf{Naive Problem Formulation:} Given $\bZ \in \Real^{m \times n}$, we seek the lowest rank approximation to $\bZ$ that interpolates the observed entries of $\bZ$. The corresponding optimizaiton problem is 
+	\begin{equation}\label{eq-mat-completion-1}
+		\begin{aligned}
+			\minimize_{\bM \in \Real^{m \times n}} & \ \rank \parens{\bM}  \\ 
+			\text{ subject to } & \  m_{i,j} = z_{i,j} \text{ for all } \parens{i, j} \in \Omega, 
+		\end{aligned}
+	\end{equation}
+	where $m_{i,j}$ and $z_{i,j}$ denote the $\parens{i, j}$-th entry of $\bM$ and $\bZ$, respectively, for all $i = 1, 2, \cdots, m$ and $j = 1, 2, \cdots, n$. 
+	
+	\textit{Issues of Optimization Problem \eqref{eq-mat-completion-1}:}
+	\begin{enumerate}
+		\item The problem \eqref{eq-mat-completion-1} is computationally intractable (NP-hard), and cannot be solved in general even for moderately large matrices. 
+		\item The constraint $z_{i,j} = m_{i,j}$ for all $\parens{i, j} \in \Omega$ can be too restrictive and may lead to overfitting. 
+	\end{enumerate}
+	
+	\item \textbf{Matrix Completion by Low-Rank Approximation:} 
+	\begin{enumerate}
+		\item \textit{Motivation:} Due to the two issues mentioned above about \eqref{eq-mat-completion-1}, it is generally better to allow $\bM$ to make some errors on the observed data. 
+		
+		\item \textit{Problem Formulation:} We consider the following optimization problem 
+		\begin{equation}\label{eq-mat-completion-2a}
+			\begin{aligned}
+				\minimize & \ \rank \parens{\bM} \\ 
+				\text{ subject to} & \ \sum_{\parens{i,j} \in \Omega} \parens{z_{i,j} - m_{i,j}}^2 \le \delta, 
+			\end{aligned}
+		\end{equation}
+		or equivalently, 
+		\begin{align}\label{eq-mat-completion-2b}
+			\minimize_{\rank \parens{\bM} \le r} \sum_{\parens{i,j} \in \Omega} \parens{z_{i,j} - m_{i,j}}^2. 
+		\end{align}
+		
+		\textit{Remark.} The family of solutions generated by varying $\delta$ in \eqref{eq-mat-completion-2a} is the same as that generated by varying $r$ in problem \eqref{eq-mat-completion-2b}. 
+		
+		\item \textit{Non-convexity of the Problem:} The problems \eqref{eq-mat-completion-2a} and \eqref{eq-mat-completion-2b} are non-convex. Exact solutions are in general \emph{not} available. 
+		
+		\item \textit{Heuristic Algorithm:} Heuristic algorithms can be used to find local minima of \eqref{eq-mat-completion-2a} and \eqref{eq-mat-completion-2b}. One example is the following: 
+		\begin{enumerate}
+			\item Start with an initial guess for the missing values, and use them to complete $\bZ$; 
+			\item Compute the rank-$r$ SVD approximation of the filled-in matrix as in \eqref{eq-rank-r-prob}, and use it to provide new estimates for the missing values; 
+			\item Repeat the preceding step till convergence. 
+		\end{enumerate}
+		The missing value imputation for a missing entry $z_{i,j}$ is simply the $\parens{i, j}$-th entry of the final rank-$r$ approximation $\widehat{\bZ}$. 
+	\end{enumerate}
+	
+	\item \textbf{Matrix Completion Using Nuclear Norm --- Version 1:} A convex relaxation of \eqref{eq-mat-completion-1} is the following 
+	\begin{equation}\label{eq-nuclear-norm-prob1}
+		\begin{aligned}
+			\minimize_{\bM \in \Real^{m \times n}} & \ \norm{\bM}_* \\ 
+			\text{ subject to } & \ m_{i,j} = z_{i,j} \text{ for all } \parens{i, j} \in \Omega, 
+		\end{aligned}
+	\end{equation}
+	where $\norm{}_*$ denotes the nuclear norm of $\bM$, i.e., the sum of singular values of $\bM$. 
+	
+	Since the nuclear norm is a convex relaxation of the rank of a matrix, and hence the problem \eqref{eq-nuclear-norm-prob1} is convex. 
+	
+	\item \textbf{Matrix Completion Using Nuclear Norm --- Version 2:} Since it is unrealistic to model the observed entries as being noiseless, we instead consider the following optimization problem 
+	\begin{equation}\label{eq-nuclear-norm-prob2}
+		\begin{aligned}
+			\minimize_{\bM \in \Real^{m \times n}} \braces[\Bigg]{\frac{1}{2} \sum_{\parens{i,j} \in \Omega} \parens{z_{i,j} - m_{i,j}}^2 + \lambda \norm{\bM}_*}, 
+		\end{aligned}
+	\end{equation}
+	where $\lambda > 0$ is the penalty parameter. The problem \eqref{eq-nuclear-norm-prob2} is called the \emph{spectral regularization}. 
+	
+	\textit{Remark 1.} This modification from \eqref{eq-nuclear-norm-prob1} to \eqref{eq-nuclear-norm-prob2} allows for solutions that do \emph{not} fit the observed entries \underline{exactly}, reducing potential overfitting in the case of noisy entries. 
+	
+	\textit{Remark 2.} The value of $\lambda > 0$ can be chosen using the cross-validation. 
+	
+	\item \textbf{Algorithm of Solving \eqref{eq-nuclear-norm-prob2}:} 
+	
+	\begin{enumerate}
+		\item \textit{Main Idea:} The main idea of the algorithm to solve \eqref{eq-nuclear-norm-prob2} is the following: 
+		\begin{enumerate}
+			\item Start with an initial guess for the missing values, compute the (full rank) SVD, and then soft-threshold its singular values by an amount $\lambda$; 
+			\item Reconstruct the corresponding SVD approximation and obtain new estimates for the missing values; 
+			\item Repeat the preceding step until convergence. 
+		\end{enumerate}
+		
+		\item \textit{Projection Operator:} Given an observed subset $\Omega$ of indices of matrix entries, we define the \emph{projection operator} $\calP_{\Omega}: \Real^{m \times n} \to \Real^{m \times n}$ as 
+		\begin{align*}
+			\bracks{\calP_{\Omega} \parens{\bZ}}_{i,j} = \begin{cases}
+				z_{i,j}, & \, \text{ if } \parens{i, j} \in \Omega, \\ 
+				0, & \, \text{ if } \parens{i, j} \notin \Omega. 
+			\end{cases}
+		\end{align*}
+		Then, we have 
+		\begin{align*}
+			\sum_{\parens{i,j} \in \Omega} \parens{z_{i,j} - m_{i,j}}^2 = \norm{\calP_{\Omega} \parens{\bZ} - \calP_{\Omega} \parens{\bM}}_{\mathrm{F}}^2
+		\end{align*}
+		
+		\item \textit{Soft-thresholded Version of a Matrix:} Let $\bW$ be a matrix of rank $r$ whose SVD is given by $\bW = \bU \bD \bV^\top$. Its \emph{soft-thresholded} version is 
+		\begin{align*}
+			\calS_{\lambda} \parens{\bW} = \bU \bD_{\lambda} \bV^\top, 
+		\end{align*}
+		where 
+		\begin{align*}
+			\bD_{\lambda} = \diag \parens[\big]{\parens{d_1 - \lambda}_+, \parens{d_2 - \lambda}_+, \cdots, \parens{d_r - \lambda}_+}. 
+		\end{align*}
+		
+		\item \textit{Soft-impute Algorithm for Matrix Completion:} The following algorithm solves \eqref{eq-nuclear-norm-prob2}. 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+			\caption{Soft-impute for Matrix Completion}\label{algo-soft-impute}
+			\begin{algorithmic}[1]
+				\STATE Initialize $\bZ^{\mathrm{old}} = \boldzero_{m \times n}$ and create a decreasing grid $\lambda_1 > \lambda_2 > \cdots > \lambda_K$; 
+				\STATE For each $k = 1, 2, \cdots, K$, set $\lambda = \lambda_k$ and iterate until convergence: 
+				\begin{itemize}
+					\item Compute $\widehat{\bZ}_{\lambda} \leftarrow \calS_{\lambda} \parens{\calP_{\Omega} \parens{\bZ} + \calP_{\Omega}^{\perp} \parens{\bZ^{\mathrm{old}}} }$; 
+					\item Update $\bZ^{\mathrm{old}} \leftarrow \widehat{\bZ}_{\lambda}$; 
+				\end{itemize}
+				\STATE Output the sequence of solutions $\widehat{\bZ}_{\lambda_1}, \widehat{\bZ}_{\lambda_2}, \cdots, \widehat{\bZ}_{\lambda_K}$. 
+			\end{algorithmic}
+		\end{algorithm}
+		\end{minipage}
+		
+		\vspace{10pt}
+		\textit{Remark.} Each iteration requires an SVD computation of a (potentially large) dense matrix, namely, $\calS_{\lambda} \parens{\calP_{\Omega} \parens{\bZ} + \calP_{\Omega}^{\perp} \parens{\bZ^{\mathrm{old}}} }$, even though $\calP_{\Omega} \parens{\bZ}$ is sparse. 
+		
+		Note that we can write 
+		\begin{align*}
+			\calP_{\Omega} \parens{\bZ} + \calP_{\Omega}^{\perp} \parens{\bZ^{\mathrm{old}}} = \underbrace{\calP_{\Omega} \parens{\bZ} - \calP_{\Omega} \parens{\bZ^{\mathrm{old}}}}_{\text{sparse}} + \underbrace{\bZ^{\mathrm{old}}}_{\text{low rank}}, 
+		\end{align*}
+		where 
+		\begin{itemize}
+			\item the first component is sparse, with $\abs{\Omega}$ non-missing entries, and 
+			\item the second component is a soft-thresholded SVD, so can be represented using the corresponding components. 
+		\end{itemize}
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{IV. Maximum Margin Factorization and Related Methods}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} The \emph{maximum margin matrix factorization} (MMMF) uses a factor model to approximate a given matrix. 
+	
+	\item \textbf{Problem Formulation:} Consider a matrix factorization of the form $\bM = \bA \bB^\top$, where $\bA \in \Real^{m \times r}$ and $\bB \in \Real^{n \times r}$. One way to estimate such a factorization is to solve the following optimization problem 
+	\begin{align}\label{eq-mmmf-prob}
+		\minimize_{\bA \in \Real^{m \times r}, \bB \in \Real^{n \times r}} \braces[\Big]{\norm{\calP_{\Omega} \parens{\bZ} - \calP_{\Omega} \parens{\bA \bB^\top}}_{\mathrm{F}}^2 + \lambda \parens{\norm{\bA}_{\mathrm{F}}^2 + \norm{\bB}_{\mathrm{F}}^2}}, 
+	\end{align}
+	and the resulting factorization is called the \emph{maximum margin matrix factorization}. 
+	
+	\item \textbf{An Equivalent Way of Expressing Nuclear Norm:} For any matrix $\bM \in \Real^{m \times n}$, the following identity holds 
+	\begin{align}\label{eq-nuclear-norm-opt}
+		\norm{\bM}_* = \min_{\bA \in \Real^{m \times r}, \bB \in \Real^{n \times r}, \bM = \bA \bB^\top} \braces[\bigg]{\frac{1}{2} \parens[\big]{\norm{\bA}_{\mathrm{F}}^2 + \norm{\bB}_{\mathrm{F}}^2}}. 
+	\end{align}
+	
+	\textit{Remark.} The solution to \eqref{eq-nuclear-norm-opt} is \emph{not unique}. 
+	
+	\item \textbf{Theorem --- Connection between \eqref{eq-nuclear-norm-prob2} and \eqref{eq-mmmf-prob}:} Let $\bZ$ be an $m \times n$ matrix with observed entries indexed by $\Omega$. 
+	\begin{enumerate}
+		\item The solutions to the MMMF criterion \eqref{eq-mmmf-prob} with $r = \min \sets{m, n}$ and the nuclear norm regularized criterion \eqref{eq-nuclear-norm-prob2} coincide for all $\lambda \ge 0$; 
+		\item The solution space of the objective \eqref{eq-nuclear-norm-prob2} is contained in that of \eqref{eq-mmmf-prob}. More precisely, for some fixed $\lambda^* > 0$, suppose that the objective \eqref{eq-nuclear-norm-prob2} has an optimal solution with rank $r^*$. Then, for any optimal solution $\parens{\widehat{\bA}, \widehat{\bB}}$ to the problem \eqref{eq-mmmf-prob} with $r \ge r^*$ and $\lambda = \lambda^*$, the matrix $\widehat{\bM} = \widehat{\bA} \widehat{\bB}^\top$ is an optimal solution for the problem \eqref{eq-nuclear-norm-prob2}. 
+	\end{enumerate}
+	
+	\textit{Remark.} The MMMF criterion \eqref{eq-mmmf-prob} defines a two-dimensional family of models indexed by the pair $\parens{r, \lambda}$, while the soft-impute criterion \eqref{eq-nuclear-norm-prob2} defines a one-dimensional family. 
+	
+	According to the preceding theorem, the latter one-dimensional family is a special path in the two-dimensional grid of solutions $\parens{\widehat{\bA}_{\parens{r, \lambda}}, \widehat{\bB}_{\parens{r, \lambda}}}$. 
+	
+	\item \textbf{Comparison of \eqref{eq-nuclear-norm-prob2} and \eqref{eq-mmmf-prob}:}
+	\begin{enumerate}
+		\item The formulation \eqref{eq-nuclear-norm-prob2} is preferable, since it is convex and it does both rank reduction and regularization at the same time. 
+		\item Using \eqref{eq-mmmf-prob}, we need to choose both the rank of the approximation and the regularization parameter $\lambda$. 
+	\end{enumerate}
+	
+	\item \textbf{A Related Problem to \eqref{eq-mmmf-prob}:} A related problem to \eqref{eq-mmmf-prob} in the literature is the following one 
+	\begin{align}\label{eq-mmmf-prob2}
+		\minimize_{\bU, \bS, \bV} \ \braces[\Big]{\norm{\calP_{\Omega} \parens{\bZ} - \calP_{\Omega} \parens{\bU \bS \bV^\top}}_{\mathrm{F}}^2 + \lambda \norm{\bS}_{\mathrm{F}}^2}, 
+	\end{align}
+	where $\bU$ and $\bV$ satisfy $\bU^\top \bU = \bV^\top \bV = \bI_r$ and $\bS \in \Real^{r \times r}$. 
+	
+	For a fixed rank $r$, the problem \eqref{eq-mmmf-prob2} can be solved by gradient descent. 
+	
+	\textit{Remark 1.} The problem \eqref{eq-mmmf-prob2} is similar to the original MMMF problem \eqref{eq-mmmf-prob}, except that the matrices $\bU$ and $\bV$ are constrained to be orthonormal so that the ``signal'' and corresponding regularization are shifted to the (full) matrix $\bS$. 
+	
+	\textit{Remark 2.} Like MMMF, the problem \eqref{eq-mmmf-prob2} is non-convex so that gradient descent is \emph{not} guaranteed to converge to the global optimum. In addition, it must be solved separately for different values of the rank $r$. 
+
+\end{enumerate}
+
+
+\section*{V. Penalized Matrix Decomposition}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Problem Formulation:} Given a matrix $\bZ \in \Real^{m \times n}$ that has \emph{no} missing values, inspired by the maximum margin matrix factorization \eqref{eq-mmmf-prob}, we consider the following optimization problem 
+	\begin{align}\label{eq-pen-matrix}
+		\minimize_{\bU \in \Real^{m \times r}, \bV \in \Real^{n \times r}, \bD \in \Real^{r \times r}} \ \braces[\Big]{\norm{\bZ - \bU \bD \bV^{\top}}_{\mathrm{F}}^2 + \lambda_1 \norm{\bU}_1 + \lambda_2 \norm{\bV}_2}, 
+	\end{align}
+	where $\bD$ is diagonal and non-negative and $\bU^\top \bU = \bV^\top \bV = \bI_r$. 
+	
+	\textit{Remark.} With the $L^1$-penalty on $\bU$ and $\bV$, we can obtain sparse versions of the singular vectors for easier interpretation. 
+	
+	\item \textbf{Problem \eqref{eq-pen-matrix} in $r=1$ Case --- Version 1:} Consider the one-dimensional case of \eqref{eq-pen-matrix} in the constrained form 
+	\begin{equation}\label{eq-pen-matrix-dim1-1}
+		\begin{aligned}
+			\minimize_{\bu \in \Real^m, \bv \in \Real^n, d \ge 0} & \ \braces[\Big]{\norm{\bZ - d \bu \bv^{\top}}_{\mathrm{F}}^2} \\ 
+			\text{subject to } & \ \norm{\bu}_1 \le c_1, \norm{\bu}_2 = 1, \norm{\bv}_1 \le c_2, \norm{\bv}_2 = 1. 
+		\end{aligned}
+	\end{equation}
+	The issues with \eqref{eq-pen-matrix-dim1-1} are the following: 
+	\begin{enumerate}
+		\item it tends to produce solutions that are too sparse, and 
+		\item it is \emph{not} convex due to the constraints $\norm{\bu}_2 = 1$ and $\norm{\bv}_2 = 1$. 
+	\end{enumerate}
+	To a rough idea of the first issue, consider the possibly simplest case where $m = 2$ and $n = 1$, and the resulting problem can be written as 
+	\begin{align*}
+		\minimize_{\bu \in \Real^2, v \in \Real, d \ge 0} & \ \braces[\Big]{\norm{\bZ - dv \bu}_{\mathrm{F}}^2} \\ 
+			\text{subject to } & \ \norm{\bu}_1 \le c_1, \norm{\bu}_2 = 1, \abs{v} = 1, 
+	\end{align*}
+	or, equivalently, 
+	\begin{align*}
+		\minimize_{u_1, u_2 \in \Real^m, v \in \Real, d \ge 0} & \ \braces[\Bigg]{\norm[\bigg]{\begin{pmatrix}
+			z_1 \\ z_2
+		\end{pmatrix} - d v \begin{pmatrix}
+			u_1 \\ u_2
+		\end{pmatrix}}_{\mathrm{F}}^2} \\ 
+		\text{subject to } & \ \abs{u_1} + \abs{u_2} \le c_1, u_1^2 + u_2^2 = 1, \abs{v} = 1, 
+	\end{align*}
+	that is, 
+	\begin{align*}
+		\minimize_{u_1, u_2 \in \Real^m, v \in \Real, d \ge 0} & \ \braces[\Big]{\parens{dvu_1 - z_1}^2 + \parens{dvu_2 - z_2}^2} \\ 
+		\text{subject to } & \ \abs{u_1} + \abs{u_2} \le c_1, u_1^2 + u_2^2 = 1, \abs{v} = 1. 
+	\end{align*}
+	With $c_1 \in \bracks{1, \sqrt{2}}$, it is easy to see that the feasible set over $\parens{u_1, u_2, v}^\top \in \Real^3$ is the union of 8 arcs that each intersect with $u_1 = 0$ or $u_2 = 0$ in $\Real^3$. Typically, the optimal solution occurs when $u_1 = 0$ or $u_2 = 0$, resulting in a sparse solution. 
+	
+	\item \textbf{Equivalent Formulation of \eqref{eq-pen-matrix-dim1-1}:} The objective function in \eqref{eq-pen-matrix-dim1-1} can be written equivalently as 
+	\begin{align*}
+		\norm{\bZ - d \bu \bv^{\top}}_{\mathrm{F}}^2 = -2 d \bu^\top \bZ \bv + d^2 \norm{\bu}_2^2 \norm{\bv}_2^2 + \norm{\bZ}_{\mathrm{F}}^2. 
+	\end{align*}
+	Under the constraint $\norm{\bu}_2 = \norm{\bv}_2 = 1$, we can simplify the preceding equation 
+	\begin{align*}
+		\norm{\bZ - d \bu \bv^{\top}}_{\mathrm{F}}^2 = -2 d \bu^\top \bZ \bv + d^2 + \norm{\bZ}_{\mathrm{F}}^2. 
+	\end{align*}
+	For given $\bu$ and $\bv$, the value of $d$ optimizing the preceding equation is $\bu^\top \bZ \bv$. In addition, the last term $\norm{\bZ}_{\mathrm{F}}^2$ does \emph{not} depend on $\bu$ or $\bv$. Hence, an equivalent formulation of \eqref{eq-pen-matrix-dim1-1} is 
+	\begin{equation}\label{eq-pen-matrix-dim1-1-1}
+		\begin{aligned}
+			\maximize_{\bu \in \Real^m, \bv \in \Real^n} & \ \bu^\top \bZ \bv \\ 
+			\text{subject to } & \ \norm{\bu}_1 \le c_1, \norm{\bu}_2 = 1, \norm{\bv}_1 \le c_2, \norm{\bv}_2 = 1. 
+		\end{aligned}
+	\end{equation}
+	We will only consider the problem \eqref{eq-pen-matrix-dim1-1-1} in the sequel. 
+	
+	\textit{Remark.} Problem \eqref{eq-pen-matrix-dim1-1-1} still suffers the two issues we discussed earlier about \eqref{eq-pen-matrix-dim1-1}. 
+	
+	\item \textbf{Problem \eqref{eq-pen-matrix} in $r=1$ Case --- Version 2:} In order to remedy the issues mentioned above about \eqref{eq-pen-matrix-dim1-1}, we instead consider the following problem 
+	\begin{equation}\label{eq-pen-matrix-dim1-2}
+		\begin{aligned}
+			\maximize_{\bu \in \Real^m, \bv \in \Real^n} & \ \bu^\top \bZ \bv \\ 
+			\text{subject to } & \ \norm{\bu}_1 \le c_1, \norm{\bv}_1 \le c_2, \norm{\bu}_2 \le 1, \norm{\bv}_2 \le 1. 
+		\end{aligned}
+	\end{equation}
+	
+	\textit{Remark 1.} If we fix the component $\bv$, the criterion \eqref{eq-pen-matrix-dim1-2} is linear in $\bu$. 
+	
+	\textit{Remark 2.} If we choose 
+	\begin{align*}
+		1 \le c_1 \le \sqrt{m} \qquad \text{ and } \qquad 1 \le c_2 \le \sqrt{n}, 
+	\end{align*}
+	then the solution of \eqref{eq-pen-matrix-dim1-2} automatically satisfies $\norm{\bu}_2 = 1$ and $\norm{\bv}_2 = 1$. This follows from the Karush-Kuhn-Tucker conditions from convex optimization. Therefore, for $c_1$ and $c_2$ appropriately chosen, the solution to \eqref{eq-pen-matrix-dim1-2} solves \eqref{eq-pen-matrix-dim1-1-1}. 
+	
+	\textit{Remark 3.} The $L^1$ penalties above may be replaced by other kinds of penalties such as the fused lasso penalty 
+	\begin{align*}
+		\Phi \parens{\bu} = \sum_{j=2}^m \abs{u_j - u_{j-1}}, 
+	\end{align*}
+	where $\bu = \parens{u_1, u_2, \cdots, u_m}^\top \in \Real^m$. This choice is useful in enforcing smoothness along the 1-dimensional ordering. 
+	
+	\item \textbf{Bi-convexity of Problem \eqref{eq-pen-matrix-dim1-2}:} With $\bv$ fixed, the problem \eqref{eq-pen-matrix-dim1-2} becomes 
+	\begin{equation}\label{eq-pen-matrix-dim1-2-1}
+		\begin{aligned}
+			\maximize_{\bu \in \Real^m} & \ \bu^\top \bZ \bv \\ 
+			\text{subject to} & \ \norm{\bu}_1 \le c_1, \norm{\bu}_2 \le 1, 
+		\end{aligned}
+	\end{equation}
+	which is convex. With $\bu$ fixed, the resulting problem with respect to $\bv$ is convex as well. This means that the problem \eqref{eq-pen-matrix-dim1-2} is \emph{bi-convex}, and suggests an alternating algorithm for optimizing it. 
+	
+	\item \textbf{Characterizing the Solution to \eqref{eq-pen-matrix-dim1-2-1}:} Using standard results from convex optimization, the solution to \eqref{eq-pen-matrix-dim1-2-1}, denoted by $\bu^*$, is given by 
+	\begin{align*}
+		\bu^* = \frac{\calS_{\lambda} \parens{\bZ \bv}}{\norm{\calS_{\lambda} \parens{\bZ \bv}}_2}, 
+	\end{align*}
+	with $\lambda$ being the smallest positive value such that $\norm{\bu^*}_1 = c_1$. Here, $\calS_{\lambda}$ is the soft-thresholding operator applied to each component of the vector $\bZ \bv$. 
+	
+	\item \textbf{Algorithm to Solve \eqref{eq-pen-matrix-dim1-2}:} 
+	With the results above, we minimize \eqref{eq-pen-matrix-dim1-2} in an alternating fashion. The resulting algorithm is shown in Algorithm \ref{algo-alternating-1d}. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{Alternating Soft-Thresholding for Rank-1 Penalized Matrix Decomposition}\label{algo-alternating-1d}
+		\begin{algorithmic}[1]
+			\STATE Set $\bv$ to the top left singular vector from the SVD of $\bZ$; 
+			
+			\STATE Perform the update 
+			\begin{align*}
+				\bu \quad \longleftarrow \quad \frac{\calS_{\lambda_1} \parens{\bZ \bv}}{\norm{\calS_{\lambda_1} \parens{\bZ \bv}}_2}, 
+			\end{align*}
+			with $\lambda_1$ being the smallest positive value such that $\norm{\bu}_1 \le c_1$; 
+			
+			\STATE Perform the update 
+			\begin{align*}
+				\bv \quad \longleftarrow \quad \frac{\calS_{\lambda_2} \parens{\bZ^\top \bu}}{\norm{\calS_{\lambda_2} \parens{\bZ^\top \bu}}_2}, 
+			\end{align*}
+			with $\lambda_2$ being the smallest positive value such that $\norm{\bv}_1 \le c_2$; 
+			
+			\STATE Iterate the preceding two steps until convergence; 
+			
+			\RETURN $\bu$, $\bv$ and $d = \bu^\top \bZ \bv$. 
+		\end{algorithmic}
+	\end{algorithm}
+	\end{minipage}
+	
+	\vspace{5pt}
+	
+	\textit{Remark.} If $c_1 > \sqrt{m}$ and $c_2 > \sqrt{n}$, then the $L^1$ constraints have no effect. 
+	
+	\item \textbf{Multi-factor Penalized Matrix Decomposition:} Algorithm \ref{algo-alternating-1d} leads the decomposition of $\bZ$ with a single factor. 
+	
+	To obtain a decomposition of $K$ factors, we can apply Algorithm \ref{algo-alternating-1d} $K$ times, which leads to the following $K$-factor penalized matrix decomposition algorithm. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{Multi-factor Penalized Matrix Decomposition}\label{algo-multi-factor-mat-decom}
+		\begin{algorithmic}[1]
+			\STATE Set $\bR \leftarrow \bZ$; 
+			
+			\STATE For $k = 1, 2, \cdots, K$: 
+			
+			\begin{enumerate}
+				\item Find $\bu_k$, $\bv_k$, and $d_k$ by applying the single-factor algorithm (Algorithm \ref{algo-alternating-1d} to data $\bR$; 
+				\item Update $\bR \leftarrow \bR - d_k \bu_k \bv_k^\top$. 
+			\end{enumerate}
+		\end{algorithmic}
+	\end{algorithm}
+	\end{minipage}
+	
+	\vspace{5pt}
+	
+	\textit{Remark 1.} If we omit $L^1$-penalties on $\bu_k$ and $\bv_k$ (or equivalently, set $\lambda_1 = \lambda_2 = 0$),  Algorithm \ref{algo-multi-factor-mat-decom} leads to the rank-$K$ SVD of $\bZ$. In particular, the successive solutions are orthogonal. 
+	
+	However, if we do impose $L^1$ penalties, the resulting solutions are \emph{not} orthogonal. 
+	
+	\textit{Remark 2.} Alternating minimization of biconvex functions, unlike the minimization of convex functions, is \emph{not} guaranteed to find a global optimum, and is only guaranteed to move downhill to a local minimum. 
+	
+	\textit{Remark 3.} Differences between matrix completion and penalized matrix decomposition are the following: 
+	\begin{enumerate}
+		\item For successful matrix completion, the singular vectors of $\bZ$ need to be dense; 
+		\item In sparse matrix decomposition, we seek sparse singular vectors for interpretability. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+	
+\section*{VI. Additive Matrix Decomposition}
+	
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Overview:} In the problem of additive matrix decomposition, we seek to decompose a matrix into the sum of two or more matrices. 
+	
+	\textit{Remark.} The components in the additive decomposition should have \emph{complementary} structures. For instance, if we decompose a matrix into a sum of two matrices, one component can have low rank and the other one is sparse. 
+	
+	\item \textbf{Applications:} Applications of additive matrix decompositions include factor analysis, and robust forms of PCA and matrix completion. 
+	
+	\item \textbf{Problem Formulation:} Given a matrix $\bZ \in \Real^{m \times n}$, we decompose it as 
+	\begin{align*}
+		\bZ = \bL + \bS + \bW, 
+	\end{align*}
+	where $\bL \in \Real^{m \times n}$ is a low rank matrix, $\bS \in \Real^{m \times n}$ is a sparse matrix, and $\bW \in \Real^{m \times n}$ is a noise matrix. This leads to the following optimization problem 
+	\begin{align}\label{eq-additive-matrix-decom}
+		\minimize_{\bL \in \Real^{m \times n}, \bS \in \Real^{m \times n}} \ \braces[\bigg]{\frac{1}{2} \norm{\bZ - \parens{\bL + \bS}}_{\mathrm{F}}^2 + \lambda_1 \Phi_1 \parens{\bL} + \lambda_2 \Phi_2 \parens{\bS}}, 
+	\end{align}
+	with $\Phi_1 \parens{\bL} = \norm{\bL}_*$ enforcing the low rank and $\Phi_2 \parens{\bS} = \norm{\bS}_1$ enforcing the sparsity. 
+	
+	\item \textbf{Application 1 --- Factor Analysis with Sparse Noise:} 
+	\begin{enumerate}
+		\item \textit{Setup:} We regard factor analysis as a generative model and let $Y_i \in \Real^p$, for all $i = 1, 2, \cdots, n$, be generated as the following mechanism 
+		\begin{align}\label{eq-factor-model}
+			Y_i = \bmu + \bGamma U_i + W_i, 
+		\end{align}
+		where 
+		\begin{itemize}
+			\item $\bmu \in \Real^p$ is the mean vector, 
+			\item $\bGamma \in \Real^{p \times r}$ is a (unknown) loading matrix, 
+			\item $U_i \iid \Normal_r \parens{\boldzero_r, \bI_{r \times r}}$, 
+			\item $W_i \iid \Normal_p \parens{\boldzero_p, \bS^*}$, and 
+			\item $U_i$ and $W_i$ are independent. 
+		\end{itemize}
+		
+		\item \textit{Goal:} Given $Y_1, Y_2, \cdots, Y_n$, the goal is to estimate the column of the loading matrix $\bGamma$, or, equivalently, the rank $r$ matrix $\bL^* = \bGamma \bGamma^\top \in \Real^{p \times p}$ that spans the column space of $\bGamma$. 
+		
+		\item \textit{Variance of $Y_i$:} By the model \eqref{eq-factor-model}, it is easy to see 
+		\begin{align*}
+			\bSigma := \var \bracks{Y_i} = \bGamma \bGamma^\top + \bS^*, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align*}
+		
+		\item \textit{Special Case:} If $\bS^* = \sigma^2 \bI_{p \times p}$, then the column span of $\bGamma$ is equivalent to the span of the top $r$ eigenvectors of $\bSigma$, and we can recover it via standard principal component analysis. 
+		
+		\item \textit{When $\bS^*$ Is Sparse:} Assume $\bmu = \boldzero_p$. When $\bS^*$ is a sparse matrix, with $Y_1, Y_2, \cdots, Y_n$ from the model \eqref{eq-factor-model}, we can let 
+		\begin{align*}
+			\bZ = \frac{1}{n} \sum_{i=1}^n Y_i Y_i^\top \in \Real^{p \times p}
+		\end{align*}
+		be the sample covariance matrix and write $\bZ = \bL^* + \bS^* + \bW$, where $\bL^* = \bGamma \bGamma^\top$ is of rank $r$. We can then estimate $\bL^*$ and $\bS^*$ by the problem \eqref{eq-additive-matrix-decom}. 
+	
+	\end{enumerate}
+	
+	\item \textbf{Application 2 --- Robust PCA:}
+	\begin{enumerate}
+		\item \textit{Review of Standard PCA:} Let $\bZ \in \Real^{n \times p}$ be the data matrix, where the $i$-th row represents the $i$-th sample of a $p$-dimensional data vector. Standard PCA can be formulated as the problem of minimizing 
+		\begin{align*}
+			\norm{\bZ - \bL}_{\mathrm{F}}^2 
+		\end{align*}
+		subject to a rank constraint on $\bL$. 
+		
+		\item \textit{Motivation of Robust PCA:} If some entries or rows of the data matrix $\bZ$ is corrupted, standard PCA may be very sensitive to the perturbations of data. 
+		
+		\item \textit{Idea of Robust PCA:} Additive matrix decompositions provide one solution that introduces robustness to PCA. Let $\bL$ be a low-rank matrix and $\bS$ be a sparse matrix. We approximate $\bZ$ with the sum $\bL + \bS$. 
+		
+		\textit{Remark.} The specification of the sparse matrix $\bS$ depends on the corruption type of $\bZ$. 
+		\begin{enumerate}
+			\item In the case of element-wise corruption, $\bS$ would be modeled as being element-wise sparse, having relatively few nonzero entries; 
+			\item In the case of having entirely corrupted rows, $\bS$ would be modeled as a row-sparse matrix. 
+		\end{enumerate}
+		
+		\item \textit{Naive Optimization Problem:} Given some target rank $r$ and sparsity $k$, robust PCA can be formulated as the following optimization problem 
+		\begin{equation}\label{eq-robust-pca-naive}
+			\begin{aligned}
+				\minimize_{\bL, \bS} & \ \frac{1}{2} \norm{\bZ - \parens{\bL + \bS}}_{\mathrm{F}}^2, \\ 
+				\text{ subject to} & \ \rank \parens{\bL} \le r, \text{card} \parens{\bS} \le k, 
+			\end{aligned}
+		\end{equation}
+		where ``card'' denotes a cardinality constraint, either 
+		\begin{enumerate}
+			\item the total number of nonzero entries (in the case of element-wise corruption), or 
+			\item the total number of nonzero rows (in the case of row-wise corruption). 
+		\end{enumerate}
+		
+		\item \textit{Convex Relaxation of \eqref{eq-robust-pca-naive}:} Note that the problem \eqref{eq-robust-pca-naive} is \emph{doubly non-convex}, due to both the rank and cardinality constraints. 
+		
+		A natural convex relaxation is to replace the low-rank constraint by 
+		\begin{align*}
+			\Phi_1 \parens{\bL} = \norm{\bL}_*
+		\end{align*}
+		and the sparsity constraint by 
+		\begin{align*}
+			\Phi_2 \parens{\bS} = \sum_{i=1}^n \sum_{j=1}^p \abs{s_{i,j}}
+		\end{align*}
+		for the element-wise sparsity or by 
+		\begin{align*}
+			\Phi_2 \parens{\bS} = \sum_{i=1}^n \norm{\bs_{i}}_2
+		\end{align*}
+		for the row-wise sparsity, where $\bs_i \in \Real^p$ denotes the $i$-th row of $\bS$. 
+		
+	\end{enumerate}
+		
+	\item \textbf{Application 3 --- Robust Matrix Completion:} Similar to robust PCA presented above, we can also introduce a sparse component $\bS$ to the optimization problem \eqref{eq-nuclear-norm-prob2} which adds robustness to the matrix completion. 
+	
+	Let $\bZ \in \Real^{m \times n}$ be the matrix containing missing values. We impose the following row-wise sparsity penalty to \eqref{eq-nuclear-norm-prob2} 
+	\begin{align*}
+		\Phi \parens{\bS} = \sum_{i=1}^m \norm{\bs_i}_2, 
+	\end{align*}
+	where $\bs_i \in \Real^n$ denotes the $i$-th row of $\bS$. Then, the optimization \eqref{eq-nuclear-norm-prob2} can be modified as 
+	\begin{align*}
+		\minimize_{\bL, \bS \in \Real^{m \times n}} \braces[\Bigg]{\frac{1}{2} \sum_{\parens{i,j} \in \Omega} \parens[\big]{z_{i,j} - \parens{l_{i,j} + s_{i,j}}}^2 + \lambda_1 \norm{\bL}_* + \lambda_2 \Phi \parens{\bS}}, 
+	\end{align*}
+	where $l_{i,j}$ and $s_{i,j}$ denote the $\parens{i,j}$-th entry of the matrices $\bL$ and $\bS$, respectively. 	
+	
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

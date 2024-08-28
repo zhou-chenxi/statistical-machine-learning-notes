@@ -1,0 +1,5 @@
+[0] Config.pm:343> INFO - This is Biber 2.5
+[0] Config.pm:346> INFO - Logfile is '/Users/chenxizhou/Dropbox/LaTex_Files/Izenman_Modern_Multivariate_Statistical_Techniques/chapter_7/.texpadtmp/chapter7linear dimensionalityreduction.blg'
+[49] biber-darwin:290> INFO - === Sat Feb  1, 2020, 20:17:35
+[70] Utils.pm:165> ERROR - /Users/chenxizhou/Dropbox/LaTex_Files/Izenman_Modern_Multivariate_Statistical_Techniques/chapter_7/.texpadtmp/chapter7linear dimensionalityreduction.bcf is malformed, last biblatex run probably failed. Deleted /Users/chenxizhou/Dropbox/LaTex_Files/Izenman_Modern_Multivariate_Statistical_Techniques/chapter_7/.texpadtmp/chapter7linear dimensionalityreduction.bbl
+[70] Biber.pm:112> INFO - ERRORS: 1

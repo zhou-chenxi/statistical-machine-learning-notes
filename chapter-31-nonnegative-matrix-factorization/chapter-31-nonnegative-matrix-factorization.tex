@@ -1,0 +1,165 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 31, Nonnegative Matrix Factorization}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Nonnegative Matrix Factorization}{31}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 14, Unsupervised Learning} in \textcite{Friedman2001-np}. 
+
+
+\section*{I. Nonnegative Matrix Factorization}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Problem Statement:} Let $\bX \in \Real^{n \times p}$ be a data matrix with all entries being nonnegative. We want to find matrices $\bW \in \Real^{n \times r}$ and $\bH \in \Real^{r \times p}$ such that 
+	\begin{align*}
+		\bX \approx \bW \bH, 
+	\end{align*}
+	where we require $r \le \max \sets{n, p}$. In addition, we assume that $w_{i, k} \ge 0$ and $h_{k,j} \ge 0$ for all $i = 1, 2, \cdots, n$, $k=1,2,\cdots, r$ and $j=1,2,\cdots, p$. 
+	
+	\item \textbf{Objective Function:} To obtain the desired $\bW$ and $\bH$, we consider the following criterion 
+	\begin{align}\label{eq-nmf-obj}
+		L \parens{\bW, \bH} := \sum_{i=1}^n \sum_{j=1}^p \parens[\big]{x_{i,j} \log \bracks{\bW \bH}_{i,j} - \bracks{\bW \bH}_{i,j}}, 
+	\end{align}
+	where $\bracks{\bA}_{i,j}$ denotes the $\parens{i, j}$-th entry of the matrix $\bA$. Equivalently, $L$ above can also be expressed as 
+	\begin{align*}
+		L \parens{\bW, \bH} = \sum_{i=1}^n \sum_{j=1}^p \parens[\Bigg]{x_{i,j} \log \parens[\bigg]{\sum_{k=1}^r w_{i,k} h_{k,j}} - \parens[\bigg]{\sum_{k=1}^r w_{i,k} h_{k,j}}}. 
+	\end{align*}
+	Notice that \eqref{eq-nmf-obj} is the log-likelihood function from a model in which $x_{i,j}$ has a Poisson distribution with the mean $\bracks{\bW \bH}_{i,j}$. 
+	
+	\item \textbf{Algorithm to Maximize \eqref{eq-nmf-obj}:} Note that $L$ is convex in $\bW$ and $\bH$ separately, but is \emph{not} convex jointly in $\bW$ and $\bH$. A minorize-maximization algorithm is proposed. 
+	
+	\begin{enumerate}
+		\item \textit{Minorization Function and Its Consequence:} A function $g \parens{x, y}$ is said to minorize a function $f \parens{x}$ if 
+		\begin{align*}
+			g \parens{x, y} \le f \parens{x}, \qquad \text{ and } \qquad g \parens{x, x} = f \parens{x}, 
+		\end{align*}
+		for all $x, y$ in the domain. This is useful for maximizing $f$ since $f$ is nondecreasing under the update 
+		\begin{align*}
+			x^{\parens{s+1}} = \argmax_x g \parens{x, x^{\parens{s}}}. 
+		\end{align*}
+		
+		\item \textit{Minorization Function for $L$:} For our objective function $L$ in \eqref{eq-nmf-obj}, it can be shown that a minorization function for $L$ is 
+		\begin{align}
+			g \parens{\bW, \bH; \bW^{\parens{s}}, \bH^{\parens{s}}} := & \, \sum_{i=1}^n \sum_{j=1}^p \sum_{k=1}^r x_{i,j} \frac{a_{i,k,j}^{\parens{s}}}{b_{i,j}^{\parens{s}}} \parens[\big]{\log w_{i,k} + \log h_{k,j}} \nonumber \\ 
+			& \qquad - \sum_{i=1}^n \sum_{j=1}^p \sum_{k=1}^r w_{i,k} h_{k,j}, \label{eq-nmf-surrogate}
+		\end{align}
+		where 
+		\begin{align*}
+			a_{i,k,j}^{\parens{s}} := w_{i,k}^{\parens{s}} h_{k,j}^{\parens{s}}, \qquad \text{ and } \qquad b_{i,j}^{\parens{s}} := \sum_{\ell=1}^r w_{i, \ell}^{\parens{s}} h_{\ell,j}^{\parens{s}}. 
+		\end{align*}
+		The key point to show $g \parens{\bW, \bH; \bW^{\parens{s}}, \bH^{\parens{s}}} \le L \parens{\bW, \bH}$ is to use the following result: for any set of $r$ positive values $\sets{y_1, y_2, \cdots, y_r}$, any set of $r$ positive values $\sets{c_1, c_2, \cdots, c_r}$ satisfying $\sum_{k=1}^r c_k = 1$, we must have 
+		\begin{align*}
+			\log \parens[\Bigg]{\sum_{k=1}^r y_k} \ge \sum_{k=1}^r c_k \log \parens[\bigg]{\frac{y_k}{c_k}}, 
+		\end{align*}
+		which is a consequence of Jensen's inequality. In addition, observe that 
+		\begin{align*}
+			\sum_{k=1}^r \frac{a_{i,k,j}^{\parens{s}}}{b_{i,j}^{\parens{s}}} = 1. 
+		\end{align*}
+		
+		\item \textit{Algorithm:} Start from $\sets{w_{i,k}^{\parens{0}}}_{i=1,\cdots,n; k=1,\cdots,r}$, $\sets{h_{k,j}^{\parens{0}}}_{j=1,\cdots,p; k=1,\cdots,r}$, update them by 
+		\begin{align}
+			w_{i,k}^{\parens{s+1}} \quad & \, \longleftarrow \quad w_{i,k}^{\parens{s}} \frac{\sum_{j=1}^p h_{k,j}^{\parens{s}} x_{i,j} / \bracks{\bW^{\parens{s}} \bH^{\parens{s}}}_{i,j}}{\sum_{j=1}^p h_{k,j}^{\parens{s}}}, \label{eq-nmf-update1} \\ 
+			h_{k,j}^{\parens{s+1}} \quad & \, \longleftarrow \quad h_{k,j}^{\parens{s}} \frac{\sum_{i=1}^n w_{i,k}^{\parens{s}} x_{i,j} / \bracks{\bW^{\parens{s}} \bH^{\parens{s}}}_{i,j}}{\sum_{i=1}^n w_{i,k}^{\parens{s}}}. \label{eq-nmf-update2} 
+		\end{align}
+		Eventually, the algorithm converges to a local maximum of $L$. 
+		
+		\textit{Remark.} Update equations \eqref{eq-nmf-update1} and \eqref{eq-nmf-update2} can be obtained by setting the partial derivatives of $g$ in \eqref{eq-nmf-surrogate} with respect to $w_{i,k}$ and $h_{k,j}$ to 0, respectively. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{II. Archetypal Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Main Idea:} \emph{Archetypal analysis} approximates data points by prototypes that are themselves linear combinations of data points. 
+	
+	Rather than approximating each data point by a \emph{single} nearby prototype (like $K$-means clustering), archetypal analysis approximates each data point by a \emph{convex combination} of a collection of prototypes. 
+	
+	\textit{Remark.} The use of a convex combination forces the prototypes to lie on the convex hull of the data cloud. 
+	
+	\item \textbf{Problem Statement:} Let $\bX \in \Real^{n \times p}$ be a data matrix. We want to find matrices $\bW \in \Real^{n \times r}$ and $\bH \in \Real^{r \times p}$ such that 
+	\begin{align*}
+		\bX \approx \bW \bH, 
+	\end{align*}
+	where we require $r \le n$. 
+	
+	We make the following assumptions: 
+	\begin{enumerate}[label=(\alph*)]
+		\item \label{assumption-1} $w_{i,k} \ge 0$ and $\sum_{k=1}^r w_{i,k} = 1$ for all $i = 1, 2, \cdots, n$; 
+		\item \label{assumption-2} $\bH = \bB \bX$, where $\bB \in \Real^{r \times n}$ satisfies $b_{k,i} \ge 0$ and $\sum_{i=1}^n b_{k,i} = 1$ for all $k = 1, 2, \cdots, r$. 
+	
+	\end{enumerate}
+	
+	\textit{Remark 1.} By Assumption \ref{assumption-1}, the $n$ data points (rows of $\bX$) in $p$-dimensional space are represented by convex combinations of the $r$ archetypes (rows of $\bH$). 
+	
+	\textit{Remark 2.} By the restrictions on $\bB$ in Assumption \ref{assumption-2}, the archetypes themselves are convex combinations of the data points. 
+	
+	\item \textbf{Objective Function:} We minimize the following criterion 
+	\begin{align}
+		J \parens{\bW, \bB} := \norm{\bX - \bW \bB \bX}_F^2, 
+	\end{align}
+	where $\norm{}_F$ denotes the Frobenius norm. 
+	
+	The criterion $J$ is convex in $\bW$ and $\bB$ separately, but \emph{not} jointly. We can minimize $J$ in an alternating fashion, with each separate minimization involving a convex optimization. The algorithm converges to a local minimum of $J$. 
+	
+	\item \textbf{Comparison between Nonnegative Matrix Factorization and Archetypal Analysis:}
+	\begin{enumerate}
+		\item \textit{Goals are different:} 
+		\begin{enumerate}
+			\item Nonnegative matrix factorization aims to approximate the columns of $\bX$, and the main output of interest are the columns of $\bW$ representing the primary nonnegative components in the data; 
+			\item Archetypal analysis focuses on the approximation of the rows of $\bX$ using the rows of $\bH$, which represent the archetypal data points. 
+		\end{enumerate}
+		
+		\item \textit{Assumptions on $r$:} 
+		\begin{enumerate}
+			\item Nonnegative matrix factorization assumes that $r \le p$. With $r = p$, we can get an exact reconstruction simply choosing $\bW$ to be the data $\bX$ with columns scaled so that they sum to 1; 
+			\item Archetypal analysis requires $r \le n$, but allows $r > p$. 
+		\end{enumerate}
+		
+	\end{enumerate}
+
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

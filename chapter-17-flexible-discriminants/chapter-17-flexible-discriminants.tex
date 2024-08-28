@@ -1,0 +1,186 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+%\usepackage{tgpagella}
+
+\usepackage[red]{zhoucx-notation}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 17, Flexible Discriminants}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{\text{#4}} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Flexible Discriminants}{17}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 12, Support Vector Machines and Flexible Discriminants} in \textcites{Friedman2001-np}. 
+
+\section*{I. Generalizing Linear Discriminant Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Advantages of LDA:} The classic LDA has the following advantages: 
+	\begin{enumerate}
+		\item LDA is a simple prototype classifier. By saying a ``prototype'' classifier, we mean each class is represented by its centroid and a new observation is classified to the class with the closest centroid; 
+		\item LDA is the estimated classifier if the observations are multivariate Gaussian in each class with a common variance; 
+		\item The decision boundaries created by LDA are linear, leading to decision rules are simple to describe and implement; 
+		\item LDA provides natural low-dimensional views of the data; 
+		\item LDA produces satisfactory classification results, because of its simplicity and low variance. 
+	\end{enumerate}
+	
+	\item \textbf{Disadvantages of LDA:} LDA can fail in some situations: 
+	\begin{enumerate}
+		\item Often linear boundaries do \emph{not} adequately separate the classes. We want to model irregular boundaries; 
+		\item A \emph{single} prototype per class is insufficient. In many situations, several prototypes per class are more appropriate; 
+		\item In the case of having many predictors, LDA uses too many parameters, which are estimated with high variance, and its performance suffers. 
+	\end{enumerate}
+	
+	\item \textbf{Three Ideas of Generalizing LDA:} 
+	\begin{enumerate}
+		\item \textit{Flexible Discriminant Analysis (FDA):} Recast the LDA problem as a nonparametric regression problem; 
+		\item \textit{Penalized Discriminant Analysis (PDA):} Fit an LDA model, and penalize its coefficients to be smooth or coherent in the spatial domain (e.g., an image); 
+		\item \textit{Mixture Discriminant Analysis (MDA):} Model each class by a mixture of two or more Gaussians with different centroids, but with every component Gaussian, both within and between classes, sharing the same covariance matrix. 
+	\end{enumerate} 
+
+\end{enumerate}
+
+
+\section*{II. Flexible Discriminant Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Main Idea:} The main idea of FDA is to perform LDA using linear regression on derived responses, which leads to nonparametric and flexible alternatives to LDA. 
+	
+	\item \textbf{Setup:} Assume the quantitative response variable $G$ belonging to one of $W$ classes $\calW := \sets{1, \cdots, W}$, and the feature variable is $\bx \in \Real^p$. 
+	
+	\item \textbf{Single Scoring:} Suppose $\theta: \calW \to \Real$ is a function that assigns scores to the class labels such that the transformed class labels are optimally predicted by linear regression on $X$. If the training sample has the form $\sets{\parens{\bx_i, g_i}}_{i=1}^n$, where $g_i \in \calW$ for all $i = 1, 2, \cdots, n$, we then solve 
+	\begin{align*}
+		\minimize_{\bbeta, \theta} \ \braces[\Bigg]{ \sum_{i=1}^n \parens[\big]{\theta \parens{g_i} - \bx_i^\top \bbeta}^2}, 
+	\end{align*}
+	with certain restrictions on $\theta$ to avoid a trivial solution. Note that the preceding minimization problem produces a one-dimensional separation between the two classes. 
+	
+	\item \textbf{Multiple Scorings:} We can find up to $L \le W - 1$ sets of independent scorings for the class labels, $\theta_1, \theta_2, \cdots, \theta_L$, and $L$ corresponding linear maps 
+	\begin{align*}
+		\eta_\ell \parens{\bx} = \bx^\top \bbeta_\ell, \qquad \text{ for all } \ell = 1, \cdots, L, 
+	\end{align*}
+	chosen to be optimal for multiple regression in $\Real^p$. 
+	
+	Then, $\sets{\theta_\ell}_{\ell = 1}^L$ and $\sets{\bbeta_\ell}_{\ell=1}^L$ are chosen by minimizing the average squared residual, i.e., 
+	\begin{align*}
+		\mathrm{ASR} \parens{\theta_1, \cdots, \theta_L, \bbeta_1, \cdots, \bbeta_L} := \frac{1}{n} \sum_{\ell=1}^L \bracks[\Bigg]{\sum_{i=1}^n \parens[\big]{\theta_{\ell} \parens{g_i} - \bx_i^\top \bbeta_{\ell}}^2}. 
+	\end{align*}
+	The set of scores is assumed to be mutually orthogonal and normalized with respect to an appropriate inner product to prevent trivial zero solutions. 
+	
+	\item \textbf{Generalizing the Linear Maps:} We can replace the linear regression fits $\eta_{\ell} \parens{\bx} = \bx^\top \bbeta_{\ell}$ by more flexible nonparametric fits, such as additive fits, spline models and MARS, in order to achieve a more flexible classifier than LDA. 
+	
+	In the more general form, the regression problem is defined via the criterion 
+	\begin{align}\label{eq-fda}
+		\widetilde{\mathrm{ASR}} \parens{\theta_1, \cdots, \theta_L, \eta_1, \cdots, \eta_L} = \frac{1}{n} \sum_{\ell=1}^L \bracks[\Bigg]{\sum_{i=1}^n \parens[\big]{\theta_{\ell} \parens{g_i} - \eta_{\ell} \parens{\bx_i}}^2 + \lambda \cdot J \parens{\eta_{\ell}}}, 
+	\end{align} 
+	where $J$ is a regularizer appropriate for some forms of nonparametric regression. 
+	
+	\item \textbf{Computing the FDA Estimates:} We suppose that the nonparametric regression procedure can be represented by a linear operator; that is, there exists a linear operator $\bS_{\lambda}$ such that the fitted value vector $\bY$ and the response vector $\widehat{\bY}$ are related by $\widehat{\bY} = \bS_{\lambda} \bY$, where $\lambda$ is a penalty parameter. 
+	
+	The procedure of computing the FDA estimates is the following: 
+	\begin{enumerate}[label=(\arabic*)]
+		\item \textit{Create response matrix:} Create an $n \times W$ indicator response matrix $\bY$ from the responses $g_i$ such that $y_{i, w} = 1$ if $g_i = w$, otherwise $y_{i, w} = 0$, for all $i = 1, 2, \cdots, n$ and $w = 1, 2, \cdots, W$; 
+		\item \textit{Multivariate nonparametric regression:} Fit a multi-response, adaptive nonparametric regression of $\bY$ on $\bX$, giving fitted values $\widehat{\bY}$. Let $\boldsymbol{\eta}^*$ be the vector of fitted regression functions; 
+		\item \textit{Compute optimal scores:} Compute the eigen-decomposition of $\bY^\top \widehat{\bY} = \bY^\top \bS_{\lambda} \bY$, where the eigenvectors $\bTheta$ are normalized so that $\bTheta^\top \bD_{\pi} \bTheta = \bI_W$. Here, $\bD_{\pi} := \bY^\top \bY/n$ is a diagonal matrix of the estimated class prior probabilities; 
+		\item \textit{Update the model from Step (1) using the optimal scores:} $\boldsymbol{\eta} \parens{\bx} = \bTheta^\top \boldsymbol{\eta}^* \parens{\bx}$. 
+	\end{enumerate}
+\end{enumerate}
+
+\section*{III. Penalized Discriminant Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{More on FDA:} In \eqref{eq-fda}, if we choose $\eta_{\ell} \parens{\bx} = \bh \parens{\bx}^\top \bbeta_{\ell}$ to be a function of transformed features $\bh \parens{\bx} \in \Real^M$ and the penalty functional $J$ to be quadratic, we can rewrite \eqref{eq-fda} as 
+	\begin{align}\label{eq-fda-2}
+		\widetilde{\mathrm{ASR}} \parens{\theta_1, \cdots, \theta_L, \eta_1, \cdots, \eta_L} = \frac{1}{n} \sum_{\ell=1}^L \bracks[\Bigg]{\sum_{i=1}^n \parens[\big]{\theta_{\ell} \parens{g_i} - \bh \parens{\bx}^\top \bbeta_{\ell}}^2 + \lambda \bbeta_{\ell}^\top \bOmega \bbeta_{\ell}}, 
+	\end{align}
+	where $\bOmega \in \Real^{M \times M}$ depends on the problem and the function space $\bh$ resides. 
+
+	\item \textbf{Penalized Discriminant Analysis:} The \emph{penalized discriminant analysis}, or PDA, follows from the following steps: 
+	\begin{enumerate}
+		\item Enlarge the set of predictors $\bx \in \Real^p$ via a basis expansion $\bh: \Real^p \to \Real^M$; 
+		\item Use the \underline{penalized LDA} in the enlarged space, where the penalized Mahalanobis distance is given by 
+		\begin{align*}
+			D \parens{\bx, \bmu} := \parens{ \bh \parens{\bx} - \bh \parens{\bmu}}^\top \parens{\bSigma_W + \lambda \bOmega}^{-1} \parens{\bh \parens{\bx} - \bh \parens{\bmu}}, 
+		\end{align*}
+		where $\bSigma_W$\footnote{Note that here the subscript ``$W$'' is to denote this is the \emph{w}ithin-class covariance matrix, and has nothing to do with the total number of classes $W$.} is the within-class covariance matrix of the derived variables $\sets{\bh \parens{\bx_i}}_{i=1}^n$; 
+		\item Decompose the classification subspace using a penalized metric 
+		\begin{equation*}
+			\begin{aligned}
+				\maximize & \ \bu^\top \bSigma_{B} \bu \\ 
+				\text{subject to } & \, \bu^\top \parens{\bSigma_W + \lambda \bOmega} \bu = 1, 
+			\end{aligned}
+		\end{equation*}
+		where $\bSigma_B$ denotes the between-class covariance matrix. 
+		
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{IV. Mixture Discriminant Analysis}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Motivation:} Linear discriminant analysis can be viewed as a \emph{prototype} classifier --- each class is represented by its centroid, and we classify an observation to the closest centroid using an appropriate metric. 
+	
+	In many situations, a \emph{single} prototype for each class is \emph{not} sufficient to represent inhomogeneous classes. Mixture models are more appropriate. 
+	
+	\item \textbf{Gaussian Mixture Models:} A \textit{Gaussian mixture model} for the $w$-th class has density 
+	\begin{align*}
+		f \parens{\bx \,\vert\, G = w} = \sum_{r=1}^{R_w} \pi_{w, r} \phi \parens{\bx; \bmu_{w,r}, \bSigma}, 
+	\end{align*}
+	where the mixing proportions $\sets{\pi_{w,r}}_{r=1}^{R_w}$ sum to one. This has $R_w$ prototypes for Class $w$ and the same covariance matrix $\bSigma$. Given such a model for each class, the class posterior probabilities are given by 
+	\begin{align*}
+		\Pr \parens{G = w \,\vert\, X = \bx} = \frac{\sum_{r=1}^{R_k} \pi_{w, r} \phi \parens{\bx; \bmu_{w, r}, \bSigma} \Pi_w}{\sum_{\ell=1}^W \sum_{s=1}^{R_w} \pi_{\ell,s} \phi \parens{\bx; \bmu_{\ell,s}, \bSigma} \Pi_\ell}, 
+	\end{align*}
+	where $\Pi_k$ represents the prior probabilities of Class $k$. 
+	
+	\item \textbf{Parameter Estimation:} We estimate the parameters by the method of maximum likelihood, i.e., we maximize 
+	\begin{align}\label{eq-mda}
+		\sum_{w=1}^W \sum_{\sets{i \vert g_i = w}} \log \bracks[\Bigg]{\sum_{r=1}^{R_w} \pi_{w, r} \phi \parens{\bx_i; \bmu_{w, r}, \bSigma} \Pi_{w}}. 
+	\end{align} 
+	We can use the EM algorithm to compute the maximizer of \eqref{eq-mda}, which alternates between the following two steps: 
+	\begin{enumerate}
+		\item \textit{E-step}: Given the current parameters, compute the responsibility of subclass $c_{w,r}$ within Class $w$ for each of the class-$w$ observations ($g_i = w$): 
+		\begin{align*}
+			\frac{\pi_{w, r} \phi \parens{\bx_i; \bmu_{w, r}, \bSigma}}{\sum_{\ell=1}^{R_w} \pi_{w,\ell} \phi \parens{\bx_i; \bmu_{w,\ell}, \bSigma}}. 
+		\end{align*}
+		\item \textit{M-step}: Compute the weighted MLEs for the parameters of each of the component Gaussians within each of the classes, using the weights from the E-step. 
+	\end{enumerate} 
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

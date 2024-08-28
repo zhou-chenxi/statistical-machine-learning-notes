@@ -1,0 +1,388 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+\usepackage{booktabs}
+
+%\usepackage{tgpagella}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 15, Random Forest}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Random Forest}{15}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 15, Random Forests} in \textcite{Friedman2001-np}, and 
+	\item \textit{Chapter 14, Committee Machines} in \textcite{Izenman2009-jk}. 
+\end{itemize}
+
+
+\section*{I. Definition of Random Forests} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{General Idea of Random Forests:} \textit{Random forest} is a modification of bagging that builds a large collection of \textit{de-correlated} trees, and then averages them. 
+	
+	\item \textbf{Review of Relevant Methods:} 
+	\begin{enumerate}
+		\item \textit{Trees:} 
+		\begin{itemize}
+			\item Trees can capture complex interaction structures in the data and have relatively small bias, if it is sufficiently large; 
+			\item Trees are noisy and have large variance. 
+		\end{itemize}
+		
+		\item \textit{Bootstap Aggregating (Bagging):} 
+		\begin{itemize}
+			\item Has relatively low variance comparing to trees; 
+			\item Each tree in bagging is identically distributed, the expectation of an average of $B$ such trees is the same as the expectation of any one of them. This means the bias of bagged trees is the \emph{same} as that of the individual trees. 
+		\end{itemize}
+		
+		\item \textit{Boosting:} 
+		\begin{itemize}
+			\item Boosting combines the outputs of many weak learners to produce a powerful committee; 
+			\item Trees in boosting are grown in an adaptive fashion to remove bias. 
+		\end{itemize}
+	\end{enumerate}
+	
+	\item \textbf{Facts:} 
+	\begin{enumerate}
+		\item Let $X_1, \cdots, X_B$ be i.i.d random variables and $\var \bracks{X_b} = \sigma^2$ for all $b = 1, \cdots, B$. Then, the average of all $X_b$'s has the variance $\frac{1}{B} \sigma^2$. 
+		\item If $X_b$'s are simply identically distributed with positive pairwise correlation $\rho$, the variance of the average is 
+		\begin{align}\label{corr.B}
+			\rho \sigma^2 + \frac{1-\rho}{B} \sigma^2. 
+		\end{align}
+	\end{enumerate}
+	
+	\begin{proof}
+	\begin{enumerate}
+		\item Note the following 
+		\begin{align*}
+			\var \bracks[\Bigg]{\frac{1}{B} \sum_{b=1}^B X_b} = \frac{1}{B^2} \var \bracks[\Bigg]{\sum_{b=1}^B X_b} = \frac{1}{B^2} \sum_{b=1}^B \var \bracks{X_b} = \frac{1}{B} \sigma^2. 
+		\end{align*} 
+		
+		\item Since now $\cor \parens{X_b, X_{b'}} = \rho > 0 $ for all $b \ne b'$, we have 
+		\begin{align*}
+			\var \bracks[\Bigg]{\frac{1}{B} \sum_{b=1}^B X_{b}} = & \, \frac{1}{B^2} \var\bracks[\Bigg]{\sum_{b=1}^B X_{b}} \\ 
+			= & \, \frac{1}{B^2} \bracks[\Bigg]{B \cdot \var \bracks{X_{b}} + 2 \cdot \sum_{b < b'} \cov \parens{X_b, X_{b'}}} \\ 
+			= & \, \frac{1}{B} \sigma^2 + \frac{2}{B^2} \frac{B \parens{B-1}}{2} \rho \sigma^2 \\ 
+			= & \, \frac{1}{B} \sigma^2 + \parens[\bigg]{1 - \frac{1}{B}} \rho \sigma^2 \\ 
+			= & \, \rho \sigma^2 + \frac{1 - \rho}{B} \sigma^2. 
+		\end{align*}
+	\end{enumerate}
+	\end{proof}
+	
+	\textit{Remark.} As $B$ increases, the second term in \eqref{corr.B} disappears, but the first remains. Hence, the \textit{size of the correlation} of pairs of bagged trees limits the benefits of averaging. 
+	
+	\item \textbf{Algorithm of Random Forest:} The main idea behind \textit{random forests} is to \emph{improve the variance reduction} of bagging by \textit{reducing the correlation} between the trees through random selection of the input variables, without increasing the variance too much. 
+	
+	\begin{minipage}{\linewidth}
+	\begin{algorithm}[H]
+		\caption{Random Forest for Classification or Regression}\label{algo-random-forest}
+		\begin{algorithmic}[1]
+		\STATE For $ b = 1 $ to $B$: 
+		\begin{enumerate}
+			\item Draw a bootstrap sample of size $n$ from the training data; 
+			\item Grow a random-forest tree $T_b$ to the bootstrapped data, by recursively repeating the following steps for each terminal node of the tree, until the minimum node size $n_{\mathrm{min}}$ is reached. 
+			\begin{enumerate}
+				\item Select $m$ variables at random from the $p$ variables; 
+				\item Pick the best variable/split-point among the $m$ selected variables; 
+				\item Split the node into two daughter nodes. 
+			\end{enumerate}
+		\end{enumerate}
+		\STATE Output the ensemble of trees $\braces{T_b}_{b=1}^B$. 
+		\STATE To make a prediction at a new point $\bx$: 
+		\begin{itemize}
+			\item \textit{Regression:} $\hat{f}^B_{\text{rf}} \parens{\bx} = \frac{1}{B} \sum_{b=1}^B T_b \parens{\bx}$; 
+			\item \textit{Classification:} Let $\widehat{C}_b$ be the class prediction of the $b$-th random-forest tree. Then $\widehat{C}_{\text{rf}}^B \parens{\bx}$ is the majority vote of $\braces{\widehat{C}_b \parens{\bx}}_{b=1}^B$. 
+		\end{itemize}
+		\end{algorithmic}
+	\end{algorithm}
+	\end{minipage}
+	
+	\vspace{10pt}
+	
+	\textit{Remark 1.} When growing a tree on a bootstrapped dataset, before \emph{each split}, select $m \le p$ of the input variables at random as candidates for splitting. Typical choice for $m$ is $\sqrt{p}$ or as low as 1. 
+	
+	\textit{Remark 2.} Intuitively, reducing $m$ will reduce the correlation between any pair of trees in the ensemble, and, hence, by \eqref{corr.B} reduce the variance of the average. 
+	
+	\item \textbf{On the Mean, Variance and Correlation of Bootstrap Estimates:} Suppose $X_1, X_2, \cdots, X_n$ are i.i.d with mean $\mu$ and variance $\sigma^2$. Let $\bar{X}_1^*$ and $\bar{X}_2^*$ be two bootstrap realizations of the sample mean. We show that the sampling correlation is 
+	\begin{align*}
+		\cor \parens{\bar{X}^*_1, \bar{X}^*_2} = \frac{n}{2n-1}. 
+	\end{align*}
+	
+	\begin{proof}
+	Let $X^*$ be a generic bootstrap sample, and we have the following distribution table: 
+	\begin{table}[h]
+	\centering
+		\begin{tabular}{cc}
+		\toprule
+		$x^*$      & $\Pr \parens{X^* = x^*}$ \\
+		\midrule
+		$X_1$      & $1/n$                    \\
+		$X_2$      & $1/n$                    \\
+		$\cdots$   & $\cdots$                 \\
+		$X_n$      & $1/n$                    \\
+		\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	Note that, \emph{conditional on $X_1, \cdots, X_n$}, bootstrap samples $X_1^*, \cdots, X_n^*$ are i.i.d. 
+	
+	We first show that 
+	\begin{align*}
+		\E \bracks{X^* \,\vert\, X_1, \cdots, X_n} = \frac{1}{n} \sum_{i=1}^n X_i, 
+	\end{align*}
+	and then $\E \bracks{X^*} = \mu$. Note that, conditional on $X_1, \cdots, X_n$, 
+	\begin{align*}
+		\E \bracks{X^* \,\vert\, X_1, \cdots, X_n} = \sum_{i=1}^n X_i \cdot \Pr \parens{X^* = X_i} = \frac{1}{n} \sum_{i=1}^n X_i, 
+	\end{align*}
+	therefore, 
+	\begin{align*}
+		\E \bracks{X^*} = \E \bracks[\big]{\E \bracks{X^* \mid X_1, \cdots, X_n}} = \E \bracks[\Bigg]{\frac{1}{n} \sum_{i=1}^n X_i} = \mu. 
+	\end{align*}
+	As a consequence, we have 
+	\begin{align*}
+		\E \bracks[\Bigg]{\frac{1}{n} \sum_{i=1}^n X_i^*} = \mu. 
+	\end{align*}
+	
+	Next, we show 
+	\begin{align*}
+		\var \bracks[\Bigg]{\frac{1}{n} \sum_{i=1}^n X_i^*} = \frac{\sigma^2}{n} \parens[\bigg]{2 - \frac{1}{n}}. 
+	\end{align*}
+	By the law of total variance 
+	\begin{align*}
+		\var \bracks{X^*} = \E \bracks[\big]{\var \bracks{X^* \,\vert\, X_1, \cdots, X_n}} + \var \bracks[\big]{\E \bracks{X^* \,\vert\, X_1, \cdots, X_n}}, 
+	\end{align*}
+	we have 
+	\begin{align*}
+		\var \bracks{X^* \,\vert\, X_1, \cdots, X_n} = & \, \E \bracks{\parens{X^*}^2 \,\vert\, X_1, \cdots, X_n} - \parens[\big]{\E \bracks{X^* \,\vert\, X_1, \cdots, X_n}}^2 \nonumber \\ 
+		= & \, \frac{1}{n} \sum_{i=1}^n X_i^2 - \parens[\bigg]{\frac{1}{n} \sum_{i=1}^n X_i}^2, \\ 
+		\E \bracks[\big]{\var \bracks{X^* \mid X_1, \cdots, X_n}} = & \, \E \bracks[\Bigg]{\frac{1}{n} \sum_{i=1}^n X_i^2 - \parens[\bigg]{\frac{1}{n} \sum_{i=1}^n X_i}^2} \nonumber \\ 
+		= & \, \parens[\bigg]{1 - \frac{1}{n}} \sigma^2, 
+	\end{align*}
+	and
+	\begin{align*}
+		\var \bracks[\big]{\E \bracks{X^* \mid X_1, \cdots, X_n}} = & \, \var \bracks[\Bigg]{\frac{1}{n} \sum_{i=1}^n X_i} = \frac{\sigma^2}{n}. 
+	\end{align*}
+	Therefore, 
+	\begin{align*}
+		\var \bracks[\Bigg]{\frac{1}{n} \sum_{i=1}^n X^*_i} = & \, \E \bracks[\Bigg]{\var \bracks[\Bigg]{\left. \frac{1}{n} \sum_{i=1}^n X^*_i \,\right\vert\, X_1, \cdots, X_n}} + \var \bracks[\Bigg]{\E \bracks[\Bigg]{\left. \frac{1}{n} \sum_{i=1}^n X^*_i \,\right\vert\, X_1, \cdots, X_n}} \nonumber \\
+		= & \, \frac{\sigma^2}{n} \parens[\bigg]{1 - \frac{1}{n}} + \frac{\sigma^2}{n} \nonumber \\ 
+		= & \, \frac{\sigma^2}{n} \parens[\bigg]{2 - \frac{1}{n}}. 
+	\end{align*}
+	
+	Finally, we show that 
+	\begin{align*}
+		\cov \parens{\bar{X}^*_1, \bar{X}^*_2} = \frac{\sigma^2}{n}. 
+	\end{align*}
+	By the definition $\cov \parens{\bar{X}^*_1, \bar{X}^*_2} = \E \bracks{\bar{X}^*_1 \cdot \bar{X}^*_2} - \E \bracks{\bar{X}^*_1} \cdot \E \bracks{\bar{X}^*_2}$, we only need to find $\E \bracks{\bar{X}^*_1 \cdot \bar{X}^*_2}$ and note that $\E \bracks{\bar{X}^*_1} = \E \bracks{\bar{X}^*_2} = \mu$. Note the following 
+	\begin{align*}
+		\E \bracks[\big]{\bar{X}^*_1 \cdot \bar{X}^*_2} = & \, \E \bracks[\Big]{\E \bracks[\big]{\bar{X}^*_1 \cdot \bar{X}^*_2 \mid X_1, \cdots, X_n}} \\ 
+		= & \, \E \bracks[\Big]{\E \bracks[\big]{\bar{X}^*_1 \mid X_1, \cdots, X_n} \cdot \E \bracks[\big]{\bar{X}^*_2 \mid X_1, \cdots, X_n}} \\ 
+		= & \, \E \bracks[\Bigg]{\parens[\bigg]{\frac{1}{n}\sum_{i=1}^n X_i}^2} \\ 
+		= & \, \mu^2 + \frac{\sigma^2}{n}. 
+	\end{align*}
+	It follows that $\cov \parens{\bar{X}^*_1, \bar{X}^*_2} = \frac{\sigma^2}{n}$. Therefore, 
+	\begin{align*}
+		\cor \parens{\bar{X}^*_1, \bar{X}^*_2} = \frac{\cov \parens{\bar{X}^*_1, \bar{X}^*_2}}{\sqrt{\var \bracks{\bar{X}^*_1} \var \bracks{\bar{X}^*_2}}} = \frac{\sigma^2/n}{\parens{\sigma^2/n} \parens{2-1/n}} = \frac{n}{2n-1}. 
+	\end{align*}
+	\end{proof}
+	
+	\textit{Remark.} Not all estimators can be improved by shaking up the data like this. It seems that highly nonlinear estimators, such as trees, benefit the most. 
+	
+	On the other hand, bagging does \emph{not} change linear estimates, such as the sample mean; the pairwise correlation between bootstrapped means is about 50\%, as indicated by the results above. 
+	
+\end{enumerate}
+
+
+\section*{II. Details of Random Forests}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Some Recommendations on the Choice of the Value of $m$:} 
+	\begin{enumerate}
+		\item For \textit{classification}, the default value for $m$ is $\floor{\sqrt{p}}$ and the minimum node size is one; 
+		\item For \textit{regression}, the default value for $m$ is $\floor{p/3}$ and the minimum node size is five. 
+	\end{enumerate}
+	
+	\item \textbf{Out-of-Bag (OOB) Estimates:} For each observation $\bz_i := \parens{\bx_i, y_i}$, construct its random forest prediction by averaging \textit{only} those trees corresponding to bootstrap samples in which $\bz_i$ did \emph{not} appear. \newline We can fit random forests in one sequence, with cross-validation being performed along the way. Once the OOB error stabilizes, the training can be terminated. 
+	
+	\item \textbf{Variable Importance:} 
+	\begin{enumerate}
+		\item At each split in each tree, the \textit{improvement} in the split-criterion is the importance measure attributed to the splitting variable, and is accumulated over all the trees in the forest separately for each variable. 
+		\item Comparing to boosting, the candidate split-variable selection \textit{increases} the chance that any single variable gets included in a random forest. Boosting ignores some variables completely, but the random forest does \emph{not}. 
+	\end{enumerate}
+	
+	\item \textbf{Variable Prediction Importance:} Random forests also use the \emph{OOB samples} to construct a different variable importance measure in order to measure the \textit{prediction strength} of each variable: 
+	\begin{enumerate}
+		\item For a single tree: let $T_b \parens{\,\cdot\,; \Theta_b}$ be the tree constructed using the $b$-th bootstrapped sample. 
+		\begin{enumerate}
+		 	\item Pass OOB samples down to $T_b \parens{\,\cdot\,; \Theta_b}$, compute the OOB error (which depends on the regression or classification problem at hand and the metric used), denoted by $\mathrm{PE}_{b} \parens{\mathrm{OOB}}$; 
+		 	\item Randomly permute the OOB values on the $j$-th variable while leaving the data on all other variables unchanged; 
+		 	\item Pass OOB samples down to $T_b \parens{\,\cdot\,; \Theta_b}$, compute the OOB error, denoted by $\mathrm{PE}_{b} \parens{\mathrm{OOB}_j}$, which should be larger than the error computed from the unaltered data; 
+		 	\item Compute the difference between these two OOB errors 
+		 	\begin{align*}
+		 		S_{b, j} := \mathrm{PE}_{b} \parens{\mathrm{OOB}_j} - \mathrm{PE}_{b} \parens{\mathrm{OOB}}; 
+		 	\end{align*}
+	\end{enumerate}
+	\item The final (predictive) importance of variable $j$ in the random forest is computed by averaging the importances of variable $j$ from all $B$ trees 
+	\begin{align*}
+		\mathrm{Im}_j = \frac{1}{B} \sum_{b=1}^B S_{b, j}. 
+	\end{align*}
+	\end{enumerate}
+	
+	\textit{Remark 1.} The rational of the procedure above is that, if $X_j$ is important, permuting its observed values will reduce our ability to classify successfully each of the OOB observations. 
+	
+	\textit{Remark 2.} The value of $\mathrm{PE}_{b} \parens{\mathrm{OOB}_j}$ should be larger than that of $\mathrm{PE}_{b} \parens{\mathrm{OOB}}$, so that $S_{b,j} \ge 0$. 
+
+	\item \textbf{Proximities:} One can use the random forest to compute the proximities between pairs of observations, which can then be used in imputing missing values and identifying multivariate outliers. 
+	\begin{enumerate}
+		\item \textit{Goal:} We want to define a similarity measure $\mathrm{prox} \parens{\,\cdot\,, \,\cdot\,}$ between pairs of observations, say $\bx_i$ and $\bx_j$, so that the closer $\bx_i$ and $\bx_j$ are to each other, the larger the value of $\mathrm{prox} \parens{\bx_i, \bx_j}$ is. 
+		\item \textit{Computation of $\mathrm{prox} \parens{\bx_i, \bx_j}$:} 
+		\begin{enumerate}
+			\item Set $\mathtt{counter} = 0$; 
+			\item Pass down the observations $\bx_i$ and $\bx_j$ to the $b$-th tree in the random forest, $T \parens{\,\cdot\,; \Theta_b}$; 
+			\item If the observations $\bx_i$ and $\bx_j$ end up at the same terminal node in $T \parens{\,\cdot\,; \Theta_b}$, we increase $\mathtt{counter}$ by one; 
+			\item We repeat the preceding two steps over all $B$ trees in the random forest, and then divide the frequency totals of pairwise proximities by the number, $B$, of trees in the forest; this gives us the proportion of all trees for which each pair of observations end up at the same terminal nodes. 
+		\end{enumerate}
+		
+		\textit{Remark.} Note that each tree is \emph{unpruned} and typically is terminated to further grow by certain criteria. Hence, each terminal node in the tree will contain a few observations. 
+		
+		\item \textit{Computation of Dissimilarity:} The dissimilarity between $\bx_i$ and $\bx_j$ can be obtained by subtracting $\mathrm{prox} \parens{\bx_i, \bx_j}$ from 1, i.e., 
+		\begin{align*}
+			\delta_{i,j} := 1 - \mathrm{prox} \parens{\bx_i, \bx_j}, \qquad \text{ for all } i, j = 1, 2, \cdots, n. 
+		\end{align*}
+		We collect these pairwise dissimilarities into an $n \times n$ proximity matrix $\Delta := \parens{\delta_{i, j}}_{i,j=1,\cdots,n}$, which is symmetric, positive-definite, with diagonal entries equal to zero. 
+
+	\end{enumerate}
+	
+	\item \textbf{Identifying Multivariate Outliers:} The proximity matrix constructed above can be used to identify multivariate outliers. We focus on the classification problem. 
+	\begin{enumerate}
+		\item \textit{Main Idea:} We identify an outlier by how far away it is from all other observations belonging to \emph{its class} in the learning set. 
+		
+		Suppose $\bx_i$ and $\bx_j$ both belong to Class $w$. Then, they are far apart from each other if and only if $\mathrm{prox} \parens{\bx_i, \bx_j}$ is small. If $\bx_i$ is far away from \emph{all} the other observations in Class $w$ in the training set, then all the proximities, $\mathrm{prox} \parens{\bx_i, \bx_{\ell}}$, of $\bx_i$ with $\bx_{\ell}$, where $i \neq \ell$, will be small. 
+
+		\item \textit{Raw Outlier Measurement:} A \textit{raw outlier measure} for the $i$-th observation, $\bx_i$, in Class $w$ is given by
+		\begin{align}\label{eq-outlier-1}
+			u_{i, w} := \frac{1}{\frac{1}{n} \sum_{\sets{\ell \vert \bx_{\ell} \text{ belongs to Class $w$}, i \neq \ell}} \bracks{\mathrm{prox} \parens{\bx_i, \bx_{\ell}}}^2}, \qquad \text{ for all } i = 1, \cdots, n, 
+		\end{align}
+		where $w = 1, 2, \cdots, W$. 
+		
+		Thus, if $\bx_i$ is really an outlier for Class $w$, the denominator of \eqref{eq-outlier-1} will be small, so that $u_{i, w}$ will be large. 
+		
+		\item \textit{Standardized Outlier Measurement:} Let 
+		\begin{align*}
+			m_w := \mathrm{median}_{\sets{\ell \,\vert\, \bx_{\ell} \text{ belongs to Class $w$}}} u_{\ell, w}
+		\end{align*}
+		be the median of the raw outlier measures over all the observations in Class $w$. Then, for $w = 1, 2, \cdots, W$, a standardized version of $u_{i, w}$ is given by
+		\begin{align}\label{eq-outlier-2}
+			\tilde{u}_{i, w} := \frac{u_{i, w} - m_w}{\sum_{\sets{\ell \,\vert\, \bx_{\ell} \text{ belongs to Class $w$}}} \abs{u_{\ell, w} - m_w}}, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align}
+		Values of \eqref{eq-outlier-2} in excess of 10 can be considered as a sign of outlier. 
+		
+	\end{enumerate}
+	
+	\item \textbf{Issue of Small Proportion of Relevant Variables:} When the number of variables is large, but the fraction of relevant variables is small, random forests are likely to perform poorly with small $m$. This is because at each split the chance can be small that the relevant variables will be selected. 
+	
+	\item \textbf{Issue of Overfitting:} Increasing the number of trees $B$ does \emph{not} cause the random forest to overfit. However, the average of fully grown trees can result in too rich a model and leads to overfitting and incur unnecessary variance. 
+		
+\end{enumerate}
+
+
+\section*{III. Analysis of Random Forests}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Predictor in Regression Using Random Forest:} With $B$ trees $\sets{T \parens{\,\cdot\,; \Theta_b}}_{b=1}^B$ grown, the random forest predictor is 
+	\begin{align*}
+		\hat{f}_{\text{rf}}^B \parens{\bx} = \frac{1}{B} \sum_{b=1}^B T \parens{\bx; \Theta_b}. 
+	\end{align*}
+	As $B \to \infty$, the random forest regression estimator is 
+	\begin{align*}
+		\hat{f}_{\text{rf}} \parens{\bx} = \E_{\Theta \mid \bZ} \bracks{T \parens{\bx; \Theta (\bZ)}}, 
+	\end{align*}
+	which depends on the training data $\bZ$. 
+	
+	\item \textbf{Variance of Limiting Random Forest Regression Estimator:} By \eqref{corr.B}, we have 
+	\begin{align*}
+		\var \bracks{\hat{f}_{\text{rf}} \parens{\bx}} = \rho \parens{\bx} \sigma^2 \parens{\bx}, 
+	\end{align*}
+	where 
+	\begin{itemize}
+		\item $\rho \parens{\bx} := \cor \parens{T \parens{\bx; \Theta_1 \parens{\bZ}}, T \parens{\bx; \Theta_2 \parens{\bZ}}}$ is the sampling correlation between any pair of trees used in the averaging, and $\Theta_1 \parens{\bZ}$ and $\Theta_2 \parens{\bZ}$ are a randomly drawn pair of random forest trees grown to the randomly sampled $\bZ$; 
+		\item $\sigma^2 \parens{\bx} := \var \bracks{T \parens{\bx; \Theta \parens{\bZ}}}$ is the sampling variance of any \textit{single} randomly drawn tree. 
+	\end{itemize}
+	
+	\item \textbf{More on $\rho \parens{\bx}$:} $\rho \parens{\bx}$ is the theoretical correlation between a pair of random-forest trees evaluated at $\bx$, induced by repeatedly making training sample draws $\bZ$ from the population, and then drawing a pair of random forest trees. This is the correlation induced by the sampling distribution of $\bZ$ and $\Theta$.
+	
+	\item \textbf{Variability in $\rho \parens{\bx}$ and $\sigma^2 \parens{\bx}$:} The variability in $\rho \parens{\bx}$ and $\sigma^2 \parens{\bx}$ is both 
+	\begin{itemize}
+		\item conditional on $\bZ$: due to the \textit{bootstrap sampling} and \textit{feature sampling} at each split, and 
+		\item a result of the sampling variability of $\bZ$ itself. 
+	\end{itemize}
+	
+	\item \textbf{Decomposition of Variance:} Note that 
+	\begin{align*}
+		\var_{\Theta, \bZ} \bracks{T \parens{\bx; \Theta \parens{\bZ}}} && \, = && \, \var_{\bZ} \bracks{\E_{\Theta \mid \bZ} \bracks{T \parens{\bx; \Theta \parens{\bZ}}}} && \, + && \, \E_{\bZ} \bracks{\var_{\Theta \mid \bZ} \bracks{T \parens{\bx; \Theta \parens{\bZ}}}} \\ 
+		\text{Total Variance} && \, = && \, \var_{\bZ} \bracks{\hat{f}_{\text{rf}} \parens{\bx}} && \, + && \, \text{within-$\bZ$ Variance}. 
+	\end{align*}
+	\begin{itemize}
+		\item The first term is the sampling variance of the random forest ensemble, and decreases as $m$ decreases; 
+		\item The second term is the \textit{within-$\bZ$ variance}, and is a result of the randomization, and increases as $m$ decreases. 
+	\end{itemize}
+	
+	\item \textbf{Bias in Random Forest:} The bias in random forest is the same as the bias of any individual samples trees $T \parens{\,\cdot\,; \Theta \parens{\bZ}}$, and 
+	\begin{align*}
+		\bias \parens{\bx} = & \, \mu \parens{\bx} - \E_{\bZ} \bracks{\hat{f}_{\text{rf}} \parens{\bx}} \nonumber \\ 
+		= & \, \mu \parens{\bx} - \E_{\bZ} \bracks[\big]{\E_{\Theta \mid \bZ} \bracks{T \parens{\bx; \Theta \parens{\bZ}}}}. 
+	\end{align*} 
+	It is typically \emph{greater} than the bias of an unpruned tree grown to $\bZ$. The improvements in prediction of bagging or random forest are solely a result of \emph{variance reduction}. 
+	
+	Typically, as $m$ increases, the bias decreases. 
+	
+	\item \textbf{Similarity between Random Forest and Ridge Regression:}
+	\begin{itemize}
+		\item In \textit{ridge regression}, when one has a large number of variables with similarly sized coefficients, ridge regression shrinks their coefficients toward zero, and those of strongly correlated variables toward each other. This regularization via ridge stabilizes the model. 
+		\item In \textit{random forests}, with small $m$, each of the relevant variables get their turn to be the primary split, and the ensemble averaging reduces the contribution of any individual variable. 
+	\end{itemize} 
+	
+	\item \textbf{Connection between Random Forest and $k$-Nearest Neighbors:} When each tree is grown to maximal size, for a particular $\Theta^*$, $T \parens{\bx; \Theta^* \parens{\bZ}}$ is the response value of one of the training samples. The averaging process assigns weights to these training responses. Via the random-forest voting mechanism, those observations close to the target point get assigned weights to produce the final prediction. 
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

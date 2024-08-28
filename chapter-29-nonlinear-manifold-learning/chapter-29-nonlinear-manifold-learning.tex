@@ -1,0 +1,616 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 29, Nonlinear Manifold Learning}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Nonlinear Manifold Learning}{29}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 16, Nonlinear Dimensionality Reduction and Manifold Learning} in \textcite{Izenman2009-jk}, 
+	\item \textit{Chapter 14, Unsupervised Learning} in \textcite{Friedman2001-np}, and 
+	\item Visualizing Data Using $t$-SNE by \textcite{vanderMaaten2008-gh}. 
+\end{itemize}
+
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Goal:} The goal of this chapter is to study new algorithms that recover full low-dimensional representation of an unknown nonlinear manifold $\calM$ embedded in some high-dimensional space. 
+	
+	\textit{Remark.} We hope that the learned low-dimensional representation can retain the neighborhood structure of $\calM$. 
+	
+	\item \textbf{Space Embedding:} A space $\calA$ is said to be \emph{embedded} in a bigger space $\calB$ if the properties of $\calB$ when restricted to $\calA$ are identical to the properties of $\calA$. 
+	
+	\item \textbf{General Approach:} Algorithms covered in this chapter (except SNE and $t$-SNE presented in the last section) consist of a three-step approach with the first and the third steps are common to all: 
+	\begin{enumerate}
+		\item \textit{Step 1:} Incorporate neighborhood information from each data point to construct a weighted graph with the data points being the vertices; 
+		\item \textit{Step 2:} Transform the weighted neighborhood graph into suitable input for the embedding step (Step 3); 
+		\item \textit{Step 3:} Solve an $n \times n$ eigen problem. 
+	\end{enumerate}
+	
+	\item \textbf{Manifold:} A \emph{manifold}, also known as a \textit{topological manifold}, is a topological space that \emph{locally} look flat and featureless and behaves like Euclidean space. 
+	
+	\item \textbf{Sub-manifold:} A \emph{sub-manifold} is a manifold lying inside a manifold of higher dimension. 
+	
+	\item \textbf{Smooth (Differentiable) Manifold:} If a manifold $\calM$ is continuously differentiable to any order, we call it \emph{smooth manifold}, also known as \emph{differentiable manifold}. 
+	
+	\item \textbf{Riemannian Manifold:} If we endow a smooth manifold $\calM$ a metric $d_{\calM}$, which calculates the distance between points in $\calM$, we obtain a \emph{Riemannian manifold}, denoted by $\parens{\calM, d_{\calM}}$. 
+	
+	\textit{Remark.} If $\calM$ is connected, it is a metric space and $d_{\calM}$ determines its structure. 
+	
+	\item \textbf{Distance in Riemannian Manifold:} Let $\calC \parens{\by, \by'}$ denote the set of all differentiable curves in $\calM$ connecting points $\by, \by' \in \calM$. Then, the \emph{distance} between $\by$ and $\by'$ is defined as 
+	\begin{align}
+		d_{\calM} \parens{\by, \by'} := \inf_{c \in \calC \parens{\by, \by'}} L \parens{c}, 
+	\end{align}
+	where $L \parens{c}$ denotes the arc-length of the curve $c$. In other words, $d_{\calM}$ finds the shortest curve (or \emph{geodesic}) between any two points on $\calM$, and $d_{\calM} \parens{\by, \by'}$ is the geodesic distance between the points. 
+	
+	\item \textbf{Data on Manifold:} 
+	\begin{enumerate}
+		\item \textit{Data on Manifold $\calM$:} Suppose we have finitely many data points $\by_1, \by_2, \cdots, \by_n$ that are randomly sampled from a smooth $s$-dimensional Riemannian manifold $\parens{\calM, d_{\calM}}$; 
+		\item \textit{Data on a Higher-dimensional Manifold:} Suppose $\by_1, \by_2, \cdots, \by_n$ are nonlinearly embedded by a smooth map $\psi$ to a high-dimensional Riemannian space $\parens{\calX, \norm{\,\cdot\,}_{\calX}}$, where $\calX = \Real^p$, with 
+		\begin{align*}
+			s \ll p. 
+		\end{align*}
+		We let 
+		\begin{align*}
+			\bx_i = \psi \parens{\by_i}, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align*}
+	\end{enumerate}
+	
+	\textit{Remark 1.} In the development above, 
+	\begin{align*}
+		\psi: \calM \to \calX
+	\end{align*}
+	is the \emph{embedding map}, and a point on the manifold, $\by \in \calM$, can be expressed as 
+	\begin{align*}
+		\by_i = \varphi \parens{\bx_i}, \qquad \text{ for all } i = 1, 2, \cdots, n, 
+	\end{align*}
+	where $\varphi = \psi^{-1}$. 
+	
+	\textit{Remark 2.} We typically taken $\norm{}_{\calX}$ to be the Euclidean distance but may use a different distance function. 
+	
+	\item \textbf{Main Goal:} The main goal is to recover $\calM$ and find an implicit representation of the embedding map $\psi$ and, hence, recover the $\by_i$'s, given only the input data points $\bx_1, \bx_2, \cdots, \bx_n \in \calX$. 
+
+\end{enumerate}
+
+
+\section*{II. Isomap}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Assumptions:} The \emph{isometric feature mapping}, or simply \emph{Isomap}, algorithm assumes that 
+	\begin{enumerate}
+		\item the smooth manifold $\calM$ is a \emph{convex} region of $\Real^s$ and 
+		\item the embedding map $\psi: \calM \to \calX$ is an \emph{isometry}. 
+	\end{enumerate}
+	
+	\item \textbf{More on Isometry Assumption:} The isometry assumption implies that the geodesic distance is \emph{invariant} under the map $\psi$; mathematically, this means 
+	\begin{align}
+		d_{\calM} \parens{\by, \by'} = \norm{\bx - \bx'}_{\calX}, 
+	\end{align}
+	where $\bx, \bx' \in \calX$, $\by, \by' \in \calM$, and $\bx = \psi \parens{\by}$ and $\bx' = \psi \parens{\by'}$. 
+	
+	\item \textbf{Comparison to Multidimensional Scaling:} Isomap uses isometry and convexity assumptions to form a nonlinear generalization of multidimensional scaling (MDS). 
+	\begin{itemize}
+		\item MDS searches for a low-dimensional subspace to embed input data and to preserve the Euclidean distances between pairs of data points; 
+		\item Isomap extends the MDS paradigm by attempting to preserve the global geometric properties of the underlying nonlinear manifold, and it does so by approximating \emph{all} geodesic distances on the manifold. 
+	\end{itemize}
+	
+	\item \textbf{Procedure --- Step 1 (Construct Neighborhood Graph):} Calculate the distances between input data points 
+	\begin{align*}
+		d_{\calX,i,j} := d_{\calX} \parens{\bx_i, \bx_j} = \norm{\bx_i - \bx_j}_{\calX}, \qquad \text{ for all } i, j = 1, 2, \cdots, n. 
+	\end{align*}
+	With a choice of either an integer $K$ or an $\varepsilon > 0$, determine which data points are ``neighbors'' on the manifold $\calM$ by connecting each point 
+	\begin{itemize}
+		\item to its $K$ nearest neighbors, or 
+		\item to all points lying within a ball of radius $\varepsilon$ of that point. 
+	\end{itemize}
+	After neighbors are identified, we can obtain a \emph{weighted} neighborhood graph 
+	\begin{align*}
+		\calG = \parens{V, E, W}, 
+	\end{align*}
+	where 
+	\begin{itemize}
+		\item the set of vertices $V = \sets{\bx_1, \bx_2, \cdots, \bx_n}$ are the input data points, 
+		\item the set of edges $E = \sets{e_{i,j}}_{i,j}$ indicate neighborhood relationships between the points, and 
+		\item the set of weights $W = \sets{w_{i,j}}_{i,j}$ indicates the distance between pairs of points, and $w_{i,j} = d_{\calX,i,j}$ for all $i, j = 1, 2, \cdots, n$. 
+	\end{itemize}
+	
+	\textit{Remark 1.} The choice of $K$ or $\varepsilon$ controls the neighborhood size and also the success of Isomap. More specifically, 
+	\begin{enumerate}
+		\item if $K$ or $\varepsilon$ is too large with respect to the manifold structure, the resulting reconstruction is very noisy and slight modification of data can lead to a drastically different (or even incorrect) low-dimensional embedding; 
+		\item if $K$ or $\varepsilon$ is too small, the neighborhood graph may become too sparse to approximate geodesic paths accurately. 
+	\end{enumerate}
+	
+	\textit{Remark 2.} If there is no edge present between a pair of points, the corresponding weight is zero. 
+	
+	\item \textbf{Procedure --- Step 2 (Compute Graph Distances):} In this step, we estimate the unknown true \emph{geodesic distances} between pairs of points. 
+%	, that is, 
+%	\begin{align*}
+%		d_{\calM} \parens{\bx_i, \bx_j}, \qquad \text{ for all } i, j = 1, 2, \cdots, n, \text{ and } i \neq j. 
+%	\end{align*}
+	We call the resulting estimates \emph{graph distances} and denote by $d_{\calG} \parens{\bx_i, \bx_j}$ for all $i, j = 1, 2, \cdots, n$. 
+	
+	To this end, we perform the following: 
+	\begin{enumerate}
+		\item Initialize $d_{\calG} \parens{\bx_i, \bx_j} = d_{\calX} \parens{\bx_i, \bx_j}$ if $\bx_i$ and $\bx_j$ are linked by an edge in $G$ (i.e., if $\bx_i$ is a neighbor of $\bx_j$, or $\bx_j$ is a neighbor of $\bx_i$, or $\bx_i$ and $\bx_j$ are neighbors of each other), and let $d_{\calG} \parens{\bx_i, \bx_j} = \infty$ otherwise; 
+		\item Fix a pair of observations $\parens{\bx_i, \bx_j}$. For each value of $k = 1, 2, \cdots, n$, set 
+		\begin{align*}
+			d_{\calG} \parens{\bx_i, \bx_j} = \min \braces[\Big]{d_{\calG} \parens{\bx_i, \bx_j}, d_{\calG} \parens{\bx_i, \bx_k} + d_{\calG} \parens{\bx_k, \bx_j}}. 
+		\end{align*}
+	\end{enumerate}
+	Then, the matrix of the final values $\bD_{\calG} = \braces{d_{\calG} \parens{\bx_i, \bx_j}}_{i,j=1,2,\cdots,n}$ will contain the shortest path distances between all pairs of vertices in $\calG$. 
+	
+	\textit{Remark 1.} The resulting matrix of graph distances, $\bD_{\calG}$, is symmetric. 
+	
+	\textit{Remark 2.} From the procedure above, note that if $\bx_i$ and $\bx_j$ are \emph{not} neighbors of one another but are connected by a sequence of neighbor-to-neighbor links, the sum of the link weights along the sequence is taken to be the graph distance between them. 
+	
+	\textit{Remark 3.} The procedure of finding the shortest path between all pairs of data points is known as Floyd's algorithm and requires $\calO \parens{n^3}$ operations. 
+	
+	\item \textbf{Procedure --- Step 3 (Embed via MDS):} Apply classical MDS to $\bD_{\calG}$ to give the reconstructed data points in an $s'$-dimensional feature space $\calY$. 
+	
+	Note that $\calY$ is an estimate of the underlying true $s$-dimensional manifold $\calM$, which may or may not coincide with $\calM$. Furthermore, $s'$ is an estimate of $s$ and it is possible that $s' \neq s$. 
+	
+	The procedure is the following: 
+	\begin{enumerate}
+		\item Form the doubly centered symmetric $n \times n$ matrix 
+		\begin{align*}
+			\bA_{\calG} = - \frac{1}{2} \bH \bS_{\calG} \bH, 
+		\end{align*}
+		where the $\parens{i, j}$-th entry of $\bS_{\calG}$ is $d_{\calG}^2 \parens{\bx_i, \bx_j}$, $\bH := \bI_n - \frac{1}{n} \bJ_n$ is the centering matrix, and $\bJ_n$ is the $n \times n$ matrix with all entries being 1. 
+		\item The embedding vectors $\sets{\by_1, \by_2, \cdots,  \by_n}$ are chosen to minimize 
+		\begin{align*}
+			\norm{\bA_{\calG} - \bA_{\calY}}_F^2, 
+		\end{align*}
+		where 
+		\begin{align*}
+			\bA_{\calY} = -\frac{1}{2} \bH \bS_{\calY} \bH, 
+		\end{align*}
+		the $\parens{i, j}$-entry of $\bS_{\calY}$ is the squared Euclidean distance between $\by_i$ and $\by_j$. 
+		
+		The optimal solution is given by the eigenvectors $\bv_1, \bv_2, \cdots, \bv_{s'}$ corresponding to the $s'$ largest positive eigenvalues of $\bA_{\calG}$. 
+		
+		\item The graph $\calG$ is embedded into $\calY$ by the matrix of shape $s' \times n$ given by 
+		\begin{align*}
+			\bY := \parens{\widehat{\by}_1, \widehat{\by}_2, \cdots, \widehat{\by}_n} = \parens{\sqrt{\lambda_1} \bv_1, \sqrt{\lambda_2} \bv_2, \cdots, \sqrt{\lambda_{s'}} \bv_{s'}}^\top. 
+		\end{align*}
+		The $i$-th column of $\widehat{\bY}$ yields the embedding coordinates in $\bY$ of the $i$-th data point. 
+	\end{enumerate}
+	
+	\item \textbf{Measurement of the Goodness of Isomap Solution:} With the embedded coordinates given from $\bY$, we can compute the $n \times n$ distance matrix containing the distances between pairs of points in the space $\calY$, which is denoted by $\bD_{\calY, s'}$. 
+	
+	To measure how good the Isomap solution is and how closely the distance matrix $\bD_{\calY, s'}$ approximates the graph distance matrix $\bD_{\calG}$, we calculate $R^2 \parens{s'}$, the squared correlation coefficient of all corresponding pairs of entries in $\bD_{\calY, s'}$ and $\bD_{\calG}$. 
+	
+	\item \textbf{How to Choose the Best $s'$:} To choose the best value of $s'$, we plot $1 - R^2 \parens{s'}$ against $s'$ for $s' = 1, 2, \cdots, s^*$, where $s^*$ is some pre-specified integer. The intrinsic dimensionality is taken to be the integer at which an ``elbow'' appears in the plot. 
+	
+	\item \textbf{Drawbacks of Isomap:} The Isomap algorithm performs bad with manifolds that 
+	\begin{enumerate}
+		\item contain holes, 
+		\item have too much curvature, or 
+		\item are not convex. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{III. Local Linear Embedding}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} The local linear embedding (LLE) algorithm for nonlinear dimensionality reduction is similar in spirit to the Isomap algorithm, but attempts to preserve \emph{local} neighborhood information on the manifold (without estimating the true geodesic distances). 
+	
+	\item \textbf{Procedure --- Step 1 (Search Nearest Neighbor):} Fix $K \ll p$ and let $\calN_{i,K}$ denote the neighborhood of $\bx_i$ that contains only its $K$ nearest points measured by Euclidean distance. 
+	
+	\textit{Remark.} Here, $K$ could be different for each point $\bx_i$. 
+	
+	\item \textbf{Procedure --- Step 2 (Compute Constrained Least-Squares Fits):} The goal of this step is to reconstruct each $\bx_i$ by a linear function of its $K$ nearest neighbors 
+	\begin{align*}
+		\widehat{\bx}_i = \sum_{j=1}^n w_{i,j} \bx_i, 
+	\end{align*}
+	where $w_{i,j} > 0$ if $\bx_j \in \calN_{i,K}$, and $w_{i,j} = 0$ if $\bx_j \notin \calN_{i,K}$, and $\sum_{j=1}^{n} w_{i,j} = 1$. 
+	
+	To determine the optimal weights, we let $\bW \in \Real^{n \times n}$ be a matrix whose $\parens{i, j}$-th entry is $w_{i,j}$ and solve the following optimization problem 
+	\begin{align}\label{eq-lle-weight}
+		\minimize_{\bW \in \Real^{n \times n}} \ \sum_{i=1}^n \norm[\bigg]{\bx_i - \sum_{j=1}^n w_{i,j} \bx_j}_2^2, 
+	\end{align}
+	subject to the non-negative constraint $w_{i,j} \ge 0$ for all $i, j = 1, 2, \cdots, n$, the row unity constraint 
+	\begin{align*}
+		\bW \boldone_n = \boldone_n, 
+	\end{align*}
+	the sparseness constraint $w_{i,j} = 0$ if $\bx_j \notin \calN_{i,K}$. 
+	
+	For convenience, we let the first $K$ components of $\bw_i$, the $i$-th row of $\bW$, correspond to $K$ nearest neighbors of $\bx_i$ and the remaining $n-K$ components correspond to the other data points. Then, automatically, each of the last $n-K$ components of $\bw_i$ is 0. 
+	
+	The optimal values of the first $K$ components of $\bw_i$ is given by 
+	\begin{align*}
+		\widehat{\bw}_i = \frac{\bG_i^{-1} \boldone_n}{\boldone_n^\top \bG_i^{-1} \boldone_n}, 
+	\end{align*}
+	where the $\parens{j,k}$-th entry of $\bG_i$ is given by 
+	\begin{align*}
+		\parens{\bx_i - \bx_j}^\top \parens{\bx_i - \bx_k}, \qquad \text{ for } \bx_j, \bx_k \in \calN_{i,K}, 
+	\end{align*}
+	for all $j, k = 1, 2, \cdots, K$. 
+	
+	\item \textbf{Procedure --- Step 3 (Solve Eigen Problem):} With the optimal weight matrix $\widehat{\bW}$, we find the matrix $\bY \in \Real^{s' \times n}$, where $s' \ll p$, of the embedding coordinates that solves 
+	\begin{align}\label{eq-opt-eigen-lle}
+		\minimize_{\bY} \ \sum_{i=1}^n \norm[\bigg]{\by_i - \sum_{j=1}^n \widehat{w}_{i,j} \by_j}_2^2, 
+	\end{align}
+	subject to the constraints 
+	\begin{align*}
+		\bY \boldone_n = \boldzero_{s'}, \qquad \text{ and } \qquad \frac{1}{n} \bY \bY^\top = \frac{1}{n} \sum_{i=1}^n \by_i \by_i^\top = \bI_{s'}. 
+	\end{align*}
+	These constraints are adopted to fix the translation, rotation and the scale of the embedding coordinates so that the objective function is invariant. 
+	
+	\begin{enumerate}
+		\item \textit{Equivalent Expression of \eqref{eq-opt-eigen-lle}:} It can be shown that the objective function \eqref{eq-opt-eigen-lle} can be written as 
+		\begin{align*}
+			\trace \parens{\bY \bM \bY^\top}, 
+		\end{align*}
+		where $\bM = \parens{\bI_n - \widehat{\bW}}^\top \parens{\bI_n - \widehat{\bW}} \in \Real^{n \times n}$, which is sparse, symmetric and positive semi-definite. 
+		
+		\item \textit{Eigenvectors of $\bM$:} Note that the smallest eigenvalue of $\bM$ is 0 with the corresponding eigenvector being $\bv_n = n^{-\frac{1}{2}} \boldone_n$. All other eigenvectors are orthogonal to $\bv_n$, implying that the sum of coefficients of each of other eigenvectors is 0. This will constrain the embedding to have mean zero with the constraint $\bY \boldone_n = \boldzero_{s'}$ being satisfied. 
+		
+		\item \textit{Optimal Solution of \eqref{eq-opt-eigen-lle}:} Let $\widehat{\bY}$ be the minimizer of \eqref{eq-opt-eigen-lle}. Then, 
+		\begin{align*}
+			\widehat{\bY} = \parens{\hat{\by}_1, \hat{\by}_2, \cdots, \hat{\by}_n} = \parens{\bv_{n-1}, \bv_{n-2}, \cdots, \bv_{n-s'}}^\top, 
+		\end{align*}
+		where $\bv_{n-j}$ is the eigenvector corresponding to the $\parens{j + 1}$-st smallest eigenvalue of $\bM$. 
+		
+	\end{enumerate}
+	
+	\textit{Remark.} The sparseness of $\bM$ enables the computation of eigenvectors to be carried out very efficiently. 
+	
+	\item \textbf{Comments on LLE:} 
+	\begin{enumerate}
+		\item \textit{Advantage:} Since LLE preserves \emph{local} (rather than global) properties of the underlying manifold, it is less susceptible to introducing false connections in $\calG$ and can successfully embed non-convex manifolds. 
+		\item \textit{Disadvantage:} Like Isomap, it has difficulty with manifolds that contain holes. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{IV. Laplacian Eigenmaps}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} Laplacian eigenmap is very similar to LLE. The main difference is the choice of weight matrix, which also affects the optimization problem solved in the embedding step. 
+	
+	\item \textbf{Procedure --- Step 1 (Search Nearest Neighbors):} Fix an integer $K$ or an $\varepsilon > 0$. The \emph{neighborhoods} of each data point are symmetrically defined: 
+	\begin{enumerate}
+		\item for a $K$-neighborhood $\calN_{i,K}$ of the point $\bx_i$, let $\bx_j \in \calN_{i,K}$ if and only if $\bx_i \in \calN_{j,K}$; 
+		\item similarly, for an $\varepsilon$-neighborhood $\calN_{i,\varepsilon}$, let $\bx_j \in \cal{N}_{i,\varepsilon}$ if and only if $\norm{\bx_i - \bx_j} < \varepsilon$, where the norm is Euclidean norm. 
+	\end{enumerate}
+	
+	\textit{Remark.} In general, let $\calN_i$ denote the neighborhood of $\bx_i$, regardless of $K$-neighborhood or $\varepsilon$-neighborhood. 
+	
+	\item \textbf{Procedure --- Step 2 (Construct Weight Adjacency Matrix):} Let $\bW \in \Real^{n \times n}$ be a symmetric weighted adjacency matrix defined as 
+	\begin{align*}
+		w_{i,j} = \begin{cases}
+			\exp \parens[\big]{-\frac{\norm{\bx_i - \bx_j}_2^2}{2 \sigma^2}}, & \, \text{ if } \bx_j \in \calN_i, \\ 
+			0, & \, \text{ otherwise}, 
+		\end{cases}
+	\end{align*}
+	where $\sigma > 0$ is the scale parameter. We let the resulting weighted graph be $\calG$, where the vertices of $\calG$ are the data points, $\bx_1, \bx_2, \cdots, \bx_n$. 
+	
+	\item \textbf{Procedure --- Step 3 (Solve the Eigen-Problem):} Embed the graph $\calG$ into the low-dimensional space $\Real^{s'}$ by the matrix 
+	\begin{align*}
+		\bY = \parens{\by_1, \by_2, \cdots, \by_n} \in \Real^{s' \times n}, 
+	\end{align*}
+	where the $i$-th column of $\bY$ yields the embedding coordinates of the $i$-th point. 
+	
+	\begin{enumerate}
+		\item \textit{Graph Laplacian:} Let $\bD \in \Real^{n \times n}$ be a diagonal matrix with diagonal elements being 
+		\begin{align*}
+			d_{i,i} = \sum_{j \in \calN_i} w_{i,j} = \bracks{\bW \boldone_n}_i, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align*}
+		The symmetric matrix 
+		\begin{align*}
+			\bL := \bD - \bW \in \Real^{n \times n}
+		\end{align*}
+		is known as the \emph{graph Laplacian} for the graph $\calG$. 
+		
+		Let $\by = \parens{y_1, y_2, \cdots, y_n}^\top \in \Real^n$ be an arbitrary vector. Then, 
+		\begin{align*}
+			\by^\top \bW \by = \frac{1}{2} \sum_{i=1}^n \sum_{j=1}^n w_{i,j} \parens{y_i - y_j}^2, 
+		\end{align*}
+		implying that $\bL$ is nonnegative definite. 
+		
+		\item \textit{Optimization Problem:} We determine the optimal matrix $\bY$ by minimizing 
+		\begin{align}\label{eq-opt-prob-lap}
+			\sum_{i=1}^n \sum_{j=1}^n w_{i,j} \norm{\by_i - \by_j}_2^2 = \trace \parens{\bY \bL \bY^\top}, 
+		\end{align} 
+		subject to the constraint $\bY \bD \bY^\top = \bI_{s'}$. 
+		
+		\textit{Remark.} The constraint $\bY \bD \bY^\top = \bI_{s'}$ is to prevent a collapse onto a subspace of fewer than $s' - 1$ dimensions. 
+		
+		\item \textit{Solution:} Minimizing \eqref{eq-opt-prob-lap} boils down to solving the generalized eigenequation, 
+		\begin{align*}
+			\bL \bv = \lambda \bD \bv, 
+		\end{align*}
+		or, equivalently, finding the eigenvalues and eigenvectors of the matrix 
+		\begin{align*}
+			\widetilde{\bW} := \bD^{-\frac{1}{2}} \bW \bD^{-\frac{1}{2}}. 
+		\end{align*}
+		The smallest eigenvalue, $\lambda_n$, of $\widetilde{\bW}$ is zero with the corresponding constant eigenvector $\bv_n = \boldone_n$. We ignore the smallest eigenvalue and its eigenvector. The best embedding in $\Real^{s'}$ is given by 
+		\begin{align*}
+			\widehat{\bY} = \parens{\hat{\by}_1, \hat{\by}_2, \cdots, \hat{\by}_n} = \parens{\bv_{n-1}, \bv_{n-2}, \cdots, \bv_{n-s'}}^\top, 
+		\end{align*}
+		corresponding to the next $s'$ smallest eigenvalues, $\lambda_{n-1} \le \lambda_{n-2} \le \cdots \le \lambda_{n-s'}$, of $\widetilde{\bW}$. 
+		
+		\textit{Remark.} Note that the solution to \eqref{eq-opt-prob-lap} is very similar to that given by the local linear embedding. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+%\section*{V. Hessian Eigenmaps}
+%
+%\begin{enumerate}
+%
+%	\item \textbf{Motivation:} In Isomap, one of the assumptions is that the manifold $\calM$ is convex, which may be too restrictive. Hessian eigenmaps have been proposed to recover high-dimensional manifolds where the convexity assumption is violated. 
+%	
+%	\item \textbf{Assumptions:} We assume the following: 
+%	\begin{enumerate}
+%		\item the underlying data can be modeled using a vector of smoothly varying parameters $\theta \in \Theta$, where $\Theta \subseteq \Real^s$; 
+%		\item the manifold is $\calM = \varphi \parens{\Theta}$, where $\varphi: \Theta \to \Real^r$ with $s < r$; 
+%		\item \textit{Local Isometry:} $\varphi$ is a locally isometric embedding of $\theta$ into $\Real^r$. 
+%		
+%		More precisely, for any point $\bx'$ in a sufficiently small neighborhood around each point $\bx$ on the manifold $\calM$, the geodesic distance equals the Euclidean distance between their corresponding parameter points $\theta, \theta' \in \Theta$, i.e., 
+%		\begin{align*}
+%			d_{\calM} \parens{\bx, \bx'} = \norm{\theta - \theta'}_{\Theta}; 
+%		\end{align*}
+%		\item \textit{Connectedness:} The parameter space $\Theta$ is an open, connected subset of $\Real^t$. 
+%	\end{enumerate}
+%	
+%	\textit{Remark.} The isometry and convexity requirements of Isomap are replaced by the local isometry and the connectedness, respectively. 
+%	
+%	\item \textbf{Goal:} The goal is to recover the parameter vector $\theta$, up to a rigid motion \footnote{Rigid motions include rotations, translations, reflections, or any sequence of these.}. 
+%	
+%	\item \textbf{Tangent Space and Tangent Coordinates:} Consider the differentiable manifold $\calM \subseteq \Real^r$. 
+%	\begin{enumerate}
+%		\item Let $\calT_{\bx} \parens{\calM}$ be a tangent space of the point $\bx \in \calM$. There is an orthonormal basis $\sets{\bv_1, \bv_2, \cdots, \bv_s}$ for $\calT_{\bx} \parens{\calM}$, where $\bv_i \in \Real^r$ for all $i = 1, 2, \cdots, n$. 
+%		
+%		\textit{Remark.} We can view $\calT_{\bx} \parens{\calM}$ as an affine subspace of $\Real^r$ that is spanned by vectors tangent to $\calM$ and pass through the point $\bx$, with the origin $\boldzero_r \in \calT_{\bx} \parens{\calM}$ identified with $\bx \in \calM$. 
+%		
+%		\item Let $\calN_{\bx}$ be a neighborhood of $\bx$ such that each point $\bx' \in \calN_x$ has a unique closest point $\bxi' \in \calT_{\bx} \parens{\calM}$ and such that the implied mapping $\bx \mapsto \bxi$ is smooth. 
+%				
+%		\item The point in $\calT_{\bx} \parens{\calM}$ has coordinates given by our choice of orthonormal coordinates for $\calT_{\bx} \parens{\calM}$, and we let 
+%		\begin{align*}
+%			\bxi = \bxi \parens{\bx} = \parens{\xi_1 \parens{\bx}, \xi_2 \parens{\bx}, \cdots, \xi_s \parens{\bx}}, 
+%		\end{align*}
+%		which is referred to as the \emph{tangent coordinates}. 
+%	
+%	\end{enumerate}
+%	
+%	\item \textbf{Tangent Hessian Matrix:} 
+%	\begin{enumerate}
+%		\item Suppose $f: \calM \to \Real$ is a $C^2$-function, meaning that it is twice continuously differentiable,  near $\bx$. 
+%		
+%		If the point $\bx' \in \calN_{\bx}$ has local coordinates $\bxi = \bxi \parens{\bx} \in \Real^r$, then the rule $g \parens{\bxi} = f \parens{\bx'}$ defines a $C^2$-function $g: U \to \Real$, where $U$ is a neighborhood of $\boldzero_r \in \Real^r$. 
+%		
+%		\item The tangent Hessian matrix, which measures the ``curviness'' of $f$ at $\bx \in \calM$, is defined as the ordinary $s \times s$ Hessian matrix of g, 
+%	\end{enumerate}
+%
+%\end{enumerate}
+
+
+\section*{V. Stochastic Neighbor Embedding (SNE) and $t$-SNE}
+
+\subsection*{V.1 Stochastic Neighbor Embedding}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} Both SNE and $t$-SNE visualize high-dimensional data by giving each data point a location in a two- or three-dimensional map. The coordinates in the lower dimensions are obtained by minimizing the Kullback-Leibler divergence. 
+	
+	\item \textbf{Setup:} 
+	\begin{enumerate}
+		\item \textit{Similarity in the High-dimensional Space:} In the original high-dimensional space, define the similarity between points $\bx_i$ and $\bx_j$, where $i \neq j$, as the following conditional probability 
+		\begin{align}\label{eq-sne-p-ji}
+			p_{j \vert i} := \frac{\exp \parens{-\norm{\bx_i - \bx_j}_2^2 / \parens{2\sigma_i^2}}}{\sum_{k \neq i} \exp \parens{-\norm{\bx_i - \bx_k}_2^2 / \parens{2\sigma_i^2}}}, 
+		\end{align}
+		which is the probability that $\bx_i$ would pick $\bx_j$ as its neighbor if neighbors were picked in proportion to their probability density under a Gaussian centered at $\bx_i$. In addition, we let 
+		\begin{align*}
+			p_{i \vert i} = 0, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align*}
+		
+		\item \textit{Similarity in the Low-dimensional Space:} Let $\by_i$ and $\by_j$ be the low-dimensional counterparts of the high-dimensional data points $\bx_i$ and $\bx_j$, respectively, where $i \neq j$. Let the similarity between $\by_i$ and $\by_j$ be 
+		\begin{align*}
+			q_{j \vert i} := \frac{\exp \parens{-\norm{\by_i - \by_j}_2^2}}{\sum_{k \neq i} \exp \parens{-\norm{\by_i - \by_k}_2^2}}, 
+		\end{align*}
+		where we still use the density function of a Gaussian distribution and set the variance to be $\frac{1}{2}$. In addition, we let 
+		\begin{align*}
+			q_{i\vert i} = 0, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Notation:} We adopt the following notation: 
+	\begin{enumerate}
+		\item $\Pr_i$ represents the conditional probability distribution over all other datapoints given datapoint $\bx_i$, and 
+		\item $\mathbb{Q}_i$ represents the conditional probability distribution over all other map points in the low dimension given the point $\by_i$. 
+	\end{enumerate}
+	
+	\item \textbf{Entropy:} Under the conditional probability distribution, the \emph{entropy} of $\Pr_i$ is defined as 
+	\begin{align*}
+		H \parens{\Pr_i} = - \sum_{j=1}^n p_{j \vert i} \log_2 p_{j \vert i}. 
+	\end{align*}
+	
+	\item \textbf{Choice of $\sigma_i^2$:} We discuss how to choose $\sigma_i^2$ for each $\bx_i$. 
+	\begin{enumerate}
+		\item \textit{Why Choices of $\sigma_i^2$ Depend on Data Points:} Since the density of the data is likely to vary, we choose (possibly) different $\sigma_i^2$ for different $\bx_i$. 
+		\item \textit{Effects of $\sigma_i^2$ on Entropy:} If we increase $\sigma_i^2$, $H \parens{\Pr_i}$ also increases. 
+		\item \textit{How to Choose $\sigma_i^2$:} We performs a binary search for the value of $\sigma_i^2$ that produces a conditional distribution $\Pr_i$ with a pre-specified perplexity, where the \emph{perplexity} is defined as 
+		\begin{align*}
+			\mathrm{Perp} \parens{\Pr_i} = 2^{H \parens{\Pr_i}}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\textit{Remark.} The perplexity can be interpreted as a smooth measure of the effective number of neighbors. 
+	
+	\item \textbf{Stochastic Neighbor Embedding:}
+	\begin{enumerate}
+		\item \textit{Main Idea:} If the points $\by_i$ and $\by_j$ correctly model the similarity between the high-dimensional datapoints $\bx_i$ and $\bx_j$, the conditional probabilities $p_{j \vert i}$ and $q_{j \vert i}$ will be equal. 
+		
+		\item \textit{Optimization Problem:} SNE aims to find a low-dimensional data representation that minimizes the mismatch between $p_{j\,\vert\,i}$ and $q_{j\,\vert\,i}$. The mismatch is measured by the Kullback-Leibler divergence, and the resulting optimization problem is 
+		\begin{align*}
+			\minimize C \parens{\by_1, \by_2, \cdots, \by_n}, 
+		\end{align*}
+		where 
+		\begin{align}\label{eq-sne-obj}
+			C \parens{\by_1, \by_2, \cdots, \by_n} := \sum_{i=1}^n \mathrm{KL} \parens{\Pr_i \Vert \mathbb{Q}_i} = \sum_{i=1}^n \sum_{j=1}^n p_{j \vert i} \log \parens[\bigg]{\frac{p_{j \vert i}}{q_{j \vert i}}}. 
+		\end{align}
+		
+		\item \textit{Gradient Descent Algorithm to Optimize $C$:} The derivative of $C$ with respect to $\by_i$ is given by 
+		\begin{align}\label{eq-sne-gd}
+			\frac{\partial C}{\partial \by_i} = 2 \sum_{j=1}^n \parens{p_{j \vert i} - q_{j \vert i} + p_{i \vert j} - q_{i \vert j}} \parens{\by_i - \by_j}. 
+		\end{align}
+		Then, one can use the gradient descent algorithm to minimize $C$. The initial points of $\by_1, \by_2, \cdots, \by_n$ can be randomly selected from an isotropic Gaussian with small variance that is centered around the origin. 
+		
+		\item \textit{Gradient Descent Algorithm with Momentum to Optimize $C$:} In order to speed up the optimization and to avoid poor local minima, we can add a momentum term to the plain gradient descent algorithm. 
+		
+		If we let $\by_i^{\parens{t}}$ denote the $t$-th iterate of $\by_i$, then the gradient descent updates with momentum for $\by_i$ are given by 
+		\begin{align*}
+			\by_i^{\parens{t}} = \by_i^{\parens{t-1}} - \alpha \parens[\bigg]{\frac{\partial C}{\partial \by_i}\bigg\vert_{\by_i=\by_i^{\parens{t-1}}}} + \beta_t \parens{\by_i^{\parens{t-1}} - \by_i^{\parens{t-2}}}, \qquad \text{ for all } t = 1, 2, \cdots, 
+		\end{align*}
+		where $\alpha > 0$ is the learning rate, and $\beta_t$ is the momentum at the $t$-th iteration. 
+	\end{enumerate}
+	
+	\item \textbf{Symmetric SNE:} A symmetric version of SNE optimizes 
+	\begin{align*}
+		C_{\mathrm{sym}} \parens{\by_1, \by_2, \cdots, \by_n} := \mathrm{KL} \parens{\Pr \Vert \mathbb{Q}} = \sum_{i=1}^n \sum_{j=1}^n p_{i,j} \log \frac{p_{i,j}}{q_{i,j}}, 
+	\end{align*}
+	where $p_{i,i} = q_{i,i} = 0$ for all $i = 1, 2, \cdots, n$, 
+	\begin{align*}
+		p_{i,j} = p_{j,i} = \frac{\exp \parens{-\norm{\bx_i - \bx_j}_2^2 / \parens{2\sigma^2}}}{\sum_{k \neq \ell} \exp \parens{-\norm{\bx_k - \bx_{\ell}}_2^2 / \parens{2\sigma^2}}}, 
+	\end{align*}
+	and 
+	\begin{align*}
+		q_{i,j} = q_{j,i} = \frac{\exp \parens{-\norm{\by_i - \by_j}_2^2 / \parens{2\sigma^2}}}{\sum_{k \neq \ell} \exp \parens{-\norm{\by_k - \by_{\ell}}_2^2 / \parens{2\sigma^2}}}. 
+	\end{align*}
+	We can then use the gradient descent algorithm to minimize $C_{\mathrm{sym}}$ by noting 
+	\begin{align*}
+		\frac{\partial C_{\mathrm{sym}}}{\partial \by_i} = 4 \sum_{j=1}^n \parens{p_{i,j} - q_{i,j}} \parens{\by_i - \by_j}. 
+	\end{align*}
+
+\end{enumerate}
+
+
+\subsection*{V.2 $t$-SNE}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Crowding Problem:} SNE described earlier suffers the serious \emph{crowding problem}, meaning that we do \emph{not} have enough spaces to accommodate all neighbors in the higher dimensions. 
+	
+	\begin{enumerate}
+		
+		\item \textit{Example:} In $p$-dimensional space, where $p > 1$, there are $p+1$ data points that are mutually equidistant. Suppose we want to map these $p+1$ data points to 1-dimensional space in which, if we fix 1 point, there are only exactly 2 data points that have equal distance to this fixed point. Hence, there is no way to model this \emph{faithfully} in a 1-dimensional space. 
+		
+		\item \textit{Consequence:} If we want to model the small distances accurately in the lower-dimensional map, most of the points that are at a moderate distance from a certain data point will have to be placed too far away in the lower-dimensional map. 
+	\end{enumerate}
+	
+	\item \textbf{Intuition of $t$-SNE:} In order to solve the crowding problem, the intuition is the following: 
+	\begin{enumerate}
+		\item In the high-dimensional space, we convert distances into probabilities using a Gaussian distribution; 
+		\item In the low-dimensional map, we use a probability distribution that has much heavier tails than a Gaussian to convert distances into probabilities. 
+	\end{enumerate}
+	
+	\textit{Why the Intuition Works?} The intuition above allows a moderate distance in the high-dimensional space to be faithfully modeled by a much larger distance in the map. 
+	
+	\item \textbf{Probabilities in Low-dimensional Space:} In $t$-SNE, we employ a $t$-distribution with one degree of freedom (i.e., a Cauchy distribution) as the heavy-tailed distribution in the low-dimensional map. Using this distribution, the joint probabilities $q_{i,j}$ are defined as 
+	\begin{align}\label{eq-q-t-dist}
+		q_{i,j} = \frac{\parens{1 + \norm{\by_i - \by_j}_2^2}^{-1}}{\sum_{k \neq \ell} \parens{1 + \norm{\by_k - \by_{\ell}}_2^2}^{-1}}, \qquad \text{ for all } i, j = 1, 2, \cdots, n. 
+	\end{align}
+	
+	\item \textbf{Gradient Descent Algorithm for $t$-SNE:} The gradient of the Kullback-Leibler divergence between $\Pr$ and the $t$-distribution based joint probability distribution $\mathbb{Q}$ computed using \eqref{eq-q-t-dist} is given by 
+	\begin{align}\label{eq-grad-tsne}
+		\frac{\partial C}{\partial \by_i} = 4 \sum_{j=1}^n \parens{p_{i,j} - q_{i,j}} \parens{\by_i - \by_j} \parens{1 + \norm{\by_i - \by_j}_2^2}^{-1}. 
+	\end{align}
+	
+	\item \textbf{Algorithm:} The algorithm for $t$-SNE is given in Algorithm \ref{algo-tsne}. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{$t$-Distributed Stochastic Neighbor Embedding}\label{algo-tsne}
+			\begin{algorithmic}[1]
+				\REQUIRE Data, $\bx_1, \bx_2, \cdots, \bx_n$; 
+				\REQUIRE Cost function parameters, perplexity $\mathrm{Perp}$; 
+				\REQUIRE Dimensionality to be mapped to $s$; 
+				\REQUIRE Optimization parameters, number of iterations $T$, and learning rate $\eta$. 
+				
+				\STATE Compute pairwise similarities $p_{j \vert i}$ with perplexity $\mathrm{Perp}$; 
+				
+				\STATE Set $p_{i,j} = \frac{1}{2n} \parens{p_{j \vert i} + p_{i \vert j}}$; 
+				
+				\STATE Sample initial points $\by_1, \by_2, \cdots, \by_n \iid \Normal \parens{0, 10^{-4} \bI_s}$; 
+				
+				\FOR{$t = 1, 2, \cdots, T$}
+					\STATE Compute low-dimensional similarity $q_{i,j}$ using \eqref{eq-q-t-dist}; 
+					\STATE Compute the gradient vector by \eqref{eq-grad-tsne}; 
+					\STATE Update $\by_1, \by_2, \cdots, \by_n$ by the gradient descent algorithm. 
+				\ENDFOR
+				
+				\RETURN Low-dimensional data representation, $\by_1, \by_2, \cdots, \by_n$. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\item \textbf{Advantages of $t$-SNE:} 
+	\begin{enumerate}
+		\item $t$-SNE puts emphasis on 
+		\begin{itemize}
+			\item modeling dissimilar datapoints by means of large pairwise distances, and 
+			\item modeling similar datapoints by means of small pairwise distances. 
+		\end{itemize}
+		\item The optimization of the $t$-SNE cost function is much easier than that of SNE. % Specifically, $t$-SNE introduces long-range forces in the low-dimensional map that can pull back together two (clusters of) similar points that get separated early on in the optimization. 
+	\end{enumerate}
+		
+	\item \textbf{Disadvantages of $t$-SNE:} 
+	\begin{enumerate}
+		\item Typically, $t$-SNE is used to reduce the dimensionality to 2 or 3 for visualization purpose. It is not obvious how to extend the $t$-SNE to perform the more general task of dimensionality reduction (i.e., to reduce the dimensionality to a value greater than 3). 
+		\item The $t$-SNE reduces the dimensionality of data mainly based on \emph{local} properties of the data, which makes it sensitive to the curse of the intrinsic dimensionality of the data. 
+		\item The loss function to be minimized in the $t$-SNE is \emph{not} convex. There is no guarantee that the $t$-SNE converges to a global optimum. In addition, the constructed solutions depend on these choices of optimization parameters and may be different each time the $t$-SNE is run from an initial random configuration of map points. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\printbibliography
+
+\end{document}

@@ -1,0 +1,253 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 18, Prototype Methods and Nearest-Neighbors}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Prototype Methods and Nearest-Neighbors}{18}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 13, Prototype Methods and Neatest-Neighbors} in \textcite{Friedman2001-np}. 
+
+\section*{I. Prototype Methods} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Let $\sets{\parens{\bx_i, g_i}}_{i=1}^n$ be $n$ pairs of training data, where $g_i$ is a class label taking values in $\calW := \sets{1, 2, \cdots, W}$ so that we have $W$ classes in total. 
+	
+	\item \textbf{Prototype Methods:} \emph{Prototype methods} represent the training data by a set of points in the feature space. Each prototype has an associated class label, and classification of a query point $\bx$ is made to the class of the closest prototype. 
+	
+	\textit{Remark.} The ``closedness'' between $\bx$ and the prototypes is usually measured by the Euclidean distance, even though other distance measurements are also possible. 
+	
+	\item \textbf{General Comments:} 
+	\begin{enumerate}
+		\item Prototype methods can be very \emph{effective} if the prototypes are \underline{well-positioned} to capture the distribution of each class. Irregular class boundaries can be represented, with enough prototypes in the right places in feature space. 
+		\item The main challenges are to figure out 
+		\begin{itemize}
+			\item how many prototypes to use, and 
+			\item where to put them. 
+		\end{itemize}
+	\end{enumerate}
+	
+	\item \textbf{$K$-means Clustering for Unlabeled Data:} 
+	\begin{enumerate}
+		\item \textit{Overview:} \textit{$K$-means clustering} is a method for finding clusters and cluster centers for a set of \emph{unlabeled} data. 
+		\item \textit{Main Idea:} One chooses the desired number of cluster centers, denoted by $K$, and iteratively moves the centers to minimize the total within cluster variance. 
+		\item \textit{Procedure:} Given an initial set of centers, $K$-means clustering algorithm alternates between the following two steps until convergence: 
+		\begin{enumerate}
+			\item For each center, identify the subset of training points (cluster of points) that is closer to it than any other centers; 
+			\item Compute the means of each feature for the data points in each clusters, and this mean vector becomes the new center for that cluster. 
+		\end{enumerate}
+		
+		\item \textit{Initialization of Centers:} Typically, initial centers are $K$ randomly chosen observations from the training data. 
+	\end{enumerate}
+	
+	\item \textbf{$K$-means Clustering for Labeled Data:} 
+	\begin{enumerate}
+		\item \textit{Procedure:} 
+		\begin{enumerate}
+			\item Apply $K$-means clustering to the training data in each class \textit{separately}, using $K$ prototypes per class; 
+			\item Assign a class label to each of the $W \times K$ prototypes; 
+			\item Classify a new feature vector $\bx$ to the class of the closest prototype. 
+		\end{enumerate}
+		
+		\item \textit{Comments:} It is possible that a number of prototypes are near the class boundaries, leading to potential misclassification error for points near these boundaries. 
+	\end{enumerate}
+	
+	\item \textbf{Learning Vector Quantization:} 
+	\begin{enumerate}
+		\item \textit{Overview:} Learning vector quantization (LVQ) is an \textit{online} algorithm --- observations are processed one at a time. 
+		\item \textit{Main Idea:} Training points attract prototypes of the correct class and repel other prototypes. When iterations settle down, prototypes should be close to the training points in their class. 
+		\item \textit{Algorithm:} The complete algorithm is shown in Algorithm \ref{algo-lvq}. 
+		
+		\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+				\caption{Learning Vector Quantization}\label{algo-lvq}
+				\begin{algorithmic}[1]
+					\STATE Choose $K$ initial prototypes for each class: $\bc_1 \parens{w}, \bc_2 \parens{w}, \cdots, \bc_K \parens{w}$, for all $w = 1, 2, \cdots, W$ (for example, by sampling $K$ training points at random from each class); 
+					\STATE Sample a training point $\bx_i$ randomly (with replacement), and let $\parens{j, w}$ index the closest prototype $\bc_j \parens{w}$ to $\bx_i$; 
+					\begin{enumerate}
+						\item If $g_i = w$ (i.e., they are in the same class), move the prototype towards the training point: 
+						\begin{align*}
+							\bc_j \parens{w} \quad \leftarrow \quad \bc_j \parens{w} + \alpha \parens{\bx_i - \bc_j \parens{w}}, 
+						\end{align*}
+						where $\alpha > 0$ is the learning rate; 
+						\item If $g_i \neq w$ (i.e., they are in different classes), move the prototype away from the training point: 
+						\begin{align*}
+							\bc_j \parens{w} \quad \leftarrow \quad \bc_j \parens{w} - \alpha \parens{\bx_i - \bc_j \parens{w}}; 
+						\end{align*}
+					\end{enumerate}
+					\STATE Repeat the preceding step, decreasing the learning rate $\alpha$ with each iteration towards zero. 
+				\end{algorithmic}
+			\end{algorithm}
+		\end{minipage}
+		
+		\item \textit{Comments:}
+		\begin{enumerate}
+			\item \underline{Advantage:} The prototypes tend to move away from the decision boundaries and away from prototypes of competing classes. This fixes the problem of the $K$-means clustering for labeled data. 
+			\item \underline{Drawback:} The procedure of learning vector quantization is defined by an algorithm rather than the optimization of some fixed criterion. It is hard to understand its properties. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{Gaussian Mixtures:} 
+	\begin{enumerate}
+		\item \textit{Overview:} Each cluster is described in terms of a Gaussian density, which has a centroid (as in $K$-means clustering) and a covariance matrix. 
+		\item \textit{Procedure:} We use the EM algorithm to fit the Gaussian mixture model: 
+		\begin{enumerate}
+			\item In the E-step, each observation is assigned a responsibility or weight for each cluster, based on the likelihood of each of the corresponding Gaussians; %Observations close to the center of a cluster will most likely get weight 1 for that cluster, and weight 0 for every other cluster. 
+			\item In the M-step, each observation contributes to the weighted means (and covariances) for every cluster. 
+		\end{enumerate}
+		
+		\item \textit{Comparison to $K$-means Clustering:} The Gaussian mixture model is often referred to as a \emph{soft} clustering method, while $K$-means is a \emph{hard} one. 
+		
+		\item \textit{Classification Rule:} Suppose we have class labels. When Gaussian mixture models are used to represent the feature density in each class, it produces smooth posterior probabilities 
+		\begin{align*}
+			\parens[\big]{\hat{p}_1 \parens{\bx}, \hat{p}_2 \parens{\bx}, \cdots, \hat{p}_W \parens{\bx} }^\top
+		\end{align*}
+		for classifying $\bx$. This can be viewed as a \emph{soft classification rule}. We classify $\bx$ to Class $\argmax_{w=1, 2, \cdots, W} \hat{p}_w \parens{\bx}$. 
+		
+	\end{enumerate}
+
+\end{enumerate}
+
+
+
+\section*{II. $k$-Nearest-Neighbor Classifiers}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Main Idea:} The $k$-nearest-neighbor classifiers are \emph{memory-based} and require \emph{no} model to be fit. Given a query point $\bx_0$, 
+	\begin{enumerate}
+		\item find the $k$-training points $\bx_{\parens{r}}$, for $r = 1, \cdots, k$, closest in distance to $\bx_0$, and 
+		\item classify using the majority vote among the $k$ neighbors. 
+	\end{enumerate}
+	When there are ties, we break them at random. 
+	
+	\item \textbf{Effectiveness:} $k$-nearest-neighbors is very successful when 
+	\begin{enumerate}
+		\item each class has many possible prototpes, and 
+		\item the decision boundary is very irregular. 
+	\end{enumerate}
+	
+	\item \textbf{Relationship Between $k$-Nearest-Neighbors and Prototype Methods:} In 1-nearest-neighbor classification, each training point is a prototype. 
+	
+	\textit{Remark.} For the 1-nearest-neighbor classification, the \emph{bias} of estimate is often low, but the variance is high, since it uses only the training point closest to the query point. 
+	
+	\item \textbf{Error Rate:} Asymptotically, the error rate of the 1-nearest-neighbor classifier is never more than twice the Bayes error rate. Here, we assume that the query point coincides with one of the training points, so that the \emph{bias} of the 1-nearest-neighbor classifier is zero. 
+	
+	At the point $\bx$, let $w^*$ be the dominant class, and $p_w \parens{\bx}$ be the true conditional probability for Class $w$. Then, conditional on $\bx$, we have 
+	\begin{align*}
+		\text{Bayes error } = & \, 1 - p_{w^*} \parens{\bx}, \\ 
+		\text{1-nearest-neighbor error } = & \, \sum_{w=1}^W p_w \parens{\bx} \parens{1 - p_w \parens{\bx}} \ge 1 - p_{w^*} \parens{\bx}. 
+	\end{align*}
+	Thus, the 1-nearest-neighbor error is always at least equal to the Bayes error rate. Then, 
+	\begin{enumerate}
+		\item if $W=2$, we have 
+		\begin{align}
+			2 p_{w^*} \parens{\bx} \parens{1 - p_{w^*} \parens{\bx}} \le 2 \parens{1 - p_{w^*} \parens{\bx}}; 
+		\end{align}
+		that is, the asymptotic error rate of 1-nearest-neighbor classifier is never more than twice the Bayes error rate; 
+		\item in general, the following inequality holds 
+		\begin{align}
+			\sum_{w=1}^W p_w \parens{\bx} \parens{1 - p_w \parens{\bx}} \le 2 \parens{1 - p_{w^*} \parens{\bx}} - \frac{W}{W-1} \parens{1 - p_{w^*} \parens{\bx}}^2. 
+		\end{align}
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{III. Adaptive Nearest-Neighbor Methods}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Motivation:} When nearest-neighbor classification is carried out in a high-dimensional feature space, the nearest neighbors of a point can be very far away, causing bias and degrading the performance of the rule. 
+	
+	\item \textbf{Example:} Consider $n$ data points uniformly distributed in the unit cube $\bracks{-\frac{1}{2}, \frac{1}{2}}^p$. Let $R$ be the radius of a 1-nearest-neighborhood centered at the origin. Then, we show that 
+	\begin{align}\label{eq-median-radius}
+		\mathrm{median} \parens{R} = v_p^{-\frac{1}{p}} \parens[\big]{1 - 2^{-\frac{1}{n}}}^{\frac{1}{p}}, 
+	\end{align}
+	where $v_p$ is the constant such that the volume of a ball of radius $r$ in $p$-dimensional space is $v_p r^p$. 
+	
+	Let $X \sim \bracks{-\frac{1}{2}, \frac{1}{2}}^p$. Then, 
+	\begin{align*}
+		\Pr \parens{X \notin B_r \parens{\boldzero_p}} = 1 - v_p r^p, 
+	\end{align*}
+	where $B_r \parens{\boldzero_p}$ denotes the ball centered at the origin with radius $r \in \parens{0, \frac{1}{2}}$. 	Then, with $X_1, X_2, \cdots, X_n \sim \bracks{-\frac{1}{2}, \frac{1}{2}}^p$, the probability that the 1-nearest-neighborhood of origin, i.e., the point that is the closest to the origin, falls outside of the ball $B_r \parens{\boldzero_p}$ is 
+	\begin{align*}
+		\Pr \parens{X_1, X_2, \cdots, X_n \notin B_r \parens{\boldzero_p}} = \parens{1 - v_p r^p}^n. 
+	\end{align*}
+	If we let $R_i$ be the distance of $X_i$ to the origin and $R := \min_{i=1,2,\cdots,n} R_i$, we have 
+	\begin{align*}
+		\Pr \parens{R > r} = \Pr \parens{X_1, X_2, \cdots, X_n \notin B_r \parens{\boldzero_p}} = \parens{1 - v_p r^p}^n. 
+	\end{align*}
+	Therefore, $\mathrm{median} \parens{R}$ must satisfy 
+	\begin{align*}
+		\parens{1 - v_p \mathrm{median} \parens{R}^p}^n = \frac{1}{2}, 
+	\end{align*}
+	from which we can obtain \eqref{eq-median-radius}. 
+	
+	In particular, we can notice that the median radius quickly approaches 0.5, the distance to the edge of the cube. 
+	
+	\item \textbf{Discriminant Adaptive Nearest-Neighbor (DANN):} Discriminant adaptive nearest-neighbor (DANN) is an approach to adapt the metric used in the nearest-neighbor classification. 
+	\begin{enumerate}
+		\item \textit{Main Idea:} At each query point $\bx_0 \in \Real^p$, a neighborhood of $k$ points is formed, and the class distribution among these points is used to decide how to adapt the metric. The adapted metric is then used in a nearest-neighbor rule at the query point. 
+		
+		\textit{Remark.} At each query point, a potentially different metric is used. 
+		\item \textit{DANN Metric:} The \emph{DANN metric} at a query point $\bx_0 \in \Real^p$ is defined by 
+		\begin{align}
+			D \parens{\bx, \bx_0} := \parens{\bx - \bx_0}^\top \bSigma \parens{\bx - \bx_0}, 
+		\end{align}
+		where 
+		\begin{align*}
+			\bSigma := & \, \bW^{-\frac{1}{2}} \parens{\bW^{-\frac{1}{2}} \bB \bW^{-\frac{1}{2}} + \varepsilon \bI_p} \bW^{-\frac{1}{2}}, 
+		\end{align*}
+		and 
+		$\bW := \sum_{w=1}^W \pi_w \bW_w$ is the pooled within-class covariance matrix, $\bB := \sum_{w=1}^W \pi_w \parens{\bar{\bx}_w - \bar{\bx}} \parens{\bar{\bx}_w - \bar{\bx}}^\top$ is the between class covariance matrix, $\bar{\bx}_w$ is the mean vector of the $w$-th class, and $\bar{\bx}$ is the overall mean vector. 
+		
+		Note that here all quantities are computed from the $k$ observations close to the query point $\bx_0$. 
+		
+		\textit{Remark.} If all $k$ points belong to a single class, we have $\bB = \boldzero_{p \times p}$ and $\bSigma$ reduces to $\varepsilon \bW^{-1}$. 
+		
+		\item \textit{DANN:} After computation of the metric, it is used in a nearest-neighbor rule at $\bx_0$. 
+		
+	\end{enumerate}
+
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

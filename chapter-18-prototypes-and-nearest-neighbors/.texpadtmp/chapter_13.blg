@@ -1,0 +1,20 @@
+[0] Config.pm:354> INFO - This is Biber 2.7
+[1] Config.pm:357> INFO - Logfile is '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_13_prototypes_and_nearest_neighbors/.texpadtmp/chapter_13.blg'
+[96] biber-darwin:303> INFO - === Mon Nov 11, 2019, 11:04:18
+[138] Biber.pm:359> INFO - Reading '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_13_prototypes_and_nearest_neighbors/.texpadtmp/chapter_13.bcf'
+[338] Biber.pm:835> INFO - Found 1 citekeys in bib section 0
+[369] Biber.pm:3670> INFO - Processing section 0
+[400] Biber.pm:3840> INFO - Looking for bibtex format file '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_13_prototypes_and_nearest_neighbors/noteref.bib' for section 0
+[404] bibtex.pm:1435> INFO - Decoding LaTeX character macros into UTF-8
+[411] bibtex.pm:1292> INFO - Found BibTeX data source '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_13_prototypes_and_nearest_neighbors/noteref.bib'
+[421] Utils.pm:164> WARN - BibTeX subsystem: warning: comma(s) at end of name (removing)
+[421] Utils.pm:164> WARN - BibTeX subsystem: author, warning: comma(s) at end of name (removing)
+[421] Utils.pm:164> WARN - BibTeX subsystem: warning: comma(s) at end of name (removing)
+[421] Utils.pm:164> WARN - BibTeX subsystem: author, warning: comma(s) at end of name (removing)
+[450] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[450] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[450] Biber.pm:3499> INFO - Sorting list 'nyt/global/' of type 'entry' with scheme 'nyt' and locale 'en-US'
+[450] Biber.pm:3505> INFO - No sort tailoring available for locale 'en-US'
+[455] bbl.pm:608> INFO - Writing '/Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_13_prototypes_and_nearest_neighbors/.texpadtmp/chapter_13.bbl' with encoding 'ascii'
+[458] bbl.pm:712> INFO - Output to /Users/chenxizhou/Dropbox/LaTex_Files/The_Elements_of_Statistical_Learning_Hastie_Tibshirani_Friedman/chapter_13_prototypes_and_nearest_neighbors/.texpadtmp/chapter_13.bbl
+[458] Biber.pm:109> INFO - WARNINGS: 4

@@ -1,0 +1,732 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\newcommand{\ridge}{\text{ridge}}
+\newcommand{\lasso}{\text{lasso}}
+\newcommand{\pcr}{\text{pcr}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 6, Multivariate Regression}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \text{\textit{#4}} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\thispagestyle{plain}
+\titlebox{Notes on Statistical and Machine Learning}{}{Multivariate Regression}{6}
+
+\vspace{10pt} 
+
+This note is prepared based on \textit{Chapter 6, Multivariate Regression} in \textcite{Izenman2009-jk}. 
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Overview:} \textit{Multivariate regression} is an extension of the multiple regression and has $s$ output variables $Y = \parens{Y_1, \cdots, Y_s}^\top \in \Real^s$, each of whose behavior may be influenced by exactly the same set of predictors $X = \parens{X_1, \cdots, X_p}^\top \in \Real^p$. 
+
+%	\item \textbf{Setup:} We let 
+%	\begin{enumerate}
+%		\item the response variable be an $s$-dimensional vector, denoted by $Y = \parens{Y_1, \cdots, Y_s}^\top$, and 
+%		\item the predictor be a $p$-dimensional vector, denoted by $X = \parens{X_1, \cdots, X_p}^\top$. 
+%	\end{enumerate}
+	
+	\item \textbf{Goal:} We are interested in estimating the regression relationship between $Y$ and $X$, taking into account the various \textit{dependencies} between the $p$-dimensional vector $X$ and the $s$-dimensional vector $Y$ and the dependencies within $X$ and within $Y$. 
+	
+	\textit{Remark.} In the multivariate regression setting, 
+	\begin{enumerate}
+		\item the components of $X$ are correlated with each other, 
+		\item the components of $Y$ are correlated with each other, and 
+		\item the components of $Y$ are correlated with components of $X$. 
+	\end{enumerate}
+\end{enumerate}
+
+
+\section*{II. Random Design Case}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Assume that the random vectors 
+	\begin{align*}
+		X = \parens{X_1, \cdots, X_p}^\top \qquad \text{ and } \qquad Y = \parens{Y_1, \cdots, Y_s}^\top
+	\end{align*}
+	are jointly distributed, where the mean vectors of $X$ and $Y$ are $\bmu_X$ and $\bmu_Y$, respectively, and the joint covariance matrix 
+	\begin{align*}
+		\begin{pmatrix}
+			\bSigma_{XX} & \bSigma_{XY} \\ 
+			\bSigma_{YX} & \bSigma_{YY}
+		\end{pmatrix}. 
+	\end{align*} 
+	In addition, we assume that $s \le p$. 
+	
+	\item \textbf{Classical Multivariate Regression Model:} Assume that $Y$ is related to $X$ by the following \emph{multivariate linear model}  
+	\begin{align}
+		Y = \bmu + \bTheta X + \beps, 
+	\end{align}  
+	where $\bmu \in \Real^{s}$ and $\bTheta \in \Real^{s \times p}$ are the unknown parameters to be estimated, and $\beps \in \Real^{s}$ is the unobservable error component of the model with mean $\boldzero_s$ and unknown error covariance matrix $\cov \bracks{\beps} = \Sigma_{\beps \beps}$. We assume that $X$ and $\beps$ are independent. 
+	
+	\item \textbf{Least Squares Estimate of Parameters:} We are interested in finding $\bmu$ and $\bTheta$ that minimize 
+	\begin{align}
+		L \parens{\bmu, \bTheta} := \E \bracks[\big]{\parens{Y - \bmu - \bTheta X} \parens{Y - \bmu - \bTheta X}^\top}, 
+	\end{align}
+	where the expectation is taken over the joint distribution of $X$ and $Y$. 
+	
+	\begin{enumerate}
+		\item \textit{First Derivation:} Let $Y_c := Y - \bmu_Y$ and $X_c := X - \bmu_X$ and assume $\bSigma_{XX} \succ 0$. We have 
+		\begin{align*}
+			L \parens{\mu, \Theta} = & \, \E \bracks[\big]{\parens{Y - \bmu - \bTheta X} \parens{Y - \bmu - \bTheta X}^\top} \\ 
+			= & \, \E \bracks[\big]{Y_c Y_c^\top - Y_c X_c^\top \bTheta^\top - \bTheta X_c Y_c^\top + \bTheta X_c X_c^\top \bTheta^\top} \\ 
+			& \qquad + \parens{\bmu - \bmu_Y + \bTheta \bmu_X} \parens{\bmu - \bmu_Y + \bTheta \bmu_X}^\top \\ 
+			= & \, \bSigma_{YY} - \bSigma_{YX} \bTheta^\top - \bTheta \bSigma_{XY} + \bTheta \bSigma_{XX} \bTheta^\top \\ 
+			& \qquad + \parens{\bmu - \bmu_Y + \bTheta \bmu_X} \parens{\bmu - \bmu_Y + \bTheta \bmu_X}^\top. 
+		\end{align*}
+		We note that 
+		\begin{align*}
+			& \, - \bSigma_{YX} \bTheta^\top - \bTheta \bSigma_{XY} + \bTheta \bSigma_{XX} \bTheta^\top \\
+			= & \, \parens{\bTheta \bSigma_{XX}^{1/2} - \bSigma_{YX} \bSigma_{XX}^{-1/2}}\parens{\bTheta \bSigma_{XX}^{1/2} - \bSigma_{YX} \bSigma_{XX}^{-1/2}}^\top - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}. 
+		\end{align*}
+		Hence, 
+		\begin{align*}
+			L \parens{\bmu, \bTheta} = & \, \parens[\big]{\bSigma_{YY} - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}} + \parens[\big]{\bTheta \bSigma_{XX}^{1/2} - \bSigma_{YX} \bSigma_{XX}^{-1/2}} \parens[\big]{\bTheta \bSigma_{XX}^{1/2} - \bSigma_{YX} \bSigma_{XX}^{-1/2}}^\top \\
+			& \, + \parens[\big]{\bmu - \bmu_Y + \bTheta \bmu_X} \parens{\bmu - \bmu_Y + \bTheta \bmu_X}^\top \\ 
+			\ge & \, \bSigma_{YY} - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}, 
+		\end{align*}
+		with equality being held when 
+		\begin{align*}
+			\bTheta^* := \bSigma_{YX} \bSigma_{XX}^{-1}, \qquad \bmu^* := \bmu_Y - \bTheta \bmu_X. 
+		\end{align*}
+		In other words, 
+		\begin{align*}
+			\parens{\bmu^*, \bTheta^*} = \argmin_{\bmu, \bTheta} L \parens{\bmu, \bTheta}. 
+		\end{align*}
+		
+		\item \textit{Second Derivation:} Assuming that we can interchange the derivative and the integral, we take the partial derivatives of $L \parens{\bmu, \bTheta}$ with respect to the two arguments and set the derivatives to zero: 
+		\begin{align*}
+			\frac{\partial L \parens{\bmu, \bTheta}}{\partial \bmu} = & \, -2 \bmu_Y^\top + 2 \bmu^\top + 2 \bmu_X \bTheta \stackrel{\text{set}}{=} \boldzero_s, \\ 
+			\frac{\partial L \parens{\bmu, \bTheta}}{\partial \bTheta} = & \, -2 \E \bracks{\parens{Y - \bmu - \bTheta X} X^\top} \stackrel{\text{set}}{=} \boldzero_{s \times p}. 
+		\end{align*}
+		It follows that $\parens{\bmu^*, \bTheta^*} = \argmin_{\bmu, \bTheta} L \parens{\bmu, \bTheta}$ must satisfy 
+		\begin{align*}
+			\bmu^* = \bmu_Y - \bTheta^* \bmu_X, \qquad \text{ and } \qquad \bTheta^* = \bSigma_{YX} \bSigma_{XX}^{-1}. 
+		\end{align*}
+	
+	\end{enumerate}
+	
+	Here, $\bTheta^*$ is the \textit{full-rank regression coefficient matrix} of $Y$ on $X$, and 
+	\begin{align*}
+		Y = \bmu_Y + \bSigma_{YX} \bSigma_{XX}^{-1} \parens{X - \bmu_X}
+	\end{align*}
+	is the \textit{full-rank linear regression function} of $Y$ on $X$. Here, the ``full-rank'' refers to the rank of $\bTheta$. At the minimum of $L$, the error is 
+	\begin{align*}
+		\beps = & \, Y - \bmu_Y - \bSigma_{YX} \bSigma_{XX}^{-1} \parens{X - \bmu_X}  
+		= Y_c - \bSigma_{YX} \bSigma_{XX}^{-1} X_c. 
+	\end{align*}
+	In particular, note that 
+	\begin{align*}
+		\E \bracks{\beps} = & \, \boldzero_s, \\ 
+		\var \bracks{\beps} = & \, \bSigma_{YY} - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}, \\ 
+		\E \bracks{\beps X_c^\top} = & \, \boldzero_{s \times p}. 
+	\end{align*}
+	
+	\item \textbf{Multivariate Reduced-Rank Regression:} 
+	\begin{enumerate}
+		\item \textit{Model Specification:} Consider the multivariate linear regression model given by 
+		\begin{align}\label{rrr}
+		Y = \bmu + \bC X + \beps, 
+		\end{align}
+		where $\bmu \in \Real^{s}$ and $\bC \in \Real^{s \times p}$ are unknown regression parameters and $\beps \in \Real^{s}$ is the unobservable error with mean $\E \bracks{\beps} = \boldzero_{s}$ and covariance matrix $\cov \bracks{\beps} = \bSigma_{\beps \beps}$. We assume that $\beps$ and $X$ are independent. Here, we allow the rank of the regression coefficient matrix $\bC$ to be deficient, i.e., 
+		\begin{align}\label{eq-reduced-rank}
+			\rank \parens{C} = t \le \min s = \sets{s, p}. 
+		\end{align}
+		
+		\textit{Remark 1.} The ``reduced-rank'' condition \eqref{eq-reduced-rank} on $\bC$ brings a true multivariate feature into the model, implying that there may be a number of \emph{linear constraints} on the set of regression coefficients in the model. 
+		
+		\textit{Remark 2.} The name \textit{reduced-rank regression} is used to distinguish the case $1 \le t < s$ from the \textit{full-rank regression} with $t = s$. 
+		
+		\item \textit{Question of Interest:} When $\rank \parens{\bC} = t$, there exits two full-rank matrices, an $s \times t$ matrix $\bA$ and a $t \times p$ matrix $\bB$, such that $\bC = \bA \bB$. Note that this decomposition is \emph{not} unique since we can always find a nonsingular $t \times t$ matrix $T$ such that 
+		\begin{align*}
+			\bC = \bA \bB = \parens{\bA \bT} \parens{\bT^{-1} \bB} = \bD \bE. 
+		\end{align*}
+		With the decomposition $\bC = \bA \bB$, we can write \eqref{rrr} as 
+		\begin{align*}
+			Y = \bmu + \bA \bB X + \beps. 
+		\end{align*}
+		We wish to estimate the unknown parameters $\bA$, $\bB$ and $\bmu$. 
+		
+		\item \textit{Effective Dimensionality:} The rank of the matrix $\bC$ here, $t$, is a meta-parameter called the \textit{effective dimensionality} of the multivariate regression. 
+		
+		\item \textit{Review of the Eckart-Young's Inequality:} Suppose both $\bA$ and $\bB$ are matrices of size $m \times n$. Assume that $\bB$ has the reduced rank $\rank \parens{\bB} = t$ and $\bA$ is of full rank, $\rank \parens{\bA} = \min \sets{m, n}$. We use $\bB$ to approximate $\bA$. Then, 
+		\begin{align*}
+			\lambda_j \parens[\big]{\parens{\bA - \bB} \parens{\bA - \bB}^\top} \ge \lambda_{j+t} \parens{\bA \bA^\top}, 
+		\end{align*}
+		with equality if 
+		\begin{align*}
+			\bB = \sum_{i=1}^t \lambda_i^{1/2} \bu_i \bv_i, 
+		\end{align*}
+		where $\lambda_i = \lambda_i \parens{\bA \bA^\top}$, $\bu_i$ is the $i$-th eigenvector of $\bA \bA^\top$, and $\bv_i$ is the $i$-th eigenvector of $\bA^\top \bA$. 
+		
+		\item \textit{Minimizing a Weighted Least Squares Criterion:} We minimize the following weighted sum-of-squares criterion 
+		\begin{align}
+			L \parens{t} := \E \bracks[\big]{\parens{Y - \bmu - \bA \bB X}^\top \bGamma \parens{Y - \bmu - \bA \bB X}}, 
+		\end{align}
+		where $\bGamma \in \Real^{s \times s}$ is a positive definite symmetric matrix of weights and the expectation is taken over the joint distribution of $\parens{X, Y}$. By letting $Y_c := Y - \bmu_Y$ and $X_c := X - \bmu_X$, first note that 
+		\begin{align}
+			L \parens{t} \ge & \, \E \bracks[\big]{\parens{Y_c - \bC X_c}^\top \bGamma \parens{Y_c - \bC X_c}} \nonumber \\ 
+			= & \, \tr \parens[\big]{\bSigma_{YY}^* - \bC^* \bSigma_{XY}^* - \bSigma_{YX}^* \bC^* + \bC^* \bSigma_{XX}^* \bC^*} \nonumber \\ 
+			= & \, \tr \parens[\big]{\parens{\bSigma_{YY}^* - \bSigma_{YX}^* \bSigma_{XX}^{*-1} \bSigma_{XY}^*}} \nonumber \\ & \qquad 
+			+ \tr \parens[\big]{\parens{\bC^* \bSigma_{XX}^{*1/2} - \bSigma_{YX}^* \bSigma_{XX}^{*-1/2}} \parens{\bC^* \bSigma_{XX}^{*1/2} - \bSigma_{YX}^* \bSigma_{XX}^{*-1/2}}^\top}, 
+		\end{align}
+		where the last equality follows by completing the perfect square, and $\bSigma_{XX}^{*} := \bSigma_{XX}$, $\bSigma_{YY}^{*} := \bGamma^{1/2} \bSigma_{YY} \bGamma^{1/2}$, $\bSigma_{XY}^{*} := \bSigma_{XY} \bGamma^{1/2}$, and $\bC^* := \bGamma^{1/2} \bC$. 
+		
+		Now, we assume that $\rank \parens{\bC} = t$. According to the Eckart-Young's Inequality, the second trace is minimized when 
+		\begin{align*}
+			\bC^* \bSigma_{XX}^{*1/2} = \sum_{i=1}^t \lambda_i^{1/2} \bv_i \bu_i, 
+		\end{align*}
+		where $\lambda_i$ is the $i$-th eigenvalue of $\bSigma_{YX}^* \bSigma_{XX}^{*-1} \bSigma_{XY}^* = \bGamma^{1/2} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bGamma^{1/2}$, and $\bv_i$ is the eigenvector associated with $\lambda_i$, and 
+		\begin{align*}
+			\bu_i = \lambda_i^{-1/2} \bSigma_{XX}^{*-1/2} \bSigma_{XY}^{*} \bv_i = \lambda_i^{-1/2} \bSigma_{XX}^{-1/2} \bSigma_{XY} \bGamma^{1/2} \bv_i.   
+		\end{align*}
+		It follows that the optimal $\bC$ of reduced rank $t$ that minimizes $L$ is 
+		\begin{align}\label{ct}
+			\bC^{(t)} = \bGamma^{-1/2} \parens[\Bigg]{\sum_{j=1}^t \bv_j \bv_j^\top} \bGamma^{1/2} \bSigma_{YX} \bSigma_{XX}^{-1}. 
+		\end{align}
+		This $\bC^{\parens{t}}$ is called the \textit{reduced-rank regression coefficient matrix} with rank $t$ and weight matrix $\bGamma$. It follows that $L$ is minimized by letting $\bmu$, $\bA$ and $\bB$ be the following functions of $t$ 
+		\begin{align}
+			\bmu^{\parens{t}} = & \, \bmu_Y - \bA^{\parens{t}} \bB^{\parens{t}} \bmu_X, \\ 
+			\bA^{\parens{t}} = & \, \bGamma^{-1/2} \bV_t, \label{At} \\ 
+			\bB^{\parens{t}} = & \, \bV_t^\top \bGamma^{1/2} \bSigma_{YX} \bSigma_{XX}^{-1}, \label{Bt}
+		\end{align}
+		where $\bV_t = \parens{\bv_1, \bv_2, \cdots, \bv_t}$ is an $s \times t$ matrix and $\bv_j$ is the eigenvector associated with the $j$-th largest eigenvalue of the matrix $\bGamma^{1/2} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bGamma^{1/2}$.  
+		
+		\item \textit{Minimum of $W \parens{t}$:} With $\bC^{\parens{t}}$ defined in \eqref{ct}, the minimum value of $L$ is 
+		\begin{align*}
+			L_{\min} \parens{t} = & \, \E \bracks[\big]{\parens{Y - \bmu - \bC^{\parens{t}} X}^\top \bGamma \parens{Y - \bmu - \bC^{\parens{t}} X}} \nonumber \\ 
+			= & \, \tr \parens{\bSigma_{YY} \bGamma} - \sum_{j=1}^t \lambda_j. 
+		\end{align*}
+		
+		\item \textit{Two Remarks:} 
+		\begin{enumerate}
+			\item If we choose $t = s$, $\bC^{\parens{s}}$ reduces to the full-rank regression coefficient matrix $\bTheta = \bC^{\parens{s}}$; 
+			\item For any $t$ and any positive-definite matrix $\bGamma$, $\bC^{\parens{t}}$ and $\bTheta$ are related by 
+			\begin{align*}
+				\bC^{\parens{t}} = \bP_{\bGamma}^{\parens{t}} \bTheta, 
+			\end{align*}
+			where 
+			\begin{align*}
+				\bP_{\bGamma}^{\parens{t}} = \bGamma^{-1/2} \parens[\Bigg]{\sum_{j=1}^t \bv_j \bv_j^\top} \bGamma^{1/2}. 
+			\end{align*}
+		\end{enumerate}
+		
+		\item \textit{Special Cases of Reduced-Rank Regression:}
+		\begin{enumerate}
+			\item If $X \equiv Y$ and $\bGamma = \bI_p$, we obtain Hotelling's principal component analysis; 
+			\item If $\bGamma = \bSigma_{YY}^{-1}$, we obtain the Hotelling's canonical correlation analysis; 
+			\item If $\bGamma = \bSigma_{YY}^{-1}$ and let $Y$ be a vector of binary variables indicating the class belonging of observations, we obtain Fisher's linear discriminant analysis. 
+		\end{enumerate}
+		
+		\item \textit{Sample Estimates:} Let $\braces{\parens{\bx_i^\top, \by_i^\top}^{\top}}_{i=1}^n$ be $n$ i.i.d observations from $\parens{X^\top, Y^\top}^\top$. Then, 
+		\begin{enumerate}
+			\item The mean vectors, $\bmu_X$ and $\bmu_Y$, can be estimated by 
+			\begin{align*}
+				\hat{\bmu}_{X} = \bar{\bx} = \frac{1}{n} \sum_{i=1}^n \bx_i, \qquad \text{ and } \qquad \hat{\bmu}_{Y} = \bar{\by} = \frac{1}{n} \sum_{i=1}^n \by_i, 
+			\end{align*}
+			respectively. 
+			\item For all $i = 1, \cdots, n$, let 
+			\begin{align*}
+				\bx_{c,i} = \bx_i - \bar{\bx}, \qquad \text{ and } \qquad \by_{c,i} = \by_i - \bar{\by}
+			\end{align*}
+			be the centered observations, and let 
+			 \begin{align*}
+				\bX_{c} = \begin{bmatrix}
+					\bx_{c,1}, \cdots, \bx_{c,n}
+				\end{bmatrix} \in \Real^{p \times n}, \qquad \text{ and } \qquad 
+				\bY_{c} = \begin{bmatrix}
+					\by_{c,1}, \cdots, \by_{c,n}
+				\end{bmatrix} \in \Real^{s \times n}
+			\end{align*}
+			be the center data matrix. 
+			\item The covariance matrices, $\bSigma_{XX}$, $\bSigma_{XY}$, $\bSigma_{YX}$ and $\bSigma_{YY}$, can be estimated by 
+			\begin{align*}
+				\widehat{\bSigma}_{XX} = & \, \frac{1}{n} \bX_c \bX_c^\top, \\ 
+				\widehat{\bSigma}_{YX} = \widehat{\bSigma}_{XY}^\top = & \, \frac{1}{n} \bY_c \bX_c^\top, \\ 
+				\widehat{\bSigma}_{YY} = & \, \frac{1}{n} \bY_c \bY_c^\top. 
+			\end{align*}
+			\item Matrices $\bA^{\parens{t}}$ in \eqref{At} and $\bB^{\parens{t}}$ in \eqref{Bt} can be estimated by 
+			\begin{align*}
+				\widehat{\bA}^{\parens{t}} = & \, \bGamma^{-1/2} \widehat{\bV}_t, \\ 
+				\widehat{\bB}^{\parens{t}} = & \, \widehat{\bV}_t^\top \bGamma^{1/2} \widehat{\bSigma}_{YX} \widehat{\bSigma}_{XX}, 
+			\end{align*}
+			where 
+			\begin{align*}
+				\widehat{\bV}_t = \parens{\hat{\bv}_1, \cdots, \hat{\bv}_t}
+			\end{align*}
+			is an $s \times t$-matrix with the $j$-th column, $\hat{\bv}_j$, being the eigenvector associated with the $j$-th largest eigenvalue $\hat{\lambda}_j$ of the $s \times s$ symmetric matrix 
+			\begin{align*}
+				\bGamma^{1/2} \widehat{\bSigma}_{YX} \widehat{\bSigma}_{XX}^{-1} \widehat{\bSigma}_{XY} \bGamma^{1/2}, 
+			\end{align*}
+			for $j = 1, 2, \cdots, p$. The reduced-rank regression coefficient matrix $\bC^{\parens{t}}$ in \eqref{ct} can be estimated by
+			\begin{align*}
+				\widehat{\bC}^{\parens{t}} = \bGamma^{-1/2} \parens[\Bigg]{\sum_{j=1}^t \hat{\bv}_j \hat{\bv}_j^\top} \bGamma^{1/2} \widehat{\bSigma}_{YX} \widehat{\bSigma}_{XX}^{-1}, 
+			\end{align*}
+			and the full-rank regression coefficient matrix $\bTheta$ can be estimated by
+			\begin{align*}
+				\widehat{\bTheta} = \widehat{\bC}^{\parens{s}} = \widehat{\bSigma}_{YX} \widehat{\bSigma}_{XX}^{-1}. 
+			\end{align*}
+			
+			\item \textit{Estimation in the Presence of Singularity:} In the case where $\widehat{\bSigma}_{XX}$ and/or $\widehat{\bSigma}_{YY}$ are singular, we replace them by a slight perturbation of their diagonal entries using the idea of the ridge regression 
+			\begin{align*}
+				\widehat{\bSigma}_{XX}^{\parens{\eta}} = & \, \frac{1}{n} \parens[\big]{\bX_c \bX_c^\top + \eta \cdot \bI_d}, \\ 
+				\widehat{\bSigma}_{YY}^{\parens{\eta}} = & \, \frac{1}{n} \parens[\big]{\bY_c \bY_c^\top + \eta \cdot \bI_d}, 
+			\end{align*}
+			respectively, where $\eta > 0$ is a tuning parameter. Everything else, such obtaining estimates of $\bC^{\parens{t}}$, $\bA^{\parens{k}}$ and $\bB^{\parens{t}}$, can be proceeded as before and will depend on the choice of $\eta > 0$. 
+
+		\end{enumerate}
+		
+		\item \textit{Assessing the Effective Dimensionality:} In order to choose the value of $t \in \sets{1, 2, \cdots, s}$, we choose the smallest integer such that the reduced-rank regression of $Y$ on $X$ with that integer as rank is as close (to be specified) as possible to the corresponding full-rank regression. 
+		
+		\begin{enumerate}
+			\item \underline{Method 1.} Let $L_{\min} \parens{t}$ denote the minimum value of $L \parens{t}$ for a fixed value of $t$. The reduction in $L_{\min} \parens{t}$ by increasing the rank from $t = t_0$ to $t = t_1$ with $t_0 < t_1$ is 
+			\begin{align*}
+				L_{\min} \parens{t_0} - L_{\min} \parens{t_1} = \sum_{j=t_0+1}^{t_1} \lambda_j, 
+			\end{align*}
+			which only depends on the eigenvalues of $\bGamma^{1/2} \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY} \bGamma^{1/2}$. 
+			Therefore, the rank of $\bC$ can be assessed by some monotone function of the sequence of ordered sample eigenvalues $\sets{\hat{\lambda}_j}_{j = 1}^{s}$, in which $\hat{\lambda}_j$ is compared with suitable reference values for each $j$, or by the sum of some monotone function of the smallest $s-t_0$ sample eigenvalues. 
+			
+			\item \underline{Method 2 --- Rank Trace.} Suppose the true rank of $\bC$ is $t^*$. The main idea behind \textit{rank trace} is the following: 
+			\begin{enumerate}
+				\item for $1 \le t < t^*$, the entries in both the estimated regression coefficient matrix and the residual covariance matrix change significantly each time we increase the rank; 
+				\item as soon as the true rank $t^*$ is achieved, these two matrices stabilize. 
+			\end{enumerate}
+			The algorithm is provided in Algorithm \ref{algo-trace-rank}. 
+			
+			\begin{minipage}{\linewidth}
+			\begin{algorithm}[H]
+			\caption{Using Rank Trace to Assess the Effective Dimensionality of a Multivariate Regression}\label{algo-trace-rank}
+				\begin{algorithmic}[1]
+				\STATE Define $\widehat{\bC}^{(0)} = \boldzero_{s \times p}$ and $\widehat{\bSigma}_{\beps \beps}^{(0)} = \widehat{\bSigma}_{YY}$. 
+				\STATE For $t = 1$ to $s$: 
+				\begin{enumerate}
+					\item[(a)] compute $\widehat{\bC}^{\parens{t}}$ and $\widehat{\bSigma}_{\beps \beps}^{\parens{t}}$, and set $\widehat{\bC}^{\parens{s}} = \widehat{\bTheta}$ and $\widehat{\bSigma}_{\beps \beps}^{\parens{s}} = \widehat{\bSigma}_{\beps \beps}$. 
+					\item[(b)] compute
+					\begin{align*}
+						\Delta \widehat{\bC}^{(t)} = \frac{\norm{\widehat{\bTheta} - \widehat{\bC}^{(t)}}}{\norm{\widehat{\bTheta}}}, \qquad \Delta \widehat{\bSigma}_{\beps \beps}^{(t)} = \frac{\norm{\widehat{\bSigma}_{\beps \beps} - \widehat{\bSigma}_{\beps \beps}^{\parens{t}}}}{\norm{\widehat{\bSigma}_{\beps \beps} - \widehat{\bSigma}_{YY}}}, 
+					\end{align*} 
+					where $\norm{\bA} = \sqrt{\tr \parens{\bA \bA^\top}} = \parens[\big]{\sum_{i} \sum_{j} a_{ij}^2}^{1/2}$. 
+				\end{enumerate}
+				\STATE Make a scatterplot of the $s$ points 
+				\begin{align*}
+					\parens[\big]{\Delta \widehat{\bC}^{(t)}, \Delta \widehat{\bSigma}_{\beps \beps}^{(t)}}, 
+				\end{align*}
+				for $t = 0, 1, \cdots, s$, and join up successive points on the plot. This is called the \textit{rank trace} for the multivariate reduce-rank regression of $Y$ onto $X$. 
+				
+				\STATE Assess the rank of $\bC$ as the \textit{smallest} rank for which both coordinates from Step 3 are approximately zero. 
+				
+				\end{algorithmic}
+			\end{algorithm}
+			\end{minipage}
+			
+			\vspace{10pt}
+			
+			Note the following: 
+			\begin{itemize}
+				\item The first point in the rank trace, corresponding to $t = 0$, is always plotted at $\parens{1, 1}$ and the last point, corresponding to $t = s$, is always plotted at $\parens{0, 0}$; 
+				\item The horizontal coordinate, $\Delta \widehat{\bC}^{(t)}$, gives a quantitative representation of the difference between a reduced-rank regression coefficient matrix and its full-rank analog; 
+				\item The vertical coordinate, $\Delta \widehat{\bSigma}_{\beps \beps}^{\parens{t}}$, shows the proportionate reduction in the residual variance matrix in using a simple full-rank model rather than the reduced-rank model. 
+
+			\end{itemize}
+			
+			\item \underline{Method 3 --- Cross Validation.} For each rank $t$, compute a sequence of estimates of prediction error using the cross validation. Identify the smallest rank such that, for larger ranks, the prediction error has stabilized and does \textit{not} decrease significantly; this is similar to saying that at $\hat{t}$, there is an elbow in the plot of prediction error against the rank. 
+		\end{enumerate}
+	
+	\end{enumerate}
+	   
+\end{enumerate}
+
+
+\section*{III. Fixed Design Case}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Assumptions:} Let $Y = \parens{Y_1, \cdots, Y_s}^\top$ be an $s$-dimensional random vector with mean $\bmu_Y \in \Real^s$ and the covariance matrix $\bSigma_{YY} \in \Real^{s \times s}$, and let $X = \parens{X_1, \cdots, X_p}^\top$ be a $p$-dimensional \textit{nonstochastic} (i.e., fixed) vector. 
+	
+	\item \textbf{Data:} Let $\braces{\parens{\bx_i^\top, \by_i^\top}^\top}_{i=1}^{n}$ be $n$ i.i.d observations from $\parens{X^\top, Y^\top}^\top$. Define the matrices $\bX$ and $\bY$ by 
+	\begin{align*}
+		\bX = \begin{bmatrix}
+			\, \bx_1 & \cdots & \bx_n \,
+		\end{bmatrix} \in \Real^{p \times n}, \qquad \text{ and } \qquad
+		\bY = \begin{bmatrix}
+			\, \by_1 & \cdots & \by_n \, 
+		\end{bmatrix} \in \Real^{s \times n}, 
+	\end{align*}
+	respectively. 
+	
+	Define the following quantities 
+	\begin{align*}
+		\bar{\bx} := & \, \frac{1}{n} \sum_{i=1}^n \bx_i, \\ 
+		\bar{\by} := & \, \frac{1}{n} \sum_{i=1}^n \by_i, \\ 
+		\bar{\bX} := & \, \begin{bmatrix}
+			\, \bar{\bx} & \cdots & \bar{\bx} \, 
+		\end{bmatrix} \in \Real^{p \times n}, \\ 
+		\bar{\bY} := & \, \begin{bmatrix}
+			\, \bar{\by} & \cdots & \bar{\by} \, 
+		\end{bmatrix} \in \Real^{s \times n}. 
+	\end{align*}
+	Defined the centered versions of $\bX$ and $\bY$ to be 
+	\begin{align*}
+		\bX_c := \bX - \bar{\bX}, \qquad \text{ and } \qquad \bY_c := \bY - \bar{\bY}. 
+	\end{align*}
+	
+	\item \textbf{Classical Multivariate Regression Model:} 
+	\begin{enumerate}
+		\item \textit{Model specification:} Suppose each component of $Y$ depends on the same set of predictors $X_1, \cdots, X_p$ in the following way 
+		\begin{align}\label{eq-multivar-reg-data}
+			Y_j = \mu_j + \theta_{\theta,1} X_1 + \theta_{\theta,2} X_2 + \cdots + \theta_{\theta,p} X_p + \varepsilon_j, \qquad \text{ for all } j = 1, \cdots, s, 
+		\end{align}
+		where $\mu_j$ is the intercept term and $\varepsilon_j$ is the error variable with zero mean. 
+		
+		With the data, we can write \eqref{eq-multivar-reg-data} collectively as 
+		\begin{align}\label{eq-multivar-reg-data-mat}
+			\bY = \bmu + \bTheta \bX + \bE, 
+		\end{align}
+		where $\bmu \in \Real^{s \times n}$ is the matrix of the intercept terms, $\bTheta \in \Real^{s \times p}$ is the matrix of the regression coefficients, and $\bE = \bracks{\, \bE_1, \bE_2, \cdots, \bE_n \,}$ is the $s \times n$ error matrix. We assume that each column of $\bE$ has mean $\boldzero_{s}$ and the common unknown nonsingular $s \times s$ covariance matrix $\bSigma_{\bE \bE}$. 
+		
+		\item \textit{Centered version:} We remove $\bmu$ from the equation by centering $\bX$ and $\bY$ and then estimate $\bTheta$ directly. To this end, we let 
+		\begin{align}\label{eq-center-mu}
+			\bmu = \bar{\bY} - \bTheta \bar{\bX}. 
+		\end{align}
+		Then, the model \eqref{eq-multivar-reg-data-mat} becomes 
+		\begin{align}\label{eq-multivar-reg-data-center}
+			\bY_c = \bTheta \bX_c + \bE. 
+		\end{align}
+		
+		\item \textit{Least squares estimation:} Apply the ``vec'' operation to both sides of \eqref{eq-multivar-reg-data-center}, we obtain 
+		\begin{align}\label{eq-multivar-reg-data-center-vec}
+			\mathrm{vec} \parens{\bY_c} = \parens{\bI_s \otimes \bX_c^{\top}} \mathrm{vec} \parens{\bTheta} + \mathrm{vec} \parens{\bE}, 
+		\end{align}
+		where we have $\mathrm{vec} \parens{\bY_c} \in \Real^{sn \times 1}$, $\bI_s \otimes \bX_c^{\top} \in \Real^{sn \times sp}$, $\mathrm{vec} \parens{\bTheta} \in \Real^{sp \times 1}$ and $\mathrm{vec} \parens{\bE} \in \Real^{sn \times 1}$. 
+		
+		Inspecting \eqref{eq-multivar-reg-data-center-vec}, we see it is a multiple linear regression problem. The error $\mathrm{vec} \parens{\bE}$ has the mean vector $\boldzero_{sn}$ and $sn \times sn$ block-diagonal covariance matrix 
+		\begin{align*}
+			\var \bracks{\mathrm{vec} \parens{\bE}} = \E \bracks[\big]{\mathrm{vec} \parens{\bE} \mathrm{vec} \parens{\bE}^\top} =\bSigma_{\bE \bE} \otimes \bI_n. 
+		\end{align*}
+		Assuming $\bX_c \bX_c^{\top}$ is nonsingular, we estimate $\mathrm{vec} \parens{\bTheta}$ using the generalized least-squares method and solve the following minimization problem 
+		\begin{align*}
+			\minimize_{\bTheta} \ \braces[\Bigg]{\parens[\big]{\mathrm{vec} \parens{\bY_c} - \parens{\bI_s \otimes \bX_c^{\top}} \mathrm{vec} \parens{\bTheta}} \bracks{\var \bracks{\mathrm{vec} \parens{\bE}}}^{-1} \parens[\big]{\mathrm{vec} \parens{\bY_c} - \parens{\bI_s \otimes \bX_c^{\top}} \mathrm{vec} \parens{\bTheta}}}. 
+		\end{align*}
+		Then, 
+		\begin{align*}
+			\mathrm{vec} \parens{\widehat{\bTheta}} = & \, \parens{ \parens{\bI_s \otimes \bX_c} \parens{ \bSigma_{\bE \bE} \otimes \bI_n}^{-1} \parens{\bI_s \otimes \bX_c^{\top}}}^{-1} \parens{\bI_s \otimes \bX_c} \parens{\bSigma_{\bE \bE} \otimes \bI_n}^{-1} \mathrm{vec} \parens{\bY_c} \nonumber \\ 
+			= & \, \parens{\bI_s \otimes \parens{\bX_c \bX_c^{\top}}^{-1} \bX_c} \mathrm{vec} \parens{\bY_c}, 
+		\end{align*}
+		using the properties of the Kronecker product. 
+		
+		If we ``un-vec'' everything, we obtain 
+		\begin{align}
+			\widehat{\bTheta} = & \, \bY_c \bX_c^\top \parens{\bX_c \bX_c^{\top}}^{-1}, \label{eq-ls-btheta} \\ 
+			\widehat{\bmu} = & \, \bar{\bY} - \widehat{\bTheta} \bar{\bX}. 
+		\end{align}
+		
+		\item \textit{Minimum-variance linear unbiased estimator of $\tr \parens{\bA \bTheta}$:} Let $\bA$ be a fixed matrix. Then, under the conditions above and if $\bX_c \bX_c^\top$ is nonsingular, then the minimum-variance linear unbiased estimator of $\tr \parens{\bA \bTheta}$ is given by $\tr \parens{\bA \widehat{\bTheta}}$. 
+		
+		\item \textit{Interpretation of $\widehat{\bTheta}$:}  Suppose we transpose both sides of \eqref{eq-multivar-reg-data-center} so that 
+		\begin{align*}
+			\bY_c^{\top} = \bX_c^\top \bTheta^\top + \bE^\top. 
+		\end{align*}
+		Let $\tilde{\by}_j \in \Real^n$ be the $j$-th column vector of $\bY_c^\top$, which represents all the $n$ mean-centered observations on the $j$-th output variable, for $j = 1, \cdots, s$. Then, $\tilde{\by}_j \in \Real^n$ can be modeled by the multiple regression equation 
+		\begin{align*}
+			\tilde{\by}_j = \bX_c^\top \btheta_j + \be_j, 
+		\end{align*}
+		where $\btheta_j$ is the $j$-th column of $\bTheta^\top$ and $\be_j$ is the $j$-th column of $\bE^\top$. The ordinary least-square estimator of $\btheta_j$ is 
+		\begin{align*}
+			\hat{\btheta}_j = \parens{\bX_c \bX_c^\top}^{-1} \bX_c \tilde{\by}_j, 
+		\end{align*}
+		which is exactly the $j$-th row of \eqref{eq-ls-btheta}. 
+		
+		Thus, simultaneous (unrestricted) least-squares estimation applied to all the $s$ equations of the multivariate regression model yields the \emph{same} results as does equation-by-equation least-squares. As a result, nothing is gained by estimating the equations jointly, even though the output variables $Y$ may be correlated. 
+		
+		In other words, even though the variables in $Y$ may be correlated, the LS estimator, $\widehat{\bTheta}$, of $\bTheta$ does \emph{not} contain any reference to that correlation. 
+		
+		\item \textit{Covariance Matrix of $\widehat{\bTheta}$:} We derive the covariance matrix of $\widehat{\bTheta}$. By the relationship $\bY_c = \bTheta \bX_c + \bE$, we have 
+		\begin{align*}
+			\widehat{\bTheta} = & \, \bY_c \bX_c^{\top} \parens{\bX_c \bX_c^\top }^{-1} \\ 
+			= & \, \parens{\bTheta \bX_c + \bE} \bX_c^{\top} \parens{\bX_c \bX_c^\top }^{-1} \\ 
+			= & \, \bTheta + \bE \bX_c^{\top} \parens{\bX_c \bX_c^\top }^{-1}. 
+		\end{align*}
+		It follows that 
+		\begin{align*}
+			\mathrm{vec} \parens{\widehat{\bTheta} - \bTheta} = \mathrm{vec} \parens{\bE \bX_c^{\top} \parens{\bX_c \bX_c^\top }^{-1}} = \parens{\bI_s \otimes \parens{\bX_c \bX_c^\top}^{-1} \bX_c} \mathrm{vec} \parens{\bE}, 
+		\end{align*}
+		and, hence, 
+		\begin{align*}
+			\var \bracks{\mathrm{vec} \parens{\widehat{\bTheta}}} = & \, \E \bracks{\mathrm{vec} \parens{\widehat{\bTheta} - \bTheta} \mathrm{vec} \parens{\widehat{\bTheta} - \bTheta}^\top} \nonumber \\ 
+			= & \, \parens{\bI_s \otimes \parens{\bX_c \bX_c^\top }^{-1} \bX_c} \parens{\bSigma_{\bE \bE} \otimes \bI_n} \parens{\bI_s \otimes \bX_c^{\top} \parens{\bX_c \bX_c^{\top}}^{-1}} \nonumber \\ 
+			= & \, \bSigma_{\bE \bE} \otimes \parens{\bX_c \bX_c^{\top}}^{-1}. 
+		\end{align*}
+		
+		\item \textit{Distribution of $\widehat{\bTheta}$:} If we assume that the errors in the model \eqref{eq-multivar-reg-data-mat} are distributed as i.i.d Gaussian random vectors, 
+		\begin{align*}
+			\bE_i \sim \Normal \parens{\boldzero_s, \bSigma_{\bE \bE}}, \qquad \text{ for all } i = 1, \cdots, n, 
+		\end{align*}
+		where $\bE_i$ denotes the $i$-th column of $\bE$, then, 
+		\begin{align*}
+			\mathrm{vec} \parens{\widehat{\bTheta}} \sim \Normal \parens{ \mathrm{vec} \parens{\bTheta}, \bSigma_{\bE \bE} \otimes \parens{\bX_c \bX_c^{\top}}^{-1}}. 
+		\end{align*}
+		
+		\item \textit{Fitted Values:} The $s \times n$ matrix $\widehat{\bY}$  of fitted values is given by 
+		\begin{align*}
+			\widehat{\bY} = \widehat{\bmu} + \widehat{\bTheta} \bX = \bar{\bY} + \widehat{\bTheta} \parens{\bX - \bar{\bX}}. 
+		\end{align*}
+		Also, we have 
+		\begin{align*}
+			\widehat{\bY}_c = \widehat{\bTheta} \bX_c = \bY_c \bX_c^\top \parens{\bX_c \bX_c^{\top}}^{-1} \bX_c = \bY_c \bH, 
+		\end{align*}
+		where the $n \times n$ matrix $\bH = \bX_c^\top \parens{\bX_c \bX_c^{\top}}^{-1} \bX_c$ is the \emph{hat matrix}. 		
+		
+		\item \textit{Residual Matrix:} The $s \times n$ residual matrix $\widehat{\bE}$ is the difference between the observed and fitted values of $\bY$, i.e., 
+		\begin{align*}
+			\widehat{\bE} := \bY - \widehat{\bY} = \bY_c - \widehat{\bTheta} \bX_c = \bY_c \parens{\bI_n - \bH}, 
+		\end{align*}
+		In addition, we also have 
+		\begin{align*}
+			\widehat{\bE} = & \, \parens{\bTheta \bX_c + \bE} - \parens{\bTheta + \bE \bX_c^{\top} \parens{\bX_c \bX_c^\top }^{-1}} \bX_c 
+			= \bE \parens{\bI_n - \bH}. 
+		\end{align*}
+		It follows that 
+		\begin{align*}
+			\E \bracks{ \mathrm{vec} \parens{\widehat{\bE}}} = & \, \boldzero_{ns}, \\ 
+			\var \bracks{ \mathrm{vec} \parens{\widehat{\bE}}} = & \, \bSigma_{\bE \bE} \otimes \parens{\bI_n - \bH}. 
+		\end{align*}
+		
+		\item \textit{Estimation of $\bSigma_{\bE \bE}$:} The $s \times s$ matrix version of the residual sum of squares is 
+		\begin{align*}
+			\bS_{\bE} := & \, \widehat{\bE} \widehat{\bE}^\top = \parens{\bY_c \parens{\bI_n - \bH}} \parens{\bY_c \parens{\bI_n - \bH}}^\top 
+			= \bY_c \parens{\bI_n - \bH} \bY_c^\top. 
+		\end{align*}
+		Also, it is easy to show 
+		\begin{align*}
+			\bS_{\bE} = & \, \bE \parens{\bI_n - \bH} \bE^\top. 
+		\end{align*}
+		Let $\bE_j$ be the $j$-th row of $\bE$. Then, the $\parens{j,k}$-th element of $\bS_{\bE}$ can be written as 
+		\begin{align*}
+			\bracks{\bS_{\bE}}_{\parens{j, k}} = \bE_j \parens{\bI_n - \bH} \bE_{k}^\top, 
+		\end{align*}
+		whence, 
+		\begin{align*}
+			\E \bracks[\big]{\bracks{\bS_{\bE}}_{\parens{j, k}}} = & \, \E \bracks{\tr \parens{\bI_n - \bH} \bE_k^\top \bE_j} \nonumber \\ 
+			= & \, \tr \parens{\bI_n - \bH} \bracks{\bSigma_{\bE \bE}}_{\parens{j, k}} \nonumber \\ 
+			= & \, \parens{n - p} \bracks{\bSigma_{\bE \bE}}_{\parens{j, k}}. 
+		\end{align*}
+		The matrix 
+		\begin{align*}
+			\widehat{\bSigma}_{\bE \bE} := \frac{1}{n-p} \bS_{\bE}
+		\end{align*}
+		is called the \emph{residual covariance matrix}. 
+		
+		\item \textit{Properties of $\widehat{\bSigma}_{\bE \bE}$:}
+		\begin{enumerate}
+			\item The matrix $\widehat{\bSigma}_{\bE \bE}$ is is statistically independent of $\widehat{\bTheta}$; 
+			\item The matrix $\widehat{\bSigma}_{\bE \bE}$ has a Wishart distribution with $n - p$ degrees of freedom and expectation $\bSigma_{\bE \bE}$. % is $\bSigma_{\bE \bE}$; that is, $\widehat{\bSigma}_{\bE \bE}$ is an unbiased estimator of the error covariance matrix $\bSigma_{\bE \bE}$. 
+		\end{enumerate}
+		
+		\item \textit{Estimator of $\var \bracks{\widehat{\bTheta}}$:} Using the results above, we can estimate $\var \bracks{\widehat{\bTheta}} = \bSigma_{\bE \bE} \otimes \parens{\bX_c \bX_c^\top}^{-1}$ by 
+		\begin{align}
+			\widehat{\var} \bracks{\mathrm{vec} \parens{\widehat{\bTheta}}} = \widehat{\bSigma}_{\bE \bE} \otimes \parens{\bX_c \bX_c^\top}^{-1}. 
+		\end{align}
+		
+		\item \textit{Confidence interval:} Let $\bgamma \in \Real^{sp}$ be an arbitrary vector and consider to construct a confidence interval of $\bgamma^\top \mathrm{vec} \parens{\bTheta}$. Assuming the error vectors are distributed as 
+		\begin{align*}
+			\bE_i \sim \Normal \parens{\boldzero_s, \bSigma_{\bE \bE}}, \qquad \text{ for all } i = 1, \cdots, n, 
+		\end{align*}
+		we have the quantity 
+		\begin{align}
+			t = \frac{\bgamma^\top \mathrm{vec} \parens{\widehat{\bTheta} - \bTheta}}{\sqrt{\bgamma^\top \parens{\widehat{\bSigma}_{\bE \bE} \otimes \parens{\bX_c \bX_c^\top}^{-1}} \bgamma}}
+		\end{align}
+		has the Student's $t$-distribution with $n - p$ degrees of freedom.  Thus, a $\parens{1 - \alpha} \times 100\%$ confidence interval for $\bgamma^\top \mathrm{vec} \parens{\bTheta}$ can be given by 
+		\begin{align*}
+			\bgamma^\top \mathrm{vec} \parens{\widehat{\bTheta}} \pm t_{n-p, 1-\frac{\alpha}{2}} \sqrt{\bgamma^\top \parens{\widehat{\bSigma}_{\bE \bE} \otimes \parens{\bX_c \bX_c^\top}^{-1}} \bgamma}, 
+		\end{align*}
+		where $t_{n-p, 1-\frac{\alpha}{2}}$ is the $\parens{1 - \alpha/2} \times 100 \%$ percentile of the $t$-distribution with degrees of freedom $n-p$. 
+
+	\end{enumerate}
+	
+	\item \textbf{Linear Constrained Estimation:} Consider the following model with centered data matrices $\bX_c$ and $\bY_c$ 
+	\begin{align*}
+		\bY_c = \bTheta \bX_c + \bE. 
+	\end{align*}
+	We require $\bTheta$ to satisfy a set of known linear constraints of the form 
+	\begin{align*}
+		\bK \bTheta \bL = \bGamma, 
+	\end{align*}
+	where the matrix $\bK \in \Real^{m \times s}$ and the matrix $\bL \in \Real^{p \times u}$ are full-rank matrices of known constants, and $\bGamma \in \Real^{m \times u}$ is a matrix of parameters (known or unknown). We often take $\bGamma = \boldzero_{m \times u}$. We require $m \le s$ and $u \le p$. 
+	
+	\begin{enumerate}
+		\item \textit{Example --- variable selection:} Suppose we wish to study whether a specific subset of the $p$ input variables has little or no effect on the behavior of the output variables. Suppose we arrange the rows of $\bX_c$ so that 
+		\begin{align*}
+			\bX_c = \begin{pmatrix}
+				\bX_{c, 1} \\ 
+				\bX_{c, 2}
+			\end{pmatrix}, 
+		\end{align*}
+		where $\bX_{c,1} \in \Real^{p_1 \times n}$ and $\bX_{c,2} \in \Real^{p_2 \times n}$ with $p_1 + p_2 = p$. Suppose we believe that the variables included in $\bX_{c,2}$ do \emph{not} belong in the regression. Corresponding to the partition of $\bX_c$, we set $\bTheta = \parens{\bTheta_1, \bTheta_2}$, so that 
+		\begin{align*}
+			\bY_c = \bTheta_1 \bX_{c,1} + \bTheta_2 \bX_{c,2} + \bE, 
+		\end{align*}
+		where $\bTheta_1 \in \Real^{s \times p_1}$ and $\bTheta_2 \in \Real^{s \times p_2}$. 
+		
+		To study whether the input variables included in $\bX_{c,2}$ can be eliminated from the model, we set 
+		\begin{align*}
+			\bK = \bI_s, \qquad \bL = \begin{pmatrix}
+				\boldzero_{p_1 \times p_2} \\ 
+				\bI_{p_2 \times p_2}
+			\end{pmatrix}, 
+		\end{align*}
+		so that $\bK \bTheta \bL = \bTheta_2 = \boldzero_{s \times p_2}$. 
+		
+		\item \textit{Constrained least-squares estimation:} To estimate $\bTheta$ under the linear constraint $\bK \bTheta \bL = \bGamma$, we consider the following optimization problem 
+		\begin{equation}\label{eq-opt-prob-constrained}
+			\begin{aligned}
+				\minimize_{\bTheta} & \, \sets[\Bigg]{ \tr \parens[\Big]{\parens{\bY_c - \bTheta \bX_c} \parens{\bY_c - \bTheta \bX_c}^\top} } \\ 
+				\text{subject to } & \, \bK \bTheta \bL = \bGamma. 
+			\end{aligned}
+		\end{equation}
+		Let $\widehat{\bTheta}^*$ be the minimizer of \eqref{eq-opt-prob-constrained} and $\bLambda$ be a matrix of Lagrangian coefficients. The normal equations are 
+		\begin{equation}
+			\begin{aligned}
+				\widehat{\bTheta}^* \bX_c \bX_c^\top + \bK^{\top} \bLambda \bL^\top = & \, \bY_c \bX_c^\top, \\ 
+				\bK \widehat{\bTheta}^* \bL = & \, \bGamma. 
+			\end{aligned}
+		\end{equation}
+		It follows that 
+		\begin{align*}
+			\widehat{\bTheta}^* = \widehat{\bTheta} - \bK^{\top} \bLambda \bL^\top \parens{\bX_c \bX_c^\top}^{-1}, 
+		\end{align*}
+		where $\widehat{\bTheta} = \bY_c \bX_c^\top \parens{\bX_c \bX_c^{\top}}^{-1}$ as we have shown before. Then, 
+		\begin{align*}
+			\bK \parens[\big]{\widehat{\bTheta} - \bK^{\top} \bLambda \bL^\top \parens{\bX_c \bX_c^\top}^{-1}} \bL = \bGamma, 
+		\end{align*} 
+		from which we obtain 
+		\begin{align*}
+			\bLambda = \parens{\bK \bK^\top}^{-1} \parens{\bK \widehat{\bTheta}\bL - \bGamma} \parens{\bL^\top \parens{\bX_c \bX_c^\top }^{-1} \bL}^{-1}, 
+		\end{align*}
+		assuming all inverses exist. Finally, we obtain 
+		\begin{align*}
+			\widehat{\bTheta}^* = \widehat{\bTheta} - \bK^{\top}\parens{\bK \bK^\top}^{-1} \parens{\bK \widehat{\bTheta}\bL - \bGamma} \parens{\bL^\top \parens{\bX_c \bX_c^\top }^{-1} \bL}^{-1} \bL^\top \parens{\bX_c \bX_c^\top}^{-1}. 
+		\end{align*}
+		
+		\item \textit{Multivariate Analysis of Variance (MANOVA):} 
+		\begin{itemize}
+			\item \underline{Residual sum of squares:} The residual sum of squares under the constrained model is given by 
+			\begin{align}
+				\bS_{\bE}^* := & \, \parens{\bY_c - \widehat{\bTheta}^* \bX_c} \parens{\bY_c - \widehat{\bTheta}^* \bX_c}^\top \nonumber \\ 
+				= & \, \parens[\big]{\bY_c - \widehat{\bTheta} \bX_c + \parens{\widehat{\bTheta} - \widehat{\bTheta}^*} \bX_c} \parens[\big]{\bY_c - \widehat{\bTheta} \bX_c + \parens{\widehat{\bTheta} - \widehat{\bTheta}^*} \bX_c}^\top \nonumber \\
+				= & \, \parens{\bY_c - \widehat{\bTheta} \bX_c} \parens[\big]{\bY_c - \widehat{\bTheta} \bX_c}^\top + \parens{\widehat{\bTheta} - \widehat{\bTheta}^*} \bX_c \bX_c^\top \parens{\widehat{\bTheta} - \widehat{\bTheta}^*}^\top, \label{eq-manova}
+			\end{align}
+			where 
+			\begin{itemize}
+				\item the first term on the RHS of \eqref{eq-manova} is the matrix version of the residual sum of squares, $\bS_{\bE}$, for the \emph{unconstrained} model, and 
+				\item the second term is the additional source of variation, $\bS_h := \bS_{\bE} - \bS_{\bE}^*$, due to dropping the constraints. 
+			\end{itemize}
+			
+			\item \underline{Regression sum of squares:} The \emph{regression sum of squares}, $\bS_{\mathrm{reg}}$, for the unconstrained model is given by 
+			\begin{align}
+				\bS_{\mathrm{reg}} := & \, \widehat{\bTheta} \bX_c \bX_c^\top \widehat{\bTheta}^\top \nonumber \\ 
+				= & \, \parens[\big]{\widehat{\bTheta}^* + \parens{\widehat{\bTheta} - \widehat{\bTheta}^*}} \bX_c \bX_c^\top \parens[\big]{\widehat{\bTheta}^* + \parens{\widehat{\bTheta} - \widehat{\bTheta}^*}}^\top \nonumber \\ 
+				= & \, \widehat{\bTheta}^* \bX_c \bX_c^\top \widehat{\bTheta}^*  + \parens{\widehat{\bTheta} - \widehat{\bTheta}^*} \bX_c \bX_c^\top \parens{\widehat{\bTheta} - \widehat{\bTheta}^*}^\top, \label{eq-manova-2}
+			\end{align}
+			where 
+			\begin{itemize}
+				\item the first term on the RHS of \eqref{eq-manova-2} is $\bS_{\mathrm{reg}}^*$, the matrix version of the regression sum of squares for the constrained model, and 
+				\item the second term is, again, $\bS_h$. 
+			\end{itemize}
+			
+			\item \underline{MANOVA Table:} Let $k = \rank \parens{\bK}$. We have the following MANOVA table. 
+			
+			\vspace{10pt}
+			
+			\begin{center}
+				\begin{tabular}{*{3}{c}}
+					\toprule
+					Source of Variation & df & Sum of Squares \\
+					\midrule
+					Constrained Model & $p - k$ & $\bS_{\mathrm{reg}}^* = \widehat{\bTheta}^* \bX_c \bX_c^\top \widehat{\bTheta}^*$ \\
+					Due to dropping constraints & $k$ & $\bS_h = \parens{\widehat{\bTheta} - \widehat{\bTheta}^*} \bX_c \bX_c^\top \parens{\widehat{\bTheta} - \widehat{\bTheta}^*}^\top$ \\
+					\midrule
+					Unconstrained model & $p$ & $\bS_{\mathrm{reg}} = \widehat{\bTheta} \bX_c \bX_c^\top \widehat{\bTheta}$ \\
+					Residual & $n - p - 1$ & $\bS_{\bE} = \parens{\bY_c - \widehat{\bTheta} \bX_c} \parens{\bY_c - \widehat{\bTheta} \bX_c}^\top$ \\
+					\midrule 
+					Total & $n - 1$ & $\bY_c \bY_c^\top$ \\ 
+					\bottomrule
+				\end{tabular}
+			\end{center}
+		\end{itemize}
+		
+		\item \textit{Expectation of $\bS_{\mathrm{reg}}$:} With the previous results, we have 
+		\begin{align*}
+			\E \bracks{\bS_h} = \bD \parens{\bK \widehat{\bTheta} \bL - \bGamma}  \parens{\bL^\top \parens{\bX_c \bX_c^{\top}}^{-1} \bL}^{-1} \parens{\bK \widehat{\bTheta} \bL - \bGamma}^{\top} \bD^\top + \bF \E \bracks{\bE \bG \bE^\top} \bF^{\top}, 
+		\end{align*}
+		where 
+		\begin{align*}
+			\bD = & \, \bK^\top \parens{\bK \bK^\top}^{-1}, \\ 
+			\bF = & \, \bD \bK, \\ 
+			\bG = & \, \bX_c^{\top} \parens{\bX_c \bX_c^\top}^{-1} \bL \parens{\bL^{\top} \parens{\bX_c \bX_c^\top}^{-1} \bL}^{-1} \bL^\top \parens{\bX_c \bX_c^{\top}}^{-1} \bX_c^\top. 
+		\end{align*}
+		It is easy to show 
+		\begin{align*}
+			\bF^2 = \bF = \bF^\top, \qquad \text{ and } \qquad \bG^2 = \bG = \bG^\top, 
+		\end{align*}
+		and 
+		\begin{align*}
+			\E \bracks{\bE \bG \bE^\top} = u \bSigma_{\bE \bE}, 
+		\end{align*}
+		where $u = \tr \parens{\bG} = \tr \parens{\bI_u}$ is the rank of $\bL$. 
+		
+		\item \textit{Hypothesis testing:} We test 
+		\begin{align*}
+			H_0: \bK \bTheta \bL = \bGamma \qquad \text{ vs. } \qquad H_1: \bK \bTheta \bL \neq \bGamma. 
+		\end{align*}
+		Under $H_0$, 
+		\begin{align*}
+			\E \bracks[\bigg]{\frac{1}{u} \bS_h} = & \, \bF \bSigma_{\bE \bE} \bF^\top, \\ 
+			\E \bracks[\bigg]{\frac{1}{n-p-1} \bS_{\bE}} = & \, \bSigma_{\bE \bE}. 
+		\end{align*}
+		A formal significance test of $H_0$ vs. $H_1$ can be realized through a function (e.g., determinant, trace, or largest eigenvalue) of the quantity $\bF \bS_h \bF^{-1} \parens{\bF \bS_{\bE} \bF^{\top}}^{-1}$. Examples include 
+		\begin{itemize}
+			\item Hotelling-Lawley trace statistic: $\tr \parens{\bS_h \bS_{\bE}^{-1}}$, 
+			\item Roy's largest root: $\lambda_{\max} \parens{\bS_h \bS_{\bE}^{-1}}$, and 
+			\item Wilks's lambda (likelihood ratio criterion): $\abs{\bS_{\bE}} / \abs{\bS_h + \bS_{\bE}}$. 
+		\end{itemize}
+		Under appropriate distribution assumptions, we reject $H_0$ if Hotelling-Lawley's trace statistic and Roy's largest root are small, or if Wilk's lambda is large. 
+	\end{enumerate}
+
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

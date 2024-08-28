@@ -1,0 +1,982 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 8, Basis Expansions and Regularization}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Basis Expansions and Regularization}{8}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 5, Basis Expansions and Regularization} in \textcite{Friedman2001-np}. In this chapter, we extend the linear models into nonlinear ones and include the transformations of input variables. 
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Motivation:} All models discussed in earlier chapters are linear ones. Linear model is a convenient approximation to the underlying true function $f$ (e.g., the regression function $\E \bracks{Y \,\vert\, X}$ or the Bayes rule classifier $\argmax_{y} \Pr \parens{Y = y \,\vert\, X}$). Benefits of a linear model include the following: 
+	\begin{enumerate}
+		\item linear models are easy to interpret; 
+		\item linear models are the first-order Taylor approximation to $f$. 
+	\end{enumerate}
+	In practice, it is extremely \emph{unlikely} that the underlying true function $f$ is \emph{not} linear. 
+	
+	\item \textbf{General Idea of Nonlinear Additive Models:} Let $h_m: \Real^p \to \Real$ denote the $m$-th transformation of $X$, for $m = 1, \cdots, M$, and fit the model 
+	\begin{align*}
+		f \parens{\bx} = \sum_{m=1}^M \beta_m h_m \parens{\bx}. 
+	\end{align*}
+	
+	\textit{Remark.} Note that $f$ may \emph{not} be linear in $\bx$ but is linear in $h_1 \parens{\bx}, \cdots, h_M \parens{\bx}$. 
+
+	\item \textbf{Examples of $h_m$:}
+	\begin{itemize}
+		\item $h_m \parens{\bx} = x_m$ for $m = 1, \cdots, p$, the original input variables; 
+		\item $h_m \parens{\bx} = x_j^k$ for $k \in \Natural$, the polynomial terms; 
+		\item $h_m \parens{\bx} = x_j \cdot x_k$, the interactions; 
+		\item $h_m \parens{\bx} = \log \parens{x_j}$ or $h_m \parens{\bx} = \sqrt{x_j}$, nonlinear transformations of $\bx$; 
+		\item $h_m \parens{\bx} = \indic \parens{L_m \le x_j < U_m}$, an indicator for a region of $x_j$. 
+	\end{itemize}
+	
+	\item \textbf{Advantage and Disadvantage of Using Basis Expansions:} 
+	\begin{enumerate}
+		\item \textit{Advantages:} Achieve more flexibility representation; 
+		\item \textit{Disadvantages:} 
+		\begin{itemize}
+			\item Can increase the complexity of a model; 
+			\item May lead to overfitting. 
+		\end{itemize}
+	\end{enumerate}
+	
+	\item \textbf{Methods of Controlling the Complexity of a Model:} There are three common approaches to control the complexity of a model: 
+	\begin{enumerate}
+		\item \textit{Restriction Method:} Decide before-hand to limit the class of functions. For example, limit the number of basis functions; 
+		\item \textit{Selection Method:} Adaptively scan the set of basis functions and include only those that contribute \emph{significantly} to the fit of the model. For example, forward and backward selection, and stagewise greedy approaches such as CART and MARS; 
+		\item \textit{Regularization Method:} Use all basis functions but restrict the coefficients. For example, ridge and lasso regression. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{II. Piecewise Polynomials and Splines} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Setup:} Assume $X$ is one-dimensional. Partition the range of $X$ into several discontiguous intervals and assume there are $M$ breaking points and, hence, $\parens{M+1}$ disjoint intervals. We represent $f$ by a separate polynomial in each sub-interval. Hence, the model we fit is 
+	\begin{align*}
+		f \parens{x} = \sum_{m=1}^{M+1} \beta_m h_m \parens{x}. 
+	\end{align*}
+	In this section, we assume $M = 2$ and let $\xi_1, \xi_2$ be the breaking points. 
+	
+	\item \textbf{Piecewise Constant Function:} The basis functions are of the form 
+	\begin{align*}
+		h_1 \parens{x} = & \, \indic \parens{x < \xi_1}, \\ 
+		h_2 \parens{x} = & \, \indic \parens{ \xi_1 \le x < \xi_2}, \\ 
+		h_{3} \parens{x} = & \, \indic \parens{ \xi_{2} \le x}. 
+	\end{align*}
+	Then, the estimate of $\beta_m$ on each interval is just the mean of the response in that particular interval. 
+	
+	\item \textbf{Piecewise Linear Function:} The basis functions are of the form 
+	\begin{equation*}
+		\begin{aligned}
+			h_1 \parens{x} = & \, \indic \parens{x < \xi_1} \cdot \parens{\beta_{1,0} + \beta_{1,1} x}, \\ 
+			h_2 \parens{x} = & \, \indic \parens{ \xi_1 \le x < \xi_2} \cdot \parens{\beta_{2,0} + \beta_{2,1} x}, \\ 
+			h_{3} \parens{x} = & \, \indic \parens{ \xi_{2} \le X} \cdot \parens{\beta_{3,0} + \beta_{3,1} x},
+		\end{aligned}
+	\end{equation*}
+	where we have 6 parameters to estimate in total. 
+	
+	\item \textbf{Continuous Piecewise Linear Function:} We use the basis functions in the piecewise linear function case and assume that $f$ is continuous at the breaking points. This leads to 
+	\begin{align*}
+		f \parens{\xi_i^+} = f \parens{\xi_i^-} \qquad \text{ for all } i = 1, 2, 
+	\end{align*}
+	that is, 
+	\begin{align*}
+		\beta_{i,0} + \beta_{i,1} \xi_i = \beta_{i+1, 0} + \beta_{i+1, 1} \xi_i, \qquad \text{ for } i = 1, 2. 
+	\end{align*}
+	Since we have 2 restrictions (1 restriction at each breaking point) here, we have 4 parameters to estimate in total. 
+	
+	\item \textbf{Piecewise Linear Basis Function:} We require the basis functions of the form 
+	\begin{align*}
+		h_1 \parens{x} = 1, \qquad h_2 \parens{x} = x, \qquad h_{3} \parens{x} = \parens{x - \xi_1}_+, \qquad h_{4} \parens{x} = \parens{x - \xi_2}_+, 
+	\end{align*}
+	where $\parens{x}_+ = \max \sets{x, 0}$. 
+	
+	\item \textbf{Cubic Spline:} We further extend the case of piecewise linear basis function above and wish to obtain \emph{smoother} function estimation by \textit{increasing} the order of the local polynomial. We require the continuity at the knots, and the continuous first- and second-order derivatives at the breaking points. This leads to the \textit{cubic spline}. The basis functions with two knots at $\xi_1$ and $\xi_2$ are 
+	\begin{equation*}
+		\begin{aligned}
+			h_1 \parens{x} = & \, 1, \hspace{10pt} && \, h_2 \parens{x} = x, \hspace{10pt} && \, h_{3} \parens{x} = x^2, \\ 
+			h_4 \parens{x} = & \, x^3, \hspace{10pt} && \, h_5 \parens{x} = \parens{x - \xi_1}^3_+, \hspace{10pt} && \, h_{6} \parens{x} = \parens{x - \xi_2}^3_+.  
+		\end{aligned}
+	\end{equation*}
+	In such a case, we need to estimate 6 parameters (due to the constraints), since 
+	\begin{align*}
+		\parens{3 \text{ regions}} \times \parens{4 \text{ parameters per region}} - \parens{2 \text{ knots}} \times \parens{3 \text{ constraints per knot}} = 6. 
+	\end{align*}
+	
+	\item \textbf{$M$-th Order Spline:} Suppose the knots are fixed at $\sets{ \xi_i }_{i=1}^K$ and the \emph{$M$-th order spline} is a piecewise polynomial of order $M$ with continuous derivatives up to order $ \parens{M-2}$.  The basis functions are 
+	\begin{equation*}
+		\begin{aligned}
+			h_j \parens{x} = & \, x^{j-1}, \qquad \qquad && \, j = 1, \cdots, M, \\
+			h_{M + l} \parens{x} = & \, \parens{x - \xi_l}_+^{M-1}, \qquad \qquad && \, l = 1, \cdots, K, 
+		\end{aligned} 
+	\end{equation*}
+	where we use the truncated power basis set. 
+	
+	\textit{Remarks.} 
+	\begin{itemize}
+		\item The cubic spline has order $M = 4$. 
+		
+		\item It is claimed that cubic splines are the \emph{lowest} order spline for which the knot-discontinuity is \emph{not} visible to the human eye. 
+		
+		\item The fixed-knot splines are also known as \textit{regression splines}. One needs to select 
+		\begin{itemize}
+			\item the order of the spline, 
+			\item the number of knots, and 
+			\item the placement of knots. 
+		\end{itemize}
+		One approach is to parametrize a family of splines by the number of basis functions or degrees of freedom and have the knots at the observations. 
+		
+		\item Since the space of spline functions of a particular order and knot sequence is a \textit{vector space}, there are many equivalent bases for representation. 
+
+	\end{itemize}
+	
+	\item \textbf{Natural Cubic Splines:} 
+	\begin{enumerate}
+		\item \textit{Motivation:} At the boundaries, the polynomial fits can be erratic and \textit{extrapolation} can be dangerous. The spline models can behave bad at the boundaries. To remedy this problem, we introduce the \textit{natural cubic spline}. 
+		
+		\item \textit{Definition:} \emph{Natural cubic spline} requires that the function is \emph{linear} beyond the boundary knots. 
+
+		\item \textit{Basis Functions:} A natural cubic spline with $K$ knots $\sets{\xi_k}_{k=1}^K$ is represented by $K$ basis functions 
+		\begin{equation}\label{eq-natural-spline-1}
+			\begin{aligned}
+				N_1 \parens{x} = & \, 1, \\ 
+				N_2 \parens{x} = & \, x, \\ 
+				N_{k+2} \parens{x} = & \, d_k \parens{x} - d_{K-1} \parens{x} \qquad \text{ for } k = 1, \cdots, K-2,
+			\end{aligned}
+		\end{equation}
+		where
+		\begin{equation}\label{eq-natural-spline-2}
+			d_k \parens{x} = \frac{\parens{x - \xi_k}_+^3 - \parens{x - \xi_K}_+^3}{\xi_K - \xi_k}. 
+		\end{equation}
+		
+		\item \textit{Derivation of \eqref{eq-natural-spline-1}:} We start from the truncated power series representation for cubic splines with $K$ interior knots, and let 
+		\begin{align}\label{eq-natural-spline-3}
+			f \parens{x} = \sum_{j=0}^3 \beta_j x^j + \sum_{k=1}^K \theta_k \parens{x - \xi_k}_+^3. 
+		\end{align}
+		We show that the natural boundary conditions for natural cubic splines imply 
+		\begin{align}\label{eq-natural-spline-4}
+			\beta_2 = 0, \qquad \beta_3 = 0, \qquad \sum_{k=1}^K \theta_k = 0, \qquad \text{ and } \qquad \sum_{k=1}^K \xi_k \theta_k = 0. 
+		\end{align}
+		
+		To start with, for all $x \in \parens{-\infty, \xi_1}$, we have 
+		\begin{align*}
+			f \parens{x} = \beta_0 + \beta_1 x + \beta_2 x^2 + \beta_3 x^3. 
+		\end{align*}
+		To ensure $f$ is linear over $\parens{-\infty, \xi_1}$, we must have $\beta_2 = 0$ and $\beta_3 = 0$. 
+		
+		For all $x \in \parens{\xi_K, \infty}$, we have 
+		\begin{align*}
+			f \parens{x} = & \, \beta_0 + \beta_1 x + \sum_{k=1}^K \theta_k \parens{x - \xi_k}^3 \\ 
+			= & \, \beta_0 + \beta_1 x + \parens[\bigg]{\sum_{k=1}^K \theta_k} x^3 - 3 \parens[\bigg]{\sum_{k=1}^K \theta_k \xi_k} x^2 + 3 \parens[\bigg]{\sum_{k=1}^K \theta_k \xi_k^2} x - \parens[\bigg]{\sum_{k=1}^K \theta_k \xi_k^3}. 
+		\end{align*}
+		To ensure $f$ is linear over $\parens{\xi_K, \infty}$, we must have 
+		\begin{align*}
+			\sum_{k=1}^K \theta_k = 0 \qquad \text{ and } \qquad \sum_{k=1}^K \theta_k \xi_k = 0. 
+		\end{align*}
+		Now, let 
+		\begin{align*}
+			S_1 := & \, \sets[\Big]{f \bigm| f \text{ is spanned by \eqref{eq-natural-spline-1}} }, \\ 
+			S_2 := & \, \sets[\Big]{f \bigm| f \text{ is of the form \eqref{eq-natural-spline-3} with \eqref{eq-natural-spline-4} satisfied} }. 
+		\end{align*}
+		We show $S_1 = S_2$ by showing $S_1 \subseteq S_2$ and $S_2 \subseteq S_1$. 
+		
+		\underline{To show $S_1 \subseteq S_2$:} Let $f \parens{x} = \beta_1 + \beta_2 x + \sum_{k=1}^{K-2} \gamma_k N_k \parens{x} \in S_1$. It is obvious that such an $f$ can be written in the form of \eqref{eq-natural-spline-3}. We need to show that $f$ satisfies \eqref{eq-natural-spline-4}. Note that it is obvious $\beta_2 = \beta_3 = 0$. In addition, note that 
+		\begin{align*}
+			f \parens{x} = & \, \beta_1 + \beta_2 x + \sum_{k=1}^{K-2} \frac{\gamma_k}{\xi_K - \xi_k} \parens{x - \xi_k}_+^3 + \sum_{k=1}^{K-2} \frac{-\gamma_k}{\xi_K - \xi_{K-1}} \parens{x - \xi_{K-1}}_+^3 \\ 
+			& \qquad + \sum_{k=1}^{K-2} \parens[\bigg]{\frac{-\gamma_k}{\xi_K - \xi_k} + \frac{\gamma_k}{\xi_K - \xi_{K-1}}} \parens{x - \xi_K}_+^3, 
+		\end{align*}
+		that is, 
+		\begin{align*}
+			\theta_k = & \, \frac{\gamma_k}{\xi_K - \xi_k}, \qquad \text{ for all } k = 1, \cdots, K-2, \\ 
+			\theta_{K-1} = & \, \sum_{k=1}^{K-2} \frac{-\gamma_k}{\xi_K - \xi_{K-1}}, \\ 
+			\theta_K = & \, \sum_{k=1}^{K-2} \parens[\bigg]{\frac{-\gamma_k}{\xi_K - \xi_k} + \frac{\gamma_k}{\xi_K - \xi_{K-1}}}. 
+		\end{align*}
+		Thus, 
+		\begin{align*}
+			\sum_{k=1}^K \theta_k = & \, \sum_{k=1}^{K-2} \frac{\gamma_k}{\xi_K - \xi_k} + \sum_{k=1}^{K-2} \frac{-\gamma_k}{\xi_K - \xi_{K-1}} + \sum_{k=1}^{K-2} \parens[\bigg]{\frac{-\gamma_k}{\xi_K - \xi_k} + \frac{\gamma_k}{\xi_K - \xi_{K-1}}} = 0, \\ 
+			\sum_{k=1}^K \xi_k \theta_k = & \, \sum_{k=1}^{K-2} \frac{\xi_k \gamma_k}{\xi_K - \xi_k} + \xi_{K-1} \sum_{k=1}^{K-2} \frac{-\gamma_k}{\xi_K - \xi_{K-1}} + \xi_K \sum_{k=1}^{K-2} \parens[\bigg]{ \frac{-\gamma_k}{\xi_K - \xi_k} + \frac{\gamma_k}{\xi_K - \xi_{K-1}}} \\ 
+			= & \, \sum_{k=1}^{K-2} \frac{1}{\xi_K - \xi_k} \parens{\xi_k \gamma_k - \xi_K \gamma_k} + \sum_{k=1}^{K-2} \frac{1}{\xi_K - \xi_{K-1}} \parens{- \xi_{K-1} \gamma_k + \xi_K \gamma_k}  \\ 
+			= & \, -\sum_{k=1}^{K-2} \gamma_k + \sum_{k=1}^{K-2} \gamma_k  \\ 
+			= & \, 0. 
+		\end{align*}
+		This shows $S_1 \subseteq S_2$. 
+		
+		\underline{To show $S_2 \subseteq S_1$:} Conversely, let $f \parens{x} = \beta_0 + \beta_1 x + \sum_{k=1}^K \theta_k \parens{x - \xi_k}_+^3 \in S_2$ with coefficients satisfying \eqref{eq-natural-spline-4}. From \eqref{eq-natural-spline-2}, we know, for all $k = 1, \cdots, K-2$, 
+		\begin{align*}
+			\parens{x - \xi_k}_+^3 = \parens[\big]{N_{k+2} \parens{x} + d_{K-1} \parens{x} } \parens{\xi_K - \xi_k} + \parens{x - \xi_K}_+^3. 
+		\end{align*}
+		Thus, we can write $f$ as 
+		\begin{align*}
+			f \parens{x} = & \, \beta_0 N_1 \parens{x} + \beta_1 N_2 \parens{x} \\ 
+			& \qquad + \sum_{k=1}^{K-2} \theta_k \parens[\Big]{\parens[\big]{N_{k+2} \parens{x} + d_{K-1} \parens{x} } \parens{\xi_K - \xi_k} + \parens{x - \xi_K}_+^3} \\ 
+			& \qquad \qquad + \theta_{K-1} \parens{x - \xi_{K-1}}_+^3 + \theta_{K} \parens{x - \xi_{K}}_+^3 \\ 
+			= & \, \beta_0 N_1 \parens{x} + \beta_1 N_2 \parens{x} + \sum_{k=1}^{K-2} \theta_k \parens{\xi_K - \xi_k} N_{k+2} \parens{x} \\ 
+			& \qquad  + \sum_{k=1}^{K-2} \theta_k \parens[\Big]{ \parens{\xi_K - \xi_k} d_{K-1} \parens{x} + \parens{x - \xi_K}_+^3} \\ 
+			& \qquad \qquad + \theta_{K-1} \parens{x - \xi_{K-1}}_+^3 + \theta_{K} \parens{x - \xi_{K}}_+^3. 
+		\end{align*}
+		To complete the proof, it is sufficient to show, for all $x$, 
+		\begin{align}\label{eq-natural-spline-5}
+			\sum_{k=1}^{K-2} \theta_k \parens[\Big]{ \parens{\xi_K - \xi_k} d_{K-1} \parens{x} + \parens{x - \xi_K}_+^3} + \theta_{K-1} \parens{x - \xi_{K-1}}_+^3 + \theta_{K} \parens{x - \xi_{K}}_+^3 = 0. 
+		\end{align}
+		In \eqref{eq-natural-spline-5}, the coefficient associated with $\parens{x-\xi_{K-1}}_+^3$ is 
+		\begin{align*}
+			& \, \sum_{k=1}^{K-2} \theta_k \frac{\xi_K - \xi_k}{\xi_K - \xi_{K-1}} + \theta_{K-1} \\ 
+			= & \, \frac{1}{\xi_K - \xi_{K-1}} \sum_{k=1}^{K-2} \parens[\Big]{ \theta_k \xi_K - \theta_k \xi_k + \theta_{K-1} \xi_K - \theta_{K-1} \xi_{K-1}} \\ 
+			= & \, \frac{1}{\xi_K - \xi_{K-1}} \bracks[\bigg]{ - \parens{\theta_{K-1} + \theta_K} \xi_K - \parens[\bigg]{ \sum_{k=1}^{K-2} \theta_k \xi_k } + \theta_{K-1} \xi_K - \theta_{K-1} \xi_{K-1}}  \\ 
+			= & \, \frac{1}{\xi_K - \xi_{K-1}} \sum_{k=1}^{K} \theta_k \xi_k \\ 
+			= & \, 0. 
+		\end{align*}
+		In addition, the coefficient associated with $\parens{x-\xi_{K}}_+^3$ is 
+		\begin{align*}
+			& \, - \sum_{k=1}^{K-2} \theta_k \frac{\xi_K - \xi_k}{\xi_K - \xi_{K-1}} + \sum_{k=1}^{K-2} \theta_k + \theta_K \\ 
+			= & \, \frac{1}{\xi_K - \xi_{K-1}} \sum_{k=1}^{K-2} \parens[\Big]{- \theta_k \parens{\xi_K - \xi_k} } + \sum_{k=1}^{K-2} \theta_k + \theta_K \\ 
+			= & \, \frac{1}{\xi_K - \xi_{K-1}} \bracks[\Bigg]{ - \xi_K \sum_{k=1}^{K-2} \theta_k + \sum_{k=1}^{K-2} \theta_k \xi_k} + \sum_{k=1}^{K-2} \theta_k + \theta_K \\ 
+			= & \, \frac{1}{\xi_K - \xi_{K-1}} \bracks[\Big]{ - \xi_K \parens{-\theta_{K-1} - \theta_K} - \parens{ \theta_{K-1} \xi_{K-1} - \theta_K \xi_K }} + \sum_{k=1}^{K-2} \theta_k + \theta_K \\ 
+			= & \, \frac{1}{\xi_K - \xi_{K-1}} \bracks[\Big]{ \xi_K \theta_{K-1} + \xi_{K-1} \theta_{K-1} } + \sum_{k=1}^{K-2} \theta_k + \theta_K \\ 
+			= & \, \theta_{K-1} + \sum_{k=1}^{K-2} \theta_k + \theta_K \\ 
+			= & \, 0. 
+		\end{align*}
+		Thus, $S_2 \subseteq S_1$. The proof is complete. 
+				
+		\item \textit{Disadvantage:} Assuming the function is linear near the boundaries leads to bias in those regions, but is often considered reasonable. 
+	
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{III. Smoothing Splines} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Motivation:} Assume we have a set of pairs of observations $\sets{\parens{x_i, y_i} }_{i=1}^n$. Instead of selecting the number and the locations of knots in cubic spline, we use a maximal set of knots and control the complexity of the fit by regularization. The resulting spline basis method is called \textit{smoothing spline}. 
+	
+	\item \textbf{Problem Statement:} Among all functions $f$ with two continuous derivatives, we wish to find the one that minimizes the penalized residual sum of squares
+	\begin{align}\label{eq-smoothing-spline}
+		\mathrm{RSS}_{\lambda} \parens{f} := \underbrace{\sum_{i=1}^n \parens{y_i - f \parens{x_i}}^2 }_{T_1} + \lambda \underbrace{ \int \parens[\big]{f''\parens{t}}^2 \diff t}_{T_2}, 
+	\end{align}
+	where $\lambda > 0$ is a smoothing parameter. 
+	
+	\textit{Remark.} $T_1$ measures the goodness of fit of $f$ to the data, and $T_2$ penalizes curvature in the function and controls the complexity of $f$ (recall that the second-order derivative is a measure of roughness/curvature), and $\lambda > 0$ establishes a tradeoff between the two. 
+	
+	\item \textbf{Effects of $\lambda$:} Consider the following two extreme cases: 
+	\begin{itemize}
+		\item $\lambda = 0$: $f$ can be any function that interpolates the data; 
+		\item $\lambda = \infty$: $f$ is the simple least squares line fit, since no second derivative can be tolerated. 
+	\end{itemize}
+	Hence, $\lambda$ indexes an class of functions from very rough to very smooth. 
+	
+	\item \textbf{Characterizing the Solution to \eqref{eq-smoothing-spline}:} The problem \eqref{eq-smoothing-spline} is defined on an infinite-dimensional function space --- the Sobolev space of functions for which the second-order derivative is defined. We show that the solution is of finite dimension, is unique, and is a natural cubic spline with knots at the unique values of the $x_i$'s, for $ i = 1, \cdots, n$. 
+	
+	Suppose that $n \ge 2$, and that $g$ is the natural cubic spline interpolant to the pairs $\sets{ \parens{x_i, y_i} }_{i=1}^n$, with $-\infty < a < x_1 < \cdots < x_n < b$. This is a natural spline with a knot at every $x_i$. 
+	%being an N-dimensional space of functions, we can determine the coefficients such that it interpolates the sequence zi exactly. 
+	Let $\tilde{g}$ be any other differentiable function on $\bracks{a, b}$ that interpolates the $n$ pairs, 	and $h := \tilde{g} - g$. 
+	
+	Let $x_0 = a$ and $x_{n+1} = b$. Using the piecewise nature of $g$ and the integration by parts, we have 
+	\begin{align*}
+		\int_a^b g'' \parens{x} h'' \parens{x} \diff x = & \, \sum_{i=0}^{n} \int_{x_i}^{x_{i+1}} g'' \parens{x} h'' \parens{x} \diff x \\
+		= & \, \sum_{i=0}^n \bracks[\Bigg]{g'' \parens{x} h' \parens{x} \bigg\vert_{x_{i}}^{x_{i+1}} - \int_{x_{i}}^{x_{i+1}} g''' \parens{x} h' \parens{x} \diff x}. 
+	\end{align*}
+	Using the fact that $g$ is a natural cubic spline that is twice continuously differentiable and is linear beyond $x_1$ and $x_n$, we have 
+	\begin{align*}
+		\sum_{i=0}^n g'' \parens{x} h' \parens{x} \bigg\vert_{x_{i}}^{x_{i+1}} = & \, g'' \parens{x_1} h' \parens{x_1} - g'' \parens{a} h' \parens{a} + \sum_{i=1}^{n-1} \parens[\big]{g'' \parens{x_{i+1}} h'\parens{x_{i+1}} - g'' \parens{x_{i}} h'\parens{x_{i}}} \\ 
+		& \qquad + g'' \parens{b} h' \parens{b} - g'' \parens{x_{n}} h' \parens{x_{n}} \\
+		= & \, g'' \parens{b} h' \parens{b} - g'' \parens{a} h' \parens{a} \\
+		= & \, 0.
+	\end{align*}
+	Applying the integration by parts again, we have
+	\begin{align*}
+		& \, \sum_{i=0}^n \int_{x_{i}}^{x_{i+1}} g''' \parens{x} h' \parens{x} \diff x \\
+		= & \, \sum_{i=0}^n \bracks[\bigg]{g''' \parens{x} h \parens{x} \bigg\vert_{x_i}^{x_{i+1}} - \int_{x_i}^{x_{i+1}} g^{\parens{4}} \parens{x} h \parens{x} \diff x} \\
+		\stackrel{\text{(i)}}{=} & \, \sum_{i=0}^n g''' \parens{x} h \parens{x} \bigg\vert_{x_i}^{x_{i+1}} \\
+		= & \, g''' \parens{x_1^-} h \parens{x_1^-} - g''' \parens{a^+} h \parens{a^+} + \sum_{i=1}^{n-1} \parens[\big]{g''' \parens{x_{i+1}^-} h \parens{x_{i+1}^-} - g''' \parens{x_{i}^+} h \parens{x_{i}^+}} \\
+		& \qquad + g''' \parens{b^-} h \parens{b^-} - g''' \parens{x_{n}^+} h \parens{x_n^+} \\
+		\stackrel{\text{(ii)}}{=} & \, \sum_{i=1}^{n-1} \parens[\big]{g''' \parens{x_{i+1}^-} h \parens{x_{i+1}} - g''' \parens{x_{i}^+} h \parens{x_{i}}} \\
+		\stackrel{\text{(iii)}}{=} & \, \sum_{i=1}^{n-1} \parens[\big]{g''' \parens{x_{i}^+} h \parens{x_{i+1}} - g''' \parens{x_{i}^+} h \parens{x_{i}}} \\
+		= & \,  \sum_{i=1}^{n-1} g''' \parens{x_{i}^+} \parens[\big]{ h \parens{x_{i+1}} - h \parens{x_{i}}} \\
+		\stackrel{\text{(iv)}}{=} & \, 0.
+	\end{align*}
+	In the derivation above, we use the fact $\int_{x_i}^{x_{i+1}} g^{\parens{4}} \parens{x} h \parens{x} \diff x = 0$ for all $i = 0, \cdots, n$ in (i), since $g$ is a cubic spline and has zero fourth derivative, use $g''' \parens{x_1^-} = g''' \parens{a^+} = g''' \parens{b^-} = g''' \parens{x_n^+} = 0$ in (ii), use $g'''$ is a piecewise constant function and $g''' \parens{x_{i}^+} = g''' \parens{x_{i+1}^-}$ in (iii), and use $h = \tilde{g} - g$ and both $g$ and $\tilde{g}$ interpolates the $n$ pairs of data points in (iv). 
+	
+	Next, we show that $\int_a^b \parens{\tilde{g}'' \parens{t}}^2 \diff t \ge \int_a^b \parens{g'' \parens{t}}^2 \diff t$ and that the equality can only hold if $h$ is identically zero on $\bracks{a, b}$. By the definition of $h$, we have $\tilde{g} = h + g$. Hence,
+	\begin{align*}
+		\int_a^b \parens{g'' \parens{t}}^2 \diff t = & \, \int_a^b \parens[\big]{h'' \parens{t} + g \parens{t}}^2 \diff t \\
+		= & \, \int_a^b \parens{h'' \parens{t}}^2 \diff t + 2 \int_a^b h'' \parens{t} g'' \parens{t} \diff t + \int_a^b \parens{g'' \parens{t}}^2 \diff t \\
+		= & \, \int_a^b \parens{h'' \parens{t}}^2 \diff t + \int_a^b \parens{g'' \parens{t}}^2 \diff t \\
+		\ge & \, \int_a^b \parens{g'' \parens{t}}^2 \diff t. 
+	\end{align*}
+	The last inequality becomes an equality if and only if $\int_a^b \parens{h'' \parens{t}}^2 \diff t = 0$, which means $h'' \parens{x} = 0$ for all $x \in \parens{a, b}$. This implies $h \parens{x} = cx + d$ for some $c, d \in \Real$. Since $n \ge 2$ and $h \parens{x_i} = g \parens{x_i} - \tilde{g} \parens{x_i} = 0$ for all $i = 1, \cdots, n$, this implies that $c = d = 0$, i.e., $h$ is identically zero. 
+	
+	Finally, we argue that, for a fixed $\lambda > 0$, the minimizer to \eqref{eq-smoothing-spline} must be a cubic spline with knots at each of the $x_i$. Denote this minimizer to be $\hat{g}$. Suppose that we have a $\tilde{g} \neq \hat{g}$ that interpolates the data points. Then, we have 
+	\begin{align*}
+		\sum_{i=1}^n \parens{y_i - \hat{g} \parens{x_i}}^2 = \sum_{i=1}^n \parens{y_i - \tilde{g} \parens{x_i}}^2.  
+	\end{align*}
+	In addition, $\lambda \int_{a}^b \parens{\tilde{g}'' \parens{t}}^2 \diff t > \lambda \int_{a}^b \parens{\hat{g}'' \parens{t}}^2 \diff t$. In other words, $\mathrm{RSS}_{\lambda}$ does \emph{not} achieve the minimum at $\tilde{g}$. The desired result follows. 
+	
+	\textit{Remark.} Consider to minimize the following function 
+	\begin{align*}
+		\mathrm{RSS}_{\bw, \lambda} \parens{f} := \sum_{i=1}^n w_i \parens{y_i - f \parens{x_i}}^2 + \lambda \int \parens[\big]{f''\parens{t}}^2 \diff t, 
+	\end{align*}
+	where $\bw := \parens{w_1, \cdots, w_n}^\top$ is the weight vector and $w_i$ is the weight of the $i$-th observation. Using a similar argument as above, we can show the minimizer of $\mathrm{RSS}_{\bw, \lambda}$ is also a natural spline with knots at unique observations $x_1, \cdots, x_n$. 
+	
+	\item \textbf{Algorithm:} Since the solution to \eqref{eq-smoothing-spline} is a natural cubic spline, we know it must be of the form 
+	\begin{align}\label{eq-smoothing-spline-sol}
+		f \parens{x} = \sum_{j=1}^n \theta_j N_j \parens{x}, 
+	\end{align}
+	where the $\sets{N_j}_{j=1}^n$'s are an $n$-dimensional set of basis functions for representing this family of natural splines. 
+	
+	Plugging \eqref{eq-smoothing-spline-sol} into \eqref{eq-smoothing-spline} yields the following criterion 
+	\begin{align*}
+		\mathrm{RSS}_{\lambda} \parens{\btheta} := \parens{\bY - \bN \btheta}^\top \parens{\bY - \bN \btheta} + \lambda \btheta^\top \bOmega \btheta, 
+	\end{align*}
+	where $\bracks{\bN}_{i,j} = N_j \parens{x_i}$ and 
+	\begin{align*}
+		\bracks{\bOmega}_{j,k} = \int N_{j}'' \parens{t} N_{k}'' \parens{t} \, \diff t. 
+	\end{align*}
+	Then, 
+	\begin{align*}
+		\frac{\partial \mathrm{RSS}_{\lambda} \parens{\btheta}}{\partial \btheta} = & \, -2 \bN^\top \parens{\bY - \bN\btheta} + 2 \lambda \bOmega \btheta, \\
+		\frac{\partial^2 \mathrm{RSS}_{\lambda} \parens{\btheta} }{\partial \btheta^2} = & \, 2 \parens{\bN^\top \bN + \lambda \bOmega} \succ 0. 
+	\end{align*}
+	We set the first-order derivative to be $\boldzero_n$ and obtain the solution to $\btheta$ 
+	\begin{align*}
+		\widehat{\btheta} = \parens{\bN^\top \bN + \lambda \bOmega}^{-1} \bN^\top \bY, 
+	\end{align*}
+	Then, plug $\widehat{\btheta}$ into \eqref{eq-smoothing-spline-sol}, we obtain the fitted smoothing spline is 
+	\begin{align*}
+		\hat{f}_{\lambda} \parens{x} = \sum_{j=1}^N \hat{\theta}_j N_j \parens{x}, 
+	\end{align*}
+	where $\hat{\theta}_j$ is the $j$-th component of $\widehat{\btheta}$. 
+	
+	% \textit{Remark.} A smoothing spline with pre-chosen $\lambda$ is an example of a \emph{linear smoother}, since the estimated parameter $\widehat{\btheta}$ is a linear combination of $y_i$'s. 
+	
+	\item \textbf{Smoother Matrix in Smoothing Spline:} We write the fitted values collectively in the matrix notation as
+	\begin{align*}
+		\widehat{\bY} = \underbrace{\bN \parens{\bN^\top \bN + \lambda \bOmega}^{-1} \bN^\top}_{\bS_\lambda} \bY. 
+	\end{align*}
+	The matrix $\bS_\lambda := \bN \parens{\bN^\top \bN + \lambda \bOmega}^{-1} \bN^\top$ is called the \textit{smoother matrix}. 
+	
+	\textit{Remark.} Note that the fitted value vector $\widehat{\bY}$ is linear in $\bY$ and, therefore, a smoothing spline with a pre-specified $\lambda$ is an example of a \textit{linear smoother}. Also note that the smoother matrix $\bS_\lambda$ only depends on $x_i$ and $\lambda$. 
+	
+	\item \textbf{Degrees of Freedom in Smoothing Spline:} The \textit{effective degrees of freedom} a smoothing spline is 
+	\begin{align*}
+		\mathrm{df}_\lambda = \tr \parens{\bS_\lambda}. 
+	\end{align*}
+	
+	\item \textbf{Smoother Matrix and Degrees of Freedom in Cubic Spline:} In the cubic spline setting, let $\bB_{\bxi}$ be an $n \times M$ matrix of $M$ cubic-spline basis functions evaluated at the $n$ training points $x_i$, with knot sequence $\bxi$, and $ M \ll n$. The fitted spline value vector is
+	\begin{align*}
+		\widehat{\bY} = \bB_{\bxi} \parens{\bB_{\bxi}^\top \bB_{\bxi}}^{-1} \bB_{\bxi}^\top \bY = \bH_{\bxi} \bY. 
+	\end{align*}
+	Then, the linear operator $ \bH_{\bxi} $ is a \emph{projection operator} or the \emph{hat matrix}. 
+	
+	Here, $M = \tr \parens{\bH_{\bxi}}$ is the dimension of the projection space, which is also the number of basis functions, and hence the number of parameters involved in the fit. 
+	
+	\item \textbf{A Comparison between $\bS_{\lambda}$ and $\bH_{\bxi}$:}
+	\begin{enumerate}
+		\item Both are symmetric, positive semidefinite matrices; 
+		\item $\bH_{\bxi}$ is idempotent, meaning that $\bH_{\bxi} = \bH_{\bxi} \bH_{\bxi}$, while $\bS_\lambda$ is \emph{not} and $\bS_\lambda \bS_\lambda \preceq \bS_\lambda$; 
+		\item $\bH_{\bxi}$ has rank $M$, while $\bS_\lambda$ has rank $n$. 
+	\end{enumerate}
+	
+	\item \textbf{Further Analysis of the Smoother Matrix $\bS_\lambda$:} 
+	\begin{enumerate}
+		\item Assuming $\bN$ is invertible, we can write $\bS_{\lambda}$ in the \textit{Reinsch form} as 
+		\begin{align*}
+			\bS_{\lambda} = & \, \bN \parens{\bN^\top \bN + \lambda \bOmega }^{-1} \bN^\top \\
+			= & \, \bN \parens[\big]{\bN^\top \parens{\bI + \lambda \parens{ \bN^\top }^{-1} \bOmega \bN^{-1}} \bN}^{-1} \bN^\top  \\
+			= & \, \parens{\bI + \lambda \bK}^{-1}, 
+		\end{align*}
+		where $\bK := \parens{ \bN^\top }^{-1} \bOmega \bN^{-1}$ does \emph{not} depend on $\lambda$. 
+		
+		\item We can re-write the optimization problem \eqref{eq-smoothing-spline-sol} as 
+		\begin{align*}
+			\minimize_{\boldf} \, \parens{\bY - \boldf}^\top \parens{\bY - \boldf} + \lambda \boldf^\top \bK \boldf, 
+		\end{align*}
+		where $\bK$ is known as the \emph{penalty matrix}. The minimizer is exactly 
+		\begin{align*}
+			\widehat{\bY} = \parens{\bI + \lambda \bK}^{-1} \bY = \bS_{\lambda} \bY. 
+		\end{align*}
+		
+		\item By the spectral decomposition theorem, we can write the smoother matrix $\bS_\lambda$ as 
+		\begin{align*}
+			\bS_\lambda = \sum_{i = 1}^n \rho_i \parens{\lambda} \bu_i \bu_i^\top
+		\end{align*}
+		where
+		\begin{align*}
+			\rho_i \parens{\lambda} = \frac{1}{1 + \lambda d_i}
+		\end{align*}
+		and $d_i$'s are the eigenvalues of $\bK$. In addition, $\bS_\lambda$ and $\bK$ have the same set of eigenvectors. In other words, the eigenvectors are \emph{not} affected by changes in $\lambda > 0$. 
+		
+		\item By the definition of the fitted values and the eigen-decomposition above, we have 
+		\begin{align*}
+			\bS_\lambda \bY = \sum_{i=1}^n \rho_i \parens{\lambda} \innerp{\bu_i}{\bY} \bu_i. 
+		\end{align*}
+		The interpretation is that the smoothing spline decomposes $\bY$ with respect to the (complete) basis $\braces{ \bu_i }_{i=1}^n$, and differentially shrinks the contributions according to $\rho_i \parens{\lambda}$. Thus, the smoothing splines are referred to as \textit{shrinking} smoothers. 
+		
+		\textit{Remark.} In contrast, the projection matrix $\bH_{\bxi}$ has $M$ eigenvalues equal to 1 and the rest are 0. The regression splines (with fixed choices of knots) are \textit{projection} smoothers. 
+		
+		\item With the decrease in $\rho_{i} \parens{\lambda}$, the sequence $\sets{\bu_i}_i$ increases in complexity. Due to the identity 
+		\begin{align*}
+			\bS_{\lambda} \bu_i = \rho_i \parens{\lambda} \bu_i, 
+		\end{align*}
+		the higher the complexity is, the more they are shrunk. 
+		
+		\item The first two eigenvalues are always one, and they correspond to the two-dimensional eigen-space of functions linear in $x$, which are never shrunk. 
+		
+		\item The eigenvalues of $\bS_\lambda$, 
+		\begin{align*}
+			\rho_i \parens{\lambda} = \frac{1}{1 + \lambda d_i}, \qquad \text{ for all } i = 1, 2, \cdots, n, 
+		\end{align*}
+		are an inverse function of the eigenvalues $d_i$ of the penalty matrix $\bK$, moderated by $\lambda > 0$. Here, $\lambda$ controls the rate at which $\rho_i \parens{\lambda}$ decrease to 0. By the preceding remark, $d_1 = d_2 = 0$ and, thus, linear functions are not penalized. 
+		
+		\item \textit{Reparametrization:} One can re-parametrize the smoothing spline using $\sets{\bu_i}_{i}$, called the \textit{Demmler-Reinsch basis}. Then, \eqref{eq-smoothing-spline} can be written as 
+		\begin{align*}
+			\minimize_{\btheta} \ \norm{\bY - \bU \btheta}_2^2 + \lambda \btheta^\top \bD \btheta, 
+		\end{align*}
+		where $\bU$ has columns $\bu_i$ and $\bD$ is a diagonal matrix with elements $\sets{d_i}_{i=1}^n$. 
+		
+		\item Notice that 
+		\begin{align*}
+			\mathrm{df}_\lambda = \tr \parens{\bS_\lambda} = \sum_{k=1}^n \rho_k \parens{\lambda}. 
+		\end{align*}
+	\end{enumerate}
+\end{enumerate}
+
+
+\section*{IV. Automatic Selection of the Smoothing Parameters}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Parameters:} 
+	\begin{enumerate}
+		\item \textit{Regression spline:} the degree of the splines, the number of knots, and the placement of knots; 
+		\item \textit{Smoothing spline:} the penalty parameter $\lambda > 0$. 
+	\end{enumerate}
+	
+	\item \textbf{Fix the Degrees of Freedom:} In smoothing splines, recall that 
+	\begin{align*}
+		\mathrm{df}_\lambda = \tr \parens{\bS_\lambda}, 
+	\end{align*}
+	which is monotonically decreasing in $\lambda$. One can invert this relationship and specify $\lambda > 0$ by fixing the degrees of freedom. 
+	
+	\item \textbf{The Bias-Variance Tradeoff Via EPE:} Suppose that the response variables are standardized so that $\cov\parens{\bY} = \bI$. Then, the \textit{covariance matrix} of the fitted value vector is 
+	\begin{align*}
+		\var \parens{\widehat{\bY}} = \bS_\lambda \var \parens{\bY} \bS_\lambda^\top = \bS_\lambda \bS_\lambda^\top, 
+	\end{align*}
+	where the diagonal elements are the pointwise variances at the training $x_i$. 
+	
+	Also, the \textit{bias} is 
+	\begin{align*}
+		\bias \parens{\widehat{\bY}} = \boldf - \E \bracks{\widehat{\bY}} = \bY - \bS_\lambda \bY = \parens{\bI - \bS_\lambda} \bY, 
+	\end{align*}
+	where $\bY$ is the \textit{unknown} vector of evaluations of the true $f$ at the training data points. 
+	
+	We next calculate the integrated squared expected prediction error (EPE) at a new point $X$ as follows: 
+	\begin{align*}
+		\mathrm{EPE} \bracks{\hat{f}_\lambda \parens{X} } = & \, \E \bracks[\big]{ \parens{Y - \hat{f}_\lambda \parens{X} }^2 } \nonumber \\ 
+		= & \, \var \parens{Y} + \E \bracks[\big]{ \bias^2 \parens{\hat{f}_\lambda \parens{X} } + \var \bracks{\hat{f}_\lambda \parens{X}} } \nonumber \\
+		= & \, \sigma^2 + \mathrm{MSE} \parens{\hat{f}_\lambda \parens{X} }. 
+	\end{align*}
+	
+	\textit{Remark.} The quantity EPE is averaged both over the training set (which produces $\hat{f}_{\lambda}$) and at a new point $\parens{X, Y}$ \emph{independently} from the training set. 
+	
+	\item \textbf{The Bias-Variance Tradeoff via Cross-Validation:} We use the \textit{$n$-fold cross-validation}, also known as \textit{leave-one-out cross-validation}, defined by 
+	\begin{align}
+		\cv \parens{\hat{f}_{\lambda}} = & \, \frac{1}{n} \sum_{i=1}^n \parens[\big]{ y_i - \hat{f}_{\lambda}^{\parens{-i}} \parens{x_i} }^2 \nonumber \\ 
+		= & \, \frac{1}{n} \sum_{i=1}^n \parens[\bigg]{ \frac{y_i - \hat{f}_{\lambda} \parens{x_i} }{1 - \bS_\lambda \parens{i,i}}}^2, \label{eq-smoothing-spline-cv}
+	\end{align}
+	where $\bS_\lambda \parens{i,i}$ is the $i$-th diagonal element in the smoother matrix $\bS_\lambda$. We show \eqref{eq-smoothing-spline-cv} holds. 
+	
+	Note that it is sufficient to show that 
+	\begin{align*}
+		y_i - \hat{f}_{\lambda}^{\parens{-i}} \parens{x_i} = \frac{y_i - \hat{f}_{\lambda} \parens{x_i} }{1 - \bS_\lambda \parens{i,i}}, \qquad \text{ for all } i = 1, \cdots, n, 
+	\end{align*}
+	and, without the loss of generality, is sufficient to show the case $i = 1$. 
+	
+	Let $\widetilde{\bY} := \parens{\tilde{y}_1, \tilde{y}_2, \cdots, \tilde{y}_n}^\top = \parens{\hat{f}_{\lambda}^{\parens{-1}} \parens{x_1}, y_2, \cdots, y_n}^\top$. We show that $\hat{f}_{\lambda}^{\parens{-1}}$ minimizes 
+	\begin{align*}
+		\widetilde{\mathrm{RSS}}_{\lambda} \parens{f} := \sum_{i=1}^n \parens{\tilde{y}_i - f \parens{x_i}}^2 + \lambda \int_{a}^{b} \parens{f'' \parens{t}}^2 \diff t. 
+	\end{align*}
+	Note that 
+	\begin{align*}
+		\widetilde{\mathrm{RSS}}_{\lambda} \parens{ \hat{f}_{\lambda}^{\parens{-1}} } = & \, \sum_{i=1}^n \parens{\tilde{y}_i - \hat{f}_{\lambda}^{\parens{-1}} \parens{x_i}}^2 + \lambda \int_{a}^{b} \parens{ {\hat{f}_{\lambda}^{\parens{-1}''}} \parens{t}}^2 \diff t \\ 
+		= & \, \sum_{i=2}^n \parens{\tilde{y}_i - \hat{f}_{\lambda}^{\parens{-1}} \parens{x_i}}^2 + \lambda \int_{a}^{b} \parens{ {\hat{f}_{\lambda}^{\parens{-1}''}} \parens{t}}^2 \diff t \\ 
+		< & \, \sum_{i=2}^n \parens{\tilde{y}_i - f \parens{x_i}}^2 + \lambda \int_{a}^{b} \parens{ f'' \parens{t}}^2 \diff t \\ 
+		\le & \, \sum_{i=1}^n \parens{\tilde{y}_i - f \parens{x_i}}^2 + \lambda \int_{a}^{b} \parens{ f'' \parens{t}}^2 \diff t \\ 
+		= & \, \widetilde{\mathrm{RSS}}_{\lambda} \parens{f}. 
+	\end{align*}
+	Thus, 
+	\begin{align*}
+		\tilde{y}_1 = & \, \sum_{i=1}^n \bS_{\lambda} \parens{1, i} \tilde{y}_i \\ 
+		= & \, \bS_{\lambda} \parens{1, 1} \tilde{y}_1 + \sum_{i=2}^n \bS_{\lambda} \parens{1, i} y_i + \bS_{\lambda} \parens{1, 1} y_1 - \bS_{\lambda} \parens{1, 1} y_1 \\ 
+		= & \, \bS_{\lambda} \parens{1, 1} \parens{ \tilde{y}_1 - y_1} + \sum_{i=1}^n \bS_{\lambda} \parens{1, i} y_i \\ 
+		= & \, \bS_{\lambda} \parens{1, 1} \parens{ \tilde{y}_1 - y_1} + \hat{f}_{\lambda} \parens{x_1}. 
+	\end{align*}
+	We plug $\tilde{y}_1 = \hat{f}_{\lambda}^{\parens{-1}} \parens{x_1}$ into the preceding equation and rearrange terms, yielding 
+	\begin{align*}
+		\hat{f}_{\lambda}^{\parens{-1}} \parens{x_1} = \frac{\hat{f}_{\lambda} \parens{x_1} - \bS_{\lambda} \parens{1, 1} y_1}{1 - \bS_{\lambda} \parens{1,1}}. 
+	\end{align*}
+	Finally, 
+	\begin{align*}
+		y_1 - \hat{f}_{\lambda}^{\parens{-1}} \parens{x_1} = y_1 - \frac{\hat{f}_{\lambda} \parens{x_1} - \bS_{\lambda} \parens{1, 1} y_1}{1 - \bS_{\lambda} \parens{1,1}} = \frac{y_1 - \hat{f}_{\lambda} \parens{x_1} }{1 - \bS_{\lambda} \parens{1,1}}. 
+	\end{align*}
+	
+	\item \textbf{A Comparison between EPE and CV:} 
+	\begin{itemize}
+		\item The EPE and CV curves have a similar shape; 
+		\item Overall, the CV curve is approximately unbiased as an estimate of the EPE curve. 
+	\end{itemize}
+	
+\end{enumerate}
+
+\section*{V. Nonparametric Logistic Regression}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Setup:} We consider the \textit{binary logistic regression} with a single quantitative input. The model is 
+	\begin{align*}
+		\log \frac{\Pr \parens{Y = 1 \,\vert\, X = x}}{\Pr \parens{Y = 0 \,\vert\, X = x}} = f \parens{x}, 
+	\end{align*}
+	for some $f$, and, hence, 
+	\begin{align*}
+		\Pr \parens{Y = 1 \,\vert\, X = x} = \frac{\exp \parens{f \parens{x} }}{1 + \exp \parens{f \parens{x}} }. 
+	\end{align*}
+	We fit $f$ in a smooth fashion and this will lead to a smooth estimate of the conditional probability $ \Pr \parens{Y = 1 \,\vert\, X = x}$, which can be used for \textit{classification}. 
+	
+	\item \textbf{Penalized Log-likelihood Function:} Let $p \parens{x} := \Pr \parens{Y = 1 \mid X = x}$. We consider to maximize the following \emph{penalized log-likelihood function} 
+	\begin{align}
+		\ell_{\lambda} \parens{f} = & \, \sum_{i=1}^n \parens[\Big]{y_i \log p \parens{x_i} + \parens{1 - y_i} \log \parens{1- p \parens{x_i} } } - \frac{1}{2} \lambda \int \parens{f''\parens{t}}^2 \diff t \nonumber \\
+		= & \, \sum_{i=1}^n \parens[\Big]{y_i \log p \parens{x_i} - y_i \log \parens{1 - p \parens{x_i} } + \log \parens{1- p \parens{x_i} } } - \frac{1}{2} \lambda \int \parens{f''\parens{t}}^2 \diff t \nonumber \\
+		= & \, \sum_{i=1}^n \parens[\bigg]{y_i \log \frac{p \parens{x_i} }{1- p \parens{x_i}} + \log \parens{1 - p \parens{x_i} } } - \frac{1}{2} \lambda \int \parens{f''\parens{t}}^2 \diff t \nonumber \\
+		= & \, \sum_{i=1}^n \parens[\Bigg]{y_i \log \parens{\exp \parens{f \parens{x_i} }} + \log \parens[\bigg]{\frac{1}{1 + \exp \parens{f \parens{x} }}}} - \frac{1}{2} \lambda \int \parens{f''\parens{t}}^2 \diff t \nonumber \\
+		= & \, \sum_{i=1}^n \bracks[\big]{y_i f \parens{x_i} - \log \parens{1 + \exp \parens[\big]{f \parens{x_i} }}} - \frac{1}{2} \lambda \int \parens{f''\parens{t}}^2 \diff t. \label{eq-smoothing-spline-logis}
+	\end{align}
+	The first term is the log-likelihood based on the binomial distribution. 
+	
+	\item \textbf{Characterizing the Solution to \eqref{eq-smoothing-spline-logis}:} The maximizer to \eqref{eq-smoothing-spline-logis} is a finite-dimensional natural spline with knots at the unique values of $x$, and therefore, the solution is of the form 
+	\begin{align*}
+		f \parens{x} = \sum_{j=1}^n \theta_j N_j \parens{x},  
+	\end{align*}
+	where $\sets{N_j}_{j=1}^n$ is a set of basis functions spanning this function space. 
+	
+	\item \textbf{Applying the Newton-Raphson Algorithm:} With the characterization above, $\ell_{\lambda}$ is essentially a function of parameters $\btheta := \parens{\theta_1, \theta_2, \cdots, \theta_n}^\top$. 
+	
+	We find the derivatives of $\ell_{\lambda}$ with respect to $\btheta$ 
+	\begin{align*}
+		\frac{\partial \ell_{\lambda} \parens{\btheta}}{\partial \btheta} & = \bN^\top \parens{\by - \bp} - \lambda \bOmega \btheta, \\ 
+		\frac{\partial^2 \ell_{\lambda} \parens{\btheta}}{\partial \btheta^2} & = - \bN^\top \bW \bN - \lambda \bOmega, 
+	\end{align*}
+	where $\bp$ is the $n$-dimensional vector with the $i$-th element being $p \parens{x_i}$, and $\bW$ is a diagonal matrix of weights $p \parens{x_i} \parens{ 1 - p \parens{x_i}}$. 
+	
+	We use the Newton-Raphson algorithm to compute the maximizer. The update equation can be written as 
+	\begin{align*}
+		\btheta^{\parens{\text{new}}} = & \, \parens{\bN^\top \bW \bN + \lambda \bOmega}^{-1} \bN^\top \bW \parens{\bN \btheta^{\parens{\text{old}}} + \bW^{-1} \parens{\by - \bp}} \nonumber \\ 
+		= & \, \parens{\bN^\top \bW \bN}^{-1} \bN^\top \bW \bz, 
+	\end{align*}
+	where $\bz := \bN \btheta^{\parens{\text{old}}} + \bW^{-1} \parens{\by - \bp}$ is the \emph{working response}. 
+	
+	We can also express $\btheta^{\parens{\text{new}}}$ in terms of the fitted values. Note that 
+	\begin{align*}
+		\boldf^{\parens{\text{new}}} = \bN \btheta^{\parens{\text{new}}} = & \, \bN \parens{\bN^\top \bW \bN + \lambda \bOmega}^{-1} \bN^\top \bW \parens{\boldf^{\parens{\text{old}}} + \bW^{-1} \parens{\by - \bp}} \\ 
+		= & \, \bS_{\lambda, w} \bz. 
+	\end{align*}
+	% Comparing to the corresponding smoothing spline results under the squared error loss, we see the update fits a weighted smoothing spline to the working response $\bz$. 
+\end{enumerate}
+
+
+\section*{VI. Multidimensional Splines}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Tensor Product Basis:} Let $x = \parens{x_1, x_2} \in \Real^2$. Suppose we have a set of basis functions $\sets{h_{1j}}_{j = 1}^{M_1}$ to represent functions of coordinate $x_1$ and a set of basis functions $\sets{h_{2k}}_{k = 1}^{M_2}$ for $x_2$. Then, the $M_1 \times M_2$ dimensional \textit{tensor product basis} is defined to be 
+	\begin{align*}
+		g_{jk} \parens{x} = h_{1j} \parens{x_1} \cdot h_{2k} \parens{X_2}, \qquad \text{ for all } j = 1, \cdots, M_1 \text{ and } k = 1, \cdots, M_2. 
+	\end{align*}
+	This set of $M_1 \times M_2$ basis functions can be used for representing a two-dimensional function: 
+	\begin{align*}
+		g \parens{x} = \sum_{j=1}^{M_1} \sum_{k=1}^{M_2} \theta_{jk} g_{jk} \parens{X}, 
+	\end{align*}
+	where the coefficients $\theta_{jk}$ can be determined by using least squares. 
+	
+	\textit{Remark.} There is nothing particular about $p = 2$, and one can generalize to dimensions larger than 2. 
+	
+	\item \textbf{General Setup for Higher-Dimensional Smoothing Splines via Regularization:} Suppose we have pairs $\sets{\parens{\bx_i, y_i}}_{i=1}^n$ with $\bx_i \in \Real^p$. We seek a $p$-dimensional regression function $f$ in the smoothing spline setting. The associated optimization problem is 
+	\begin{align}\label{eq-smoothing-spline-multi-d}
+		\minimize_f \ \sum_{i=1}^n \parens[\big]{y_i - f \parens{\bx_i} }^2 + \lambda J \parens{f}, 
+	\end{align}
+	where $\lambda > 0$ and $J$ is an appropriate penalty functional for stabilizing a function $f$ in $\Real^p$. 
+	
+	\item \textbf{Thin-Plate Spline:} Suppose $p = 2$. We can choose the roughness penalty to be 
+	\begin{align}\label{eq-thin}
+		J \parens{f} = \int_{\Real^2} \bracks[\Bigg]{ \parens[\bigg]{\frac{\partial^2 f \parens{\bx} }{\partial x_1^2}}^2 + 2 \parens[\bigg]{\frac{\partial^2 f \parens{\bx} }{\partial x_1 \partial x_2}}^2 + \parens[\bigg]{\frac{\partial^2 f \parens{\bx}}{\partial x_2^2}}^2} \diff x_1 \diff x_2, 
+	\end{align}
+	which is a natural generalization of $d = 1$ case. Optimizing \eqref{eq-smoothing-spline-multi-d} with this particular $J$ leads to a smooth two-dimensional surface known as a \textit{thin-plate} spline. 
+	
+	\begin{enumerate}
+		\item \textit{Effects of $\lambda$:} The effect of $\lambda$ is similar as before: 
+		\begin{itemize}
+			\item as $\lambda \to 0$, the solution approaches an interpolating function; 
+			\item as $\lambda \to \infty$, the solution approaches the least squares plane; 
+			\item for intermediate values of $\lambda$, the solution can be represented as a linear expansion of basis functions with coefficients obtained by a form of generalized ridge regression. 
+		\end{itemize}
+		
+		\item \textit{Characterization of the Solution:} The solution to the \eqref{eq-smoothing-spline-multi-d} with the penalty defined by \eqref{eq-thin} is of the following form 
+		\begin{align}\label{eq-smoothing-spline-multi-d-sol}
+			f \parens{\bx} = \beta_0 + \bbeta^\top \bx + \sum_{j=1}^n \alpha_j h_j \parens{\bx}, 
+		\end{align}
+		where $h_j \parens{\bx} = \norm{\bx - \bx_j}^2 \log \norm{\bx - \bx_j}$, an example of \textit{radial basis functions}. 
+	
+	To determine the coefficients, we plug \eqref{eq-smoothing-spline-multi-d-sol} into \eqref{eq-smoothing-spline-multi-d} and obtain a finite-dimensional penalized least squares problem. The coefficients $\alpha_j$'s need to satisfy a set of linear constraints. 
+	\end{enumerate}
+	
+	\textit{Remarks.} 
+	\begin{itemize}
+		\item Thin-plate splines can be defined more generally for arbitrary dimension $p$ with an appropriately more general penalty $J$ is used; 
+		\item The computational complexity for thin-plate splines is $\calO \parens{n^3}$. However, in practice, we need \emph{not} use all $n$ knots and, instead, work with a lattice of knots covering the domain. Using $K \ll n$ knots, the computational complexity reduces to $\calO \parens{n K^2 + K^3}$. 
+	\end{itemize}
+	
+	\item \textbf{Caution:} In general, one can represent $f \in \Real^p$ as an expansion in any arbitrarily large collection of basis functions, and control the complexity by regularization. However, the number of basis functions can grow exponentially as the dimensionality increases, and we have to reduce the number of functions per coordinate accordingly. 
+	
+	\item \textbf{Additive Spline Model:} Consider the case $p \ge 2$ and $\bx := \parens{x_1, \cdots, x_p}^\top \in \Real^p$. 
+	\begin{enumerate}
+		\item Assume $f \parens{\bx} = \alpha + f_1 \parens{x_1} + \cdots + f_p \parens{x_p}$ is additive and impose a penalty on each of the component functions
+		\begin{align*}
+			J \parens{f} = J \parens{f_1 + f_2 + \cdots + f_d} = \sum_{j=1}^d \int \parens{f_j''\parens{t_j}}^2 \diff t_j. 
+		\end{align*}
+		
+		\item Assume $f$ is the \emph{ANOVA spline decomposition} of the form 
+		\begin{align}\label{eq-extend-anova}
+			f \parens{\bx} = \alpha + \sum_{j} f_j \parens{x_j} + \sum_{j<k} f_{jk} \parens{x_j, x_k} + \cdots, 
+		\end{align}
+		where each of the components is a spline of the required dimension. 
+	\end{enumerate}
+	
+	\textit{Remark.} In \eqref{eq-extend-anova}, we can choose 
+	\begin{enumerate}
+		\item the maximum order of interactions; 
+		\item which terms to include --- not all of the main effects and interactions are needed; 
+		\item the basis functions: 
+		\begin{itemize}
+			\item we can choose a relatively small number of basis functions per coordinate and use the tensor product for interactions; \emph{or} 
+			\item We can choose a complete basis and include appropriate regularizer for each term in the expansion. 
+		\end{itemize}
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{VII. Regularization and Reproducing Kernel Hilbert Space} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} We consider a general class of regularization problem of the form 
+	\begin{align}\label{eq-rkhs-general-form}
+		\minimize_{f \in \calH} \ \braces[\Bigg]{ \sum_{i=1}^n L \parens{y_i, f \parens{\bx_i} } + \lambda J \parens{f} }, 
+	\end{align}
+	where $L$ is a loss function, $J: \calH \to [0, \infty)$ is a penalty functional, and $\calH$ is a space of functions on which $J \parens{f}$ is defined. 
+	
+	\item \textbf{A First Example:} Consider the following penalty function 
+	\begin{align*}
+		J \parens{f} = \int_{\Real^p} \frac{\abs{\tilde{f} \parens{\bs}}^2}{\widetilde{G} \parens{\bs}} \diff \bs, 
+	\end{align*}
+	where $\tilde{f}$ denotes the Fourier transform of $f$, and $\widetilde{G}$ is some positive function that falls off to zero as $\norm{\bs} \to \infty$. Then the solution is of the following form 
+	\begin{align*}
+		f \parens{\bx} = \sum_{m=1}^M \alpha_m \phi_m \parens{\bx} + \sum_{i=1}^n \theta_i G \parens{\bx - \bx_i}, 
+	\end{align*}
+	where $\sets{\phi_m}_{m=1}^M$ spans the null space of the penalty functional $J$, and $G$ is the inverse Fourier transform of $\widetilde{G}$. 
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item Smoothing splines and thin-plate splines fall into this framework. 
+		\item The remarkable feature of this approach is that while the criterion \eqref{eq-rkhs-general-form} is defined over an infinite-dimensional space, its solution is finite-dimensional. 
+	\end{enumerate}
+	
+	\item \textbf{Space of Functions Generated by Kernels:} 
+	\begin{enumerate}
+		\item \textit{Kernel:} A function $K: \Real^p \times \Real^p \to \Real$ is called a \textit{kernel} if there exists a Hilbert space $\calH$ and a map $\phi: \Real^p \to \calH$ such that, for all $x, x' \in \Real^p$, we have
+		\begin{align*}
+			K \parens{\bx, \by} = \innerp{\phi \parens{\bx}}{\phi \parens{\by}}_{\calH}. 
+		\end{align*}
+		We call $\phi: \Real^p \to \calH$ a \emph{feature map} and $\calH$ a \textit{feature space} of $K$. 
+		% We require a kernel $K$ is symmetric, $K \parens{\bx, \by} = K \parens{\by, \bx}$, and satisfies the inequality $$\parens{K(x, y)}^2 \le K(x, x) K(y, y). $$
+		
+		\item \textit{Reproducing Property:} A kernel $K$ is said to have the \textit{reproducing property} if, for any $f \in \calH$, 
+		\begin{align*}
+			\innerp{f}{K \parens{\bx, \,\cdot\,} }_{\hil} = f \parens{\bx}. 
+		\end{align*}
+		Such a kernel function $K$ is called a \emph{reproducing kernel}, or the \textit{representer of evaluation}. In particular, if $f = K \parens{\bx, \,\cdot\,}$, then, 
+		\begin{align*}
+			\innerp{K \parens{\by, \,\cdot\,} }{K \parens{\bx, \,\cdot\,}}_{\calH} = K \parens{\bx, \by}. 
+		\end{align*}
+		
+		\item \textit{(Strictly) Positive Definite Kernel:} A kernel function $K: \Real^p \times \Real^p \to \Real$ is \emph{positive definite} if $K \parens{\bx, \by} = K \parens{\by, \bx}$ for any $\bx, \by \in \Real^p$ and $K$ is positive definite
+		\begin{equation}\label{eq-pd-kernel}
+			\sum_{i=1}^n \sum_{j=1}^n c_i c_j K \parens{\bx_i, \bx_j} \ge 0.
+		\end{equation}
+		for all $n \ge 1$, all $c_1, \cdots, c_n \in \Real$, and all $\bx_1, \cdots, \bx_n \in \Real^p$. It is said to be \emph{strictly positive definite} if the equality in \eqref{eq-pd-kernel} holds only when $c_i = 0$ for all $i$. 
+		
+		\item \textit{Reproducing Kernel Hilbert Space (RKHS):} A \emph{reproducing kernel Hilbert space (RKHS)}, $\calH$, is a space of functions generated by a positive definite kernel. 
+		
+		\item \textit{Functions in $\hil$:} Let $\bx, \by \in \Real^p$ and consider the space of functions generated by the linear span of $\sets{K \parens{\by, \,\cdot\,} \,\vert\, y \in \Real^p}$, i.e., arbitrary linear combinations of the form
+		\begin{align*}
+			f \parens{\bx} = \sum_{m \in \Natural} \alpha_m K \parens{\bx, \by_m}. 
+		\end{align*}
+		Suppose that $K$ has an eigen-expansion 
+		\begin{align*}
+			K \parens{\bx, \by} = \sum_{i=1}^\infty \gamma_i \psi_i \parens{\bx} \psi_i \parens{\by}, 
+		\end{align*}
+		where $\gamma_i \ge 0$ and $\sum_{i=1}^\infty \gamma_i^2 < \infty$. Then, functions in $\hil$ can be written in terms of these eigenfunctions, 
+		\begin{align*}
+			f \parens{\bx} = \sum_{i=1}^\infty c_i \psi_i \parens{\bx} 
+		\end{align*}
+		with the constraint that 
+		\begin{align*}
+			\norm{f}_{\calH}^2 := \sum_{i=1}^\infty \frac{c_i^2}{\gamma_i} < \infty, 
+		\end{align*}
+		where $\norm{f}_{\calH}$ is the norm induced by $K$. 
+	\end{enumerate}
+	
+	\item \textbf{Equivalent Formulation of \eqref{eq-rkhs-general-form}:} If we let $J \parens{f}$ in \eqref{eq-rkhs-general-form} for $f \in \calH$ be the squared norm of $f$, i.e., 
+	\begin{align*}
+		J \parens{f} = \norm{f}_{\calH}^2, 
+	\end{align*}
+	which can be interpreted as a \textit{generalized ridge penalty}, we can rewrite \eqref{eq-rkhs-general-form} as 
+	\begin{align}\label{eq-rkhs-opt-prob}
+		\minimize_{f} \braces[\Bigg]{ \sum_{i=1}^n L \parens[\big]{y_i, f \parens{\bx_i}} + \lambda \norm{f}_{\calH}^2 }. 
+	\end{align}
+	or, equivalently, 
+	\begin{align*}
+		\minimize_{\sets{ c_i }_{i=1}^\infty } \braces[\Bigg]{ \sum_{i=1}^n L \parens[\bigg]{y_i, \sum_{j=1}^\infty c_j \psi_j \parens{\bx_i}} + \lambda \sum_{j=1}^\infty \frac{c_j^2}{\gamma_j} }. 
+	\end{align*}
+	
+	\item \textbf{Characterizing the Solution to \eqref{eq-rkhs-opt-prob}:} The solution to \eqref{eq-rkhs-opt-prob} is finite-dimensional and has the form 
+	\begin{align}\label{eq-rkhs-sol}
+		f \parens{\bx} = \sum_{i=1}^n \alpha_i K \parens{\bx, \bx_i}. 
+	\end{align}
+	Let $\tilde{f} = f + \rho$, where $f$ is of the form \eqref{eq-rkhs-sol} and belongs to the span of $\calH_0 := \mathrm{Span} \sets{K \parens{\bx_1, \,\cdot\,}, K \parens{\bx_2, \,\cdot\,}, \cdots, K \parens{\bx_n, \,\cdot\,}}$ and $\rho \in \calH$ belongs to the orthogonal complement of $\calH_0$. Then, we have 
+	\begin{align*}
+		\tilde{f} \parens{\bx_i} = & \, \innerp{\tilde{f}}{K \parens{\bx_i, \,\cdot\,}}_{\calH} = \innerp{f + \rho}{K \parens{\bx_i, \,\cdot\,}}_{\calH} \\ 
+		= & \, \innerp{f}{K \parens{\bx_i, \,\cdot\,}}_{\calH} + \innerp{\rho}{K \parens{\bx_i, \,\cdot\,}}_{\calH} = f \parens{\bx_i}, 
+	\end{align*}
+	and 
+	\begin{align*}
+		J \parens{\tilde{f}} = \norm{f + \rho}_{\calH}^2 = \norm{f}_{\calH}^2 + 2 \innerp{f}{\rho}_{\calH} + \norm{\rho}_{\calH}^2 = \norm{f}_{\calH}^2 + \norm{\rho}_{\calH}^2. 
+	\end{align*}
+	Thus, 
+	\begin{align*}
+		\sum_{i=1}^n L \parens[\big]{y_i, \tilde{f} \parens{\bx_i}} + \lambda \norm{\tilde{f}}_{\calH}^2 = & \, \sum_{i=1}^n L \parens[\big]{y_i, f \parens{\bx_i}} + \lambda \parens[\Big]{\norm{f}_{\calH}^2 + \norm{\rho}_{\calH}^2} \\ 
+		\ge & \, \sum_{i=1}^n L \parens[\big]{y_i, f \parens{\bx_i}} + \lambda \norm{f}_{\calH}^2, 
+	\end{align*}
+	with the inequality becoming an equality if and only if $\rho = 0$. In other words, \eqref{eq-rkhs-opt-prob} is minimized by functions of the form \eqref{eq-rkhs-sol}. 
+	
+	\item \textbf{Optimization Problem in Matrix Form:} We can rewrite the optimization problem \eqref{eq-rkhs-opt-prob} in the following matrix form 
+	\begin{align*}
+		\minimize_{\balpha} \ L \parens{\bY, \bK \balpha} + \lambda \balpha \bK \balpha, 
+	\end{align*}
+	where $\balpha := \parens{\alpha_1, \cdots, \alpha_n}^\top \in \Real^n$, and $\bK$ is the $n \times n$ matrix with $\parens{i, j}$-entry being $K \parens{\bx_i, \bx_j}$. 
+	
+	\item \textbf{Partial Penalization:} Sometimes, we want to leave some components in $\calH$ alone and do \emph{not} penalize them. Decompose the space $\calH$ as $\calH = \calH_0 \oplus \calH_1$, with the null space $\calH_0$ consisting of components that do not get penalized. The penalty becomes $J \parens{f} = \norm{P_1f}_{\calH}^2$, where $P_1$ is the orthogonal projection of $f$ onto $\calH_1$. The solution has the form 
+	\begin{align*}
+		f \parens{\bx} = \sum_{j=1}^M \beta_j h_j \parens{\bx} + \sum_{i=1}^n \alpha_i K \parens{\bx, \bx_i}, 
+	\end{align*}
+	where the first term represents an expansion of functions in $\calH_0$. 
+	
+	\item \textbf{Example --- Penalized Least Squares:} We consider the penalized least squares problem where we solve the following (infinite-dimensional) optimization problem 
+	\begin{align*}
+		\minimize_{\sets{c_i}_{i=1}^\infty} \sum_{i=1}^n \parens[\Bigg]{y_i - \sum_{j=1}^\infty c_j \psi_j \parens{\bx_i}}^2 + \lambda \sum_{j=1}^\infty \frac{c_j^2}{\gamma_j}, 
+	\end{align*}
+	called the \emph{generalized ridge regression problem}. 
+	
+	By the earlier argument, the solution is of the form $\sum_{i=1}^n \alpha_i K \parens{\bx_i, \,\cdot\,}$. We can rewrite the preceding infinite-dimensional optimization problem as the following finite-dimensional problem in the matrix form 
+	\begin{align*}
+		\minimize_{\balpha} \ \parens{\bY - \bK \balpha}^\top \parens{\bY - \bK \balpha} + \lambda \balpha \bK \balpha, 
+	\end{align*}
+	where the $\parens{i, j}$-entry of $\bK \in \Real^{n \times n}$ is $K \parens{\bx_i, \bx_j}$. 
+	The solution is 
+	\begin{align*}
+		\widehat{\balpha} := \parens{\bK + \lambda \bI}^{-1} \bY, 
+	\end{align*}
+	and the fitted value at $\bx$ is
+	\begin{align*}
+		\hat{f} \parens{\bx} = \sum_{j=1}^n \hat{\alpha}_j K \parens{\bx, \bx_j}, 
+	\end{align*}
+	where $\hat{\alpha}_j$ is the $j$-th component of $\widehat{\balpha}$. 
+	
+	Collectively, the fitted value vector is 
+	\begin{align*}
+		\widehat{\bY} = \bK \widehat{\balpha} = \bK \parens{\bK + \lambda \bI}^{-1} \bY = \parens{\bI + \lambda \bK^{-1}}^{-1} \bY. 
+	\end{align*}
+	
+	\item \textbf{Example --- Penalized Polynomial Regression:} We consider the polynomial kernel of the form 
+	\begin{align*}
+		K \parens{\bx, \by} = \parens{\bx^\top \by + 1}^d, \qquad \text{ for all } \bx, \by \in \Real^p. 
+	\end{align*}
+	It has $ M := {p+d \choose d} $ eigen-functions that span the space of polynomials in $\Real^p$ of total degree $d$. 
+	\begin{enumerate}
+		\item \textit{Example:} With $p = 2$, $d = 2$ and $M = 6$, we have 
+		\begin{align*}
+			K \parens{\bx, \by} = & \, 1 + 2 x_1 y_1 + 2 x_2 y_2 + x^2_1 y_1^2 + x_2^2 y_2^2 + 2 x_1 x_2 y_1 y_2 \\
+			= & \, \sum_{m=1}^M h_m \parens{\bx} h_m \parens{\by}
+		\end{align*}
+		with 
+		\begin{equation*}
+			\bh \parens{\bx} = \parens{1, \sqrt{2}x_1, \sqrt{2}x_2, x_1^2, x_2^2, \sqrt{2}x_1x_2}^\top. 
+		\end{equation*}
+		
+		\item One can represent $\bh$ in terms of the $M$ orthogonal eigenfunctions and eigenvalues of $K$ as 
+		\begin{align*}
+			\bh \parens{\bx} = \bV \bD_\gamma^{1/2} \bpsi \parens{\bx}, 
+		\end{align*}
+		where $\bD_\gamma = \mathrm{diag} \parens{\gamma_1, \gamma_2, \cdots, \gamma_M}$, $\bV$ is an $M \times M$ orthogonal matrix, and $\bpsi \parens{\bx} := \parens{\psi_1 \parens{\bx}, \psi_2 \parens{\bx}, \cdots, \psi_M \parens{\bx} }^\top$. 
+		
+		\item We wish to solve the following penalized polynomial regression problem 
+		\begin{align}\label{eq-rkhs-poly-opt-prob}
+			\minimize_{\sets{\beta_m}_{m=1}^M} \, \sum_{i=1}^n \parens[\Bigg]{y_i - \sum_{m=1}^M \beta_m h_m \parens{\bx_i}}^2 + \lambda \sum_{m=1}^M \beta_m^2. 
+		\end{align}
+		Let $\widehat{\bbeta} := \parens{\hat{\beta}_1, \cdots, \hat{\beta}_M}^\top$ be the minimizer of \eqref{eq-rkhs-poly-opt-prob}. Then, 
+		\begin{align*}
+			\widehat{\bbeta} = \bH^\top \parens{\bH \bH^\top + \lambda \bI}^{-1} \bY, 
+		\end{align*}
+		where $\bH \in \Real^{n \times M}$ with rows given by $\bh \parens{\bx_i}^\top$, and $\bY := \parens{y_1, \cdots, y_n}^\top \in \Real^n$. 
+				
+		\item \textit{Caution:} Notice that the number of basis functions $M = {p+d \choose d}$ can be very large! 
+		
+	\end{enumerate}
+	
+	\item \textbf{Example --- Gaussian Radial Basis Functions:} The \textit{Gaussian kernel} is $K \parens{\bx, \by} = e^{-\nu \norm{\bx-\by}_2^2}$. Then, the Gaussian radial basis functions are 
+	\begin{equation*}
+		k_m \parens{\bx} = e^{-\nu \norm{\bx - \bx_m}_2^2}, \qquad \text{ for } m = 1, \cdots, n, 
+	\end{equation*}
+	where each one is centered at one of the training feature vectors $\bx_m$. 
+	\begin{itemize}
+		\item For a kernel matrix $\bK$, where each entry is calculated as $\bK_{ml} = k_m \parens{\bx_l}$ for all $m, l = 1, \cdots, n$, we compute its eigen-decomposition $\bK = \boldsymbol{\Psi} \bD_\gamma \boldsymbol{\Psi}^\top$. We can think of the columns of $\boldsymbol{\Psi}$ and the corresponding eigenvalues in $\bD_\gamma$ as empirical estimates of the eigen-expansion $K \parens{\bx, \by} = \sum_{i=1}^\infty \gamma_i \psi_i \parens{\bx}\psi_i \parens{\by}$. 
+		
+		\item Although in principle the implicit feature space is \textit{infinite} dimensional, the effective dimension is dramatically lower. 
+		
+		\item The kernel scale parameter $\nu$ plays a role here as well: larger $\nu$ implies more local $k_m$ functions, and increases the effective dimension of the feature space. 
+
+	\end{itemize}
+	
+	\item \textbf{Example --- Support Vector Machines:} The support vector machines for a two-class classification problem have the form
+	\begin{align*}
+		f \parens{\bx} = \alpha_0 + \sum_{i=1}^n \alpha_i K \parens{\bx, \bx_i}, 
+	\end{align*}
+	where the parameters are chosen to minimize
+	\begin{equation}\label{eq-svm}
+		\minimize_{\alpha_0, \balpha} \braces[\Bigg]{ \sum_{i=1}^n \bracks[\big]{ 1 - y_i \cdot f \parens{\bx_i}}_+ + \frac{\lambda}{2} \balpha^\top \bK \balpha }, 
+	\end{equation}
+	with $y_i \in \sets{-1, 1}$, $\balpha := \parens{\alpha_1, \alpha_2, \cdots, \alpha_n}^\top$, and $\bracks{z}_+ := \max \sets{z, 0}$ denoting the positive part of $z$. 
+	
+	This can be viewed as a \textit{quadratic} optimization problem with \textit{linear} constraints. 
+	
+	The name \textit{support vector} arises from the fact that typically many components of the $\widehat{\balpha}$ equal to 0 due to the piecewise-zero nature of the loss function in \eqref{eq-svm}, and so $\hat{f}$ is an expansion in a subset of the $\sets{K \parens{\bx_i, \,\cdot\,}}_{i=1}^n$. 
+
+\end{enumerate}
+
+
+%\section*{VIII. Wavelet Smoothing} 
+%
+%\begin{enumerate}
+%	\item \textbf{Main Idea:} Wavelets typically use a \emph{complete} orthonormal basis to represent functions, and then \textit{shrink} and \textit{select} the coefficients toward a sparse representation. 
+%	
+%	\item \textbf{Advantages:} Wavelets are able to represent both \underline{smooth} and/or \underline{locally bumpy} functions in an efficient way, which is a phenomenon dubbed \textit{time} and \textit{frequency} localization. In contrast, the traditional \textit{Fourier basis} allows only frequency localization. 
+%	
+%	\item \textbf{Wavelet Bases and the Wavelet Transform:} Wavelet bases are generated by \textit{translations} and \textit{dilations} of a single scaling function $\phi(x)$, also known as the \textbf{father}. 
+%\begin{itemize}
+%\item \textbf{Haar Basis:} The Haar basis produces a piecewise-constant representation. If $\phi(x) = \indic \parens{x \in [0, 1]}$, then $$\phi_{0,k}(x) = \phi (x-k),$$ where $k$ is an integer, generates an orthonormal basis for functions with jumps at the integers. Call this \textit{reference space} $V_0$. 
+%
+%The dilations $$\phi_{1,k}(x) = \sqrt{2}\phi (2x-k)$$ form an orthonormal basis for a space $V_1 \supset V_0$ of functions piecewise constant on intervals of length $\frac{1}{2}$. \\ More generally, we have a sequence of spaces $$ \cdots \supset V_1 \supset V_0 \supset V_{-1} \supset \cdots, $$ where each $V_j$ is spanned by $$ \phi_{j,k} = 2^{j/2}\phi (2^j x - k). $$
+%
+%\item Consider a function in $V_{j+1}$, and we can write it as a component in $V_j$ plus the component in the orthogonal complement $W_j$ of $V_j$ to $V_{j+1}$, written as $V_{j+1} = V_j \oplus W_j$. The component in $W_j$ represents \textit{detail}, and we might wish to set some elements of this component to zero. \\ Then, the functions $\psi (x - k)$ generated by the mother wavelet $\psi (x) = \phi(2x) - \phi (2x-1)$ form an orthonormal basis for $W_0$ for the Haar family. Likewise, $\psi_{j,k}(x) = 2^{j/2}\psi (2^jx - k)$ form a basis for $W_j$. 
+%\item Based on the results above, we have the following sequence of decomposition: 
+%\begin{equation}
+%	 V_{J} = V_{J-1} \oplus W_{J-1} = V_{J-2} \oplus W_{J-2} \oplus W_{J-2} = V_0 \oplus W_0 \oplus W_1 \oplus \cdots \oplus W_{J-1}. 
+%\end{equation} 
+%Since these spaces are orthogonal, all the basis functions are orthonormal.
+%
+%\item \textbf{Daubechies Symmlet $p$-Basis:} 
+%\begin{itemize}
+%\item The symmlet-$p$ family has a support of $ 2p - 1$ consecutive intervals. The wider the support, the more time the wavelet has to die to zero, and so it can achieve this more smoothly; 
+%\item The symmlet-$p$ wavelet $\psi(x)$ has $p$ vanishing moments, i.e., 
+%      \begin{equation}
+%      	 \int \psi(x)x^j dx = 0, \text{ for } j = 0, \cdots, p-1.  
+%      \end{equation}
+%       This implies that any order-$p$ polynomial over the $N = 2^J$ times points is reproduced exactly in $V_0$. In this sense $V_0$ is equivalent to the null space of the smoothing-spline penalty. 
+% 
+%\end{itemize}
+%\item \textbf{Symmlet $p$-Basis as Generators:} 
+%\begin{itemize}
+% \item If $V_0$ is spanned by $\phi(x-k)$, then $ V_1 \supset V_0 $ is spanned by $ \phi (x)= \sqrt{2}\phi (2x-k)$ and $\phi(x) = \sum_{k \in \mathcal{Z}} h(k) \phi_{1,k}(x)$, for some filter coefficients h(k); 
+% \item $W_0$ is spanned by $\psi(x) = \sum_{k \in \mathcal{Z}} g(k) \phi_{1,k}(x)$, with filter coefficients $g(k) = (-1)^{1-k} h(1 - k)$. 
+%\end{itemize}
+%\end{itemize}
+%
+%\item \textbf{Adaptive Wavelet Filtering:} Wavelets are particularly useful when the data are measured on a uniform lattice, and here we consider one-dimensional case and let the total number of lattice points be $N = 2^J$. \\ Suppose $\bY$ is the response vector, and $\bW$ is the $ N \times N$ orthonormal wavelet basis matrix evaluated at the $N$ uniformly spaced observations. Then, $$\bY^* = \bW^\top \by$$ is called the \textit{wavelet transform} of $\bY$. 
+%\begin{itemize}
+%\item \textbf{SURE shrinkage:} A popular method for adaptive wavelet fitting is known as SURE shrinkage (\textit{Stein Unbiased Risk Estimation}). Start with the criterion
+%    \begin{equation}
+%    	\min \norm{ \bY - \bW \btheta}_2 + 2 \lambda \norm{\btheta}_1, 
+%    \end{equation}
+%    Notice that this is the same as the lasso criterion. Because $\bW$ is orthonormal, this leads to the solution: 
+%    \begin{equation}
+%    	\widehat{\theta}_j = \text{sign}(\bY_j^*)\parens{\abs{\bY_j^*} - \lambda}_+, 
+%    \end{equation}
+%    The least squares coefficients are translated toward zero, and truncated at zero. The fitted function (vector) is then given by the \textit{inverse wavelet transform} $\widehat{\boldf} = \bW \widehat{\btheta}$. 
+%\item A simple choice of $\lambda$ is $$\lambda = \sigma\sqrt{2\log N}, $$ where $\sigma$ is an estimate of the standard deviation of the noise. 
+%\item \textbf{A Comparison between SURE Criterion and Smoothing Spline Criterion:} 
+%   \begin{itemize}
+%    \item Both are \textit{hierarchically} structured from coarse to fine detail, although wavelets are also localized in time within each resolution level; 
+%    \item The splines build in a bias toward smooth functions by imposing differential shrinking constants $d_k$;
+%    \item The spline $L_2$ penalty cause pure shrinkage, while the SURE $L_1$ penalty does shrinkage and selection. More generally smoothing splines achieve compression of the original signal by imposing smoothness, while wavelets impose sparsity. 
+%   \end{itemize}
+%\end{itemize}
+%
+%
+%\end{enumerate}
+
+\printbibliography
+
+\end{document}

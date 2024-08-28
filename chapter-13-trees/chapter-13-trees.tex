@@ -1,0 +1,459 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 13, Trees-based Models}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Trees-based Methods}{13}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is produced based on 
+\begin{itemize}
+	\item \textit{Chapter 9, Additive Models, Trees, and Related Methods} in \textcite{Friedman2001-np}, and 
+	\item \textit{Chapter 9, Recursive Partitioning and Tree-based Methods} in \textcite{Izenman2009-jk}. 
+\end{itemize}
+
+\section*{I. Overview}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Overview:} Tree-based methods partition the feature space into a set of rectangles, and then fit a simple model (like a constant) in each one. 
+	
+	\item \textbf{Recursive Binary Tree:} Consider the case where the response variable is continuous. 
+	\begin{enumerate}
+		\item \textit{Procedure:} 
+		\begin{enumerate} 
+			\item First split the feature space into two regions, and model the response by the mean in each region. We choose the variable and split-point to achieve the best fit; 
+			\item Then, one or both of these regions are further split into two more regions, and this process is continued, until some stopping rule is applied. 
+		\end{enumerate}
+		\item \textit{Advantages:} The recursive tree is very easy to interpret. The feature space partition can be fully described by a single tree. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{II. Regression Tree} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Setup:} Let data be $\sets{\parens{\bx_i, y_i}}_{i=1}^n$, where $\bx_{i} := \parens{x_{i,1}, x_{i,2}, \cdots, x_{i,p}}^\top \in \Real^p$ and $y_i \in \Real$, for all $i = 1, \cdots, n$. 
+	
+	\item \textbf{Computation Goal:} The algorithm needs to automatically decide on 
+	\begin{itemize}
+		\item the splitting variables and splitting points, and 
+		\item what topology (shape) the tree should have. 
+	\end{itemize}
+	
+	\item \textbf{Constant Fitted Value Given a Partition:} Suppose 
+	\begin{enumerate}
+		\item we have partitioned the feature space into $M$ regions $R_1, R_2, \cdots, R_M$; 
+		\item we model the response as a \emph{constant} $c_m$ in each region: 
+		\begin{align*}
+			f \parens{\bx} = \sum_{m=1}^M c_m \indic \parens{\bx \in R_m}; 
+		\end{align*}
+		\item we use the squared-error loss function $\sum_{i=1}^n \parens{y_i - f \parens{\bx_i}}^2$ as the minimization criterion. 
+	\end{enumerate}
+	The best $\hat{c}_m$ is the average of $y_i$ in region $R_m$: 
+	\begin{align}
+		\hat{c}_m = \frac{1}{\abs[\big]{\sets{i \,\vert\, \bx_i \in R_m}}} \sum_{\sets{i \,\vert\, \bx_i \in R_m}} y_i. 
+	\end{align}
+	
+	\item \textbf{Greedy Algorithm to Find the Best Binary Partition:} 
+	\begin{enumerate}
+		\item \textit{Why Greedy Algorithm:} Finding the best binary partition in terms of the minimum sum of squares is generally computationally infeasible. 
+		\item \textit{Procedure:} Starting with all of the data, consider a splitting variable $j$ and split point $s$, and define the pair of half-planes
+		\begin{align}
+			R_1 \parens{j, s} = \sets{X \,\vert\, X_j \le s}, \qquad \text{ and } \qquad R_2 \parens{j, s} = \sets{X \,\vert\, X_j > s}. 
+		\end{align}
+		Seek the splitting variable $j$ and split point $s$ that solve 
+		\begin{align}
+			\min_{j, s} \braces[\Bigg]{\min_{c_1} \sum_{\sets{i \,\vert\, \bx_i \in R_1 \parens{j, s}}} \parens{y_i - c_1}^2 + \min_{c_2} \sum_{\sets{i \,\vert\, \bx_i \in R_2 \parens{j, s}}} \parens{y_i - c_2}^2}. 
+		\end{align}
+		For any choice $j$ and $s$, the inner minimization is solved by 
+		\begin{align*}
+			\hat{c}_1 = & \, \frac{1}{\abs[\big]{\sets{i \,\vert\, \bx_i \in R_1 \parens{j, s}}}} \sum_{ \sets{i \,\vert\, \bx_i \in R_1 \parens{j, s}}} y_i, \\ 
+			\hat{c}_2 = & \, \frac{1}{\abs[\big]{\sets{i \,\vert\, \bx_i \in R_2 \parens{j, s}}}} \sum_{ \sets{i \,\vert\, \bx_i \in R_2 \parens{j, s}}} y_i. 
+		\end{align*}
+		For each splitting variable, the determination of the split point $s$ can be done very quickly and hence by scanning through all of the inputs, determination of the best pair $\parens{j, s}$ is feasible. 
+		
+		\item \textit{Complete procedure:} Having found the best split, we partition the data into the two resulting regions and repeat the splitting process on each of the two regions. This process is repeated on all of the resulting regions. 
+	\end{enumerate}
+	
+	\item \textbf{Notation:} Let $T$ be a tree. 
+	\begin{enumerate}
+		\item $\abs{T}$ be the number of terminal nodes in $T$, 
+		\item $n_m := \abs[\big]{\sets{i \,\vert\, \bx_i \in R_m}}$, 
+		\item $\hat{c}_m := \frac{1}{n_m} \sum_{\sets{i \,\vert\, \bx_i \in R_m}} y_i$, and 
+		\item $Q_m \parens{T} := \frac{1}{n_m} \sum_{\sets{i \,\vert\, \bx_i \in R_m}} \parens{y_i - \hat{c}_m}^2$. 
+	\end{enumerate}
+	
+	\item \textbf{Subtree:} Let $T$ be a tree. A tree $\widetilde{T}$ is said to be a \emph{subtree} of $T$, denoted by $\widetilde{T} \subseteq T$, if $\widetilde{T}$ is any tree that can be obtained by pruning $T$, that is, collapsing any number of its internal (non-terminal) nodes. 
+	
+	\item \textbf{Tree Size:}  
+	\begin{enumerate}
+		\item \textit{Overview:} Tree size is a tuning parameter in growing a regression tree, and governs the model complexity: 
+		\begin{enumerate}
+			\item A very large tree might overfit the data, but 
+			\item a too small tree might \emph{not} capture the important structure and lead to a large bias. 
+		\end{enumerate}
+		The optimal tree size should be adaptively chosen from data. 
+		
+		\item \textit{Cost-complexity Pruning:} Grow a large tree $T_0$, stopping the splitting process only when some minimum node size is reached. Then, prune this large tree using \emph{cost-complexity pruning} 
+		\begin{align}
+			C_{\alpha} \parens{T} := \sum_{m=1}^{\abs{T}} n_m Q_{m} \parens{T} + \alpha \cdot \abs{T}. 
+		\end{align}
+		For each $\alpha \ge 0$, find the subtree $T_{\alpha} \subset T_0$ that minimizes $C_{\alpha}$. 
+		
+		\item \textit{Role of $\alpha$:} The tuning parameter $\alpha \ge 0$ governs the tradeoff between tree size and its goodness of fit to the data: 
+		\begin{enumerate}
+			\item large values of $\alpha$ result in smaller trees $T_{\alpha}$, and 
+			\item smaller values of $\alpha$ result in a larger tree. 
+		\end{enumerate}
+		The solution when $\alpha = 0$ is the full tree $T_0$. 
+		
+		\item \textit{Finding $T_{\alpha}$ That Minimizes $C_{\alpha}$:} 
+		\begin{itemize}
+			\item \underline{Uniqueness of the solution:} For each $\alpha \ge 0$, there exists a \emph{unique} smallest subtree $T_{\alpha}$ that minimizes $C_{\alpha}$. 
+			\item \underline{Weakest link pruning:} 
+			\begin{itemize}
+				\item \underline{Procedure:} We successively collapse the internal node that produces the \emph{smallest} per-node increase in $\sum_{m} n_m Q_m \parens{T}$, and continue until we produce the single-node (root) tree. 
+				\item \underline{Validity:} This procedure gives a (finite) sequence of subtrees. It can be shown that this sequence must contain $T_{\alpha}$. 
+			\end{itemize}
+		\end{itemize}
+		
+		\item \textit{Choosing $\alpha$ by Cross-validation:} The optimal choice of $\alpha \ge 0$ can be achieved by five- or ten-fold cross-validation. That is, we choose the value $\hat{\alpha}$ to minimize the cross-validated sum of squares. Our final tree is $T_{\hat{\alpha}}$. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{III. Classification Tree}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Setup:} Let data be $\sets{\parens{\bx_i, g_i}}_{i=1}^n$, where $\bx_{i} := \parens{x_{i,1}, x_{i,2}, \cdots, x_{i,p}}^\top \in \Real^p$ and $g_i \in \calW := \sets{1, 2, \cdots, W}$, for all $i = 1, \cdots, n$. 
+	
+	\item \textbf{Classification Rule:} In a node $m$ that represents a region $R_m$ with $n_m$ observations, let 
+	\begin{align}
+		\hat{p}_{m,w} := \frac{1}{n_m} \sum_{\sets{i \,\vert\, \bx_i \in R_m}} \indic \parens{g_i = w}, 
+	\end{align}
+	which is the proportion of observations in Class $w$ in node $m$. We classify observations in node $m$ to the class 
+	\begin{align*}
+		w^* \parens{m} := \argmax_{w \in \calW} \ \hat{p}_{m,w}, 
+	\end{align*}
+	the majority class in node $m$. 
+	
+	\item \textbf{Splitting Criterion:} In the classification tree, we use the following criteria for searching for splitting variables and splitting values: 
+	\begin{enumerate}
+		\item \textit{Misclassification error:} 
+		\begin{align}
+			\frac{1}{n_m} \sum_{\sets{i \,\vert\, \bx_i \in R_m}} \indic \parens{y_i \neq w^* \parens{m}} = 1 - \hat{p}_{m, w^* \parens{m}}; 
+		\end{align}
+		
+		\item \textit{Gini index:} 
+		\begin{align}
+			\sum_{w \neq w'} \hat{p}_{m, w} \hat{p}_{m, w'} = \sum_{w=1}^W \hat{p}_{m,w} \parens{1 - \hat{p}_{m,w}}. 
+		\end{align}
+		
+		\item \textit{Cross-entropy or deviance:} 
+		\begin{align}
+			- \sum_{w=1}^W \hat{p}_{m,w} \log \hat{p}_{m,w}. 
+		\end{align}
+	\end{enumerate}
+	
+	\textit{Remark 1.} If $K=2$ so that we only have two classes, if $p$ is the proportion in the second class, the misclassification error, the Gini index, and the cross-entropy become 
+	\begin{align*}
+		1 - \max \parens{p, 1-p}, \qquad 2p \parens{1-p}, \qquad - p \log p - \parens{1-p} \log \parens{1-p}, 
+	\end{align*}
+	respectively. 
+	
+	\textit{Remark 2.} The cross-entropy and the Gini index are differentiable but the misclassification error is not. Thus, the former two are more amenable to numerical optimization. 
+	
+	\textit{Remark 3.} The cross-entropy and the Gini index are more sensitive to changes in the node probabilities than the misclassification error. 
+	
+	\item \textbf{Interpretations of Gini Index:} 
+	\begin{enumerate}
+		\item Rather than classify observations to the majority class in the node, we could classify them to Class $w$ with probability $\hat{p}_{m, w}$. Then, the expected training error rate of this rule in the node is $\sum_{w \neq w'} \hat{p}_{m, w} \hat{p}_{m, w'}$, which is the Gini index. 
+		\item If we code each observation as $1$ for Class $w$ and zero otherwise, the \emph{variance} over the node of this 0-1 response is $\hat{p}_{m, w} \parens{1 - \hat{p}_{m, w}}$. Summing over $W$ different classes again gives the Gini index. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{IV. Some Practical Issues}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Dealing With Categorical Variables:} 
+	\begin{enumerate}
+		\item \textit{Difficulty:} When splitting a predictor having $q$ possible unordered values, there are $2^q-1$ possible partitions of the $q$ values into two groups. Computation can be prohibitively expensive for large $q$. 
+		\item \textit{Special case for 0-1 outcome:} With the 0-1 outcome, we can simplify the computation as below: 
+		\begin{enumerate}
+			\item Order the predictor classes according to the proportion falling in outcome Class 1; 
+			\item Split this predictor as if it were an ordered predictor. 
+		\end{enumerate}
+		This procedure gives the optimal split in terms of cross-entropy or Gini index. 
+		
+		\textit{This procedure does \emph{not} work for multi-category outcomes. }
+		
+		\item \textit{Comments:} The partitioning algorithm tends to favor categorical predictors with too large $q$ --- the number of partitions grows exponentially in $q$, and the more choices we have, the more likely we can find a good one for the data at hand. This can lead to severe \underline{overfitting} if $q$ is large, and such variables should be avoided. 
+	\end{enumerate}
+	
+	\item \textbf{Asymmetric Loss Matrix:} 
+	\begin{enumerate}
+		\item \textit{Setup:} In classification problems, the consequences of misclassifying observations are more serious in some classes than others. Define a $W \times W$ loss matrix $\bL$, with $\bL_{w, w'}$ being the loss incurred for classifying an observation in Class $w$ to Class $w'$. Typically, $\bL_{w, w} = 0$, i.e., \emph{no} loss is incurred for correct classifications. 
+		
+		\item \textit{Incorporating Asymmetric Loss Matrix into Fitting Classification Tree:} 
+		\begin{itemize}
+			\item For \underline{two-class} problems, weight the observations in Class $w$ by $\bL_{w, w'}$. 
+			
+			\textit{Remark 1.} This works for the multi-class problems only if $\bL_{w, w'}$ does \emph{not} depend on $w'$ as a function of $w$. 
+			
+			\textit{Remark 2.} The effect of observation weighting is to alter the prior probability on the classes. 
+			
+			\item For \underline{multi-class} problems, modify the Gini index to 
+			\begin{align*}
+				\sum_{w \neq w'} \bL_{w, w'} \hat{p}_{m, w} \hat{p}_{m, w'}. 
+			\end{align*}
+			This is the expected loss incurred by the randomized rule. 
+		\end{itemize}
+		
+	\end{enumerate}
+	
+	\item \textbf{Imputation of Missing Values in Predictors:} 
+	\begin{enumerate}
+		\item \textit{Motivation:} Suppose data have some missing values in predictors. One approach is to discard any observation with missing values, which may lead to serious depletion of the training dataset. 
+		\item \textit{Imputation strategies:} 
+		\begin{itemize}
+			\item Impute the missing values with the mean/median of that predictor over the non-missing values. 
+			\item For categorical predictors, simply make a new category for ``missing''. 
+			\item Constructing \textit{surrogate variables}: 
+			\begin{enumerate}
+				\item When considering a predictor for a split, we use only the \textit{observations} for which that predictor is \emph{not} missing. 
+				\item Having chosen the best primary predictor and splitting point, form a list of surrogate predictors and splitting points. 
+			\end{enumerate}
+			When sending observations down the tree, we use the surrogate splits in order, if the primary splitting predictor is missing. 
+			
+			\textit{Remark.} Surrogate splits explores the \emph{correlations} between predictors to try and alleviate the effect of the missing data. The higher the correlation between the missing predictor and the other predictors, the smaller the loss of information due to the missing value. 
+		\end{itemize}
+		
+	\end{enumerate}
+	
+	\item \textbf{From Binary Splits to Multiway Splits:} Rather than splitting each node into two groups at each stage, we can consider \textit{multiway} splits into more than two groups. However, this is \emph{not} a good strategy, since the multiway splits fragment the data too quickly, leaving \emph{insufficient} data at the next level down. Hence, we would want to use such splits only when needed. 
+	
+	\item \textbf{Linear Combination Splits:} Rather than restricting splits to be of the form $X_j \le s$, one can allow splits along linear combinations of the form $\sum_{j} a_j X_j \le s$, where the weights $a_j$'s and split point $s$ are optimized to minimize the relevant criterion. 
+	\begin{enumerate}
+		\item \textit{Advantage:} This can improve the predictive power of the tree; 
+		\item \textit{Disadvantages:} 
+		\begin{enumerate}
+			\item This approach hurts interpretability; 
+			\item Computationally, the discreteness of the split point search precludes the use of a smooth optimization for the weights. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{Instability of Trees:} 
+	\begin{enumerate}
+		\item \textit{Issue:} Trees have high variance. Often a small change in the data can result in a very different series of splits. 
+		\item \textit{Major Cause:} The major reason for this instability is the \emph{hierarchical nature} of the process: the effect of an error in the top split is propagated down to all of the splits below it. 
+		\item \textit{Solution:} Bagging averages many trees and may reduce the variance. 
+	\end{enumerate}
+	
+	\item \textbf{Lack of Smoothness:} Trees lack smoothness of the prediction surface. This can degrade performance in the \textit{regression setting}, where we would normally expect the underlying function to be smooth. 
+	
+	\item \textbf{Difficulty in Capturing Additive Structure:} Trees have difficulty in modeling \textit{additive structure}, such as $Y = c_1 \indic \parens{X_1 < t_1} + c_2 \indic \parens{X_2 < t_2} + \varepsilon$, where $\varepsilon$ is the zero-mean random noise. This difficult is mainly due to the binary tree structure. 
+	
+\end{enumerate}
+
+
+\section*{V. PRIM: Bump Huning}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Patient Rule Induction Method (PRIM):} The \textit{patient rule induction method (PRIM)}, similar to the tree model described earlier, finds boxes in which the response average is high. Hence, it looks for maximum in the target function, known as \emph{bump hunting}. 
+	
+	\item \textbf{Applicability:} 
+	\begin{enumerate}
+		\item PRIM is primarily designed for \emph{regression} (quantitative response variable); 
+		\item A two-class outcome can be handled simply by coding the response variable as 0 and 1; 
+		\item There is no simple way to deal with $W > 2$ classes simultaneously: one approach is to run PRIM separately for each class versus a baseline class. 
+	\end{enumerate}
+	
+	\item \textbf{Procedure:} 
+	\begin{enumerate}
+		\item \textit{Top-down Compression:} 
+		\begin{enumerate}
+			\item Starting with a box containing all of the data, the box is compressed along one face by a small amount, and the observations then falling outside the box are peeled off; 
+			\item Then, the process is repeated, stopping when the current box contains some minimum number of data points. 
+		\end{enumerate}
+		
+		\underline{Choice of Face:} The face chosen for compression at each stage is the one resulting in the largest box mean, after the compression is performed. 
+		
+		\item \textit{Bottom-up Pasting:} After the top-down sequence is computed, PRIM reverses the process, expanding along any edge, if such an expansion \emph{increases} the box mean. This procedure is called \emph{pasting}. 
+		
+		\textit{Remark.} Since the top-down procedure is greedy at each step, such an expansion is often possible. 
+	
+	\end{enumerate}
+	
+	The top-down compression and bottom-up pasting process is repeated several times, producing a sequence of boxes $B_1$, $B_2$, $\cdots, B_k$. Each box contains different numbers of observations and is defined by a set of rules involving a subset of predictors like 
+	\begin{align*}
+		a_1 \le X_1 \le a_2 \qquad \text{ and } \qquad b_1 \le X_2 \le b_2. 
+	\end{align*}
+	Cross-validation can be used to choose the optimal box size. 
+	
+	Algorithm for PRIM is outlined in Algorithm \ref{algo-prim}. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{Patient Rule Induction Method (PRIM)}\label{algo-prim}
+			\begin{algorithmic}[1]
+				\STATE Start with all of the training data, and a maximal box containing all of the data; 
+				\STATE Consider shrinking the box by compressing one face, so as to \emph{peel off} the proportion $\alpha$ of observations having either the highest values of a predictor $X_j$, or the lowest. Choose the peeling that produces the highest response mean in the remaining box (Typically $\alpha = 0.05$ or $0.10$.); 
+				\STATE Repeat Step 2 until some pre-specified minimal number of observations remain in the box; 
+				\STATE Expand the box along any face, as long as the resulting box mean increases; 
+				\STATE Steps 1-4 give a sequence of boxes, with different numbers of observations in each box. Use cross-validation to choose a member of the sequence. Call the box $B_1$; 
+				\STATE Remove the data in box $B_1$ from the dataset and repeat Steps 2-5 to obtain a second box, and continue to get as many boxes as desired. 
+			\end{algorithmic} 
+		\end{algorithm}
+	\end{minipage}
+	
+	\item \textbf{Comparison with Tree-based Methods:} The main difference is that boxes in PRIM are \emph{not} described by binary trees. Consequences are the following: 
+	\begin{enumerate}
+		\item interpretation of the collection of rules in PRIM is more difficult, but 
+		\item interpretation of individual rule is often simpler. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{VI. MARS: Multivariate Adaptive Regression Splines}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Overview:} MARS is an adaptive procedure for regression. It can be viewed as 
+	\begin{itemize}
+		\item a generalization of stepwise linear regression, or 
+		\item a modification of the CART method to improve the performance of the latter in the regression setting. 
+	\end{itemize}
+	
+	\item \textbf{Basis Functions in MARS:} Basis functions in MARS are piecewise linear basis functions of the form $\parens{x - t}_+$ and $\parens{t - x}_+$, where $\parens{x}_+ := \max \sets{x, 0}$. More explicitly, we have 
+	\begin{align*}
+		\parens{x - t}_+ = \begin{cases}
+			x-t, & \, \text{ if } x \ge t, \\ 
+			0, & \, \text{ otherwise}, 
+		\end{cases}
+	\end{align*}
+	and 
+	\begin{align*}
+		\parens{t - x}_+ = \begin{cases}
+			t-x, & \, \text{ if } x \le t, \\ 
+			0, & \, \text{ otherwise}, 
+		\end{cases}
+	\end{align*}
+	The entire collection of basis functions consists of the piecewise linear basis functions for each input variable and at each distinct value of the corresponding variable, i.e., 
+	\begin{align*}
+		\calC := \sets[\big]{\parens{X_j - t}_+, \parens{t - X_j}_+}_{t \in \sets{x_{1,j}, x_{2,j}, \cdots, x_{n,j}}, j \in \sets{1, 2, \cdots, p}}. 
+	\end{align*}
+	
+	\textit{Remark 1.} We call the pair of functions $\parens{X_j - t}_+$ and $\parens{t - X_j}_+$ the \emph{reflected pair}. 
+	
+	\textit{Remark 2.} If all of the input values are distinct, there are $2np$ basis functions altogether. 
+	
+	\textit{Remark 3.} Each basis function is univariate and depends only on a single $X_j$. It is considered as a function over the entire input space $\Real^p$. 
+	
+	\item \textbf{Model Specification:} The model-building strategy is like a forward stepwise linear regression, but instead of using the original inputs, we are allowed to use functions from the set $\calC$ \emph{and} their products. Thus, the model has the form 
+	\begin{align}\label{eq-mars-model}
+		f \parens{\bx} = \beta_0 + \sum_{\ell=1}^M \beta_{\ell} h_{\ell} \parens{\bx}, 
+	\end{align}
+	where each $h_{\ell}$ either belongs to $\calC$, or is a product of two or more functions in $\calC$. 
+	
+	\item \textbf{Model Fitting:} Given a choice for the $h_{\ell}$, the coefficients $\bbeta_{\ell}$ are estimated by minimizing the residual sum-of-squares. 
+	
+	\item \textbf{Choosing Basis Functions $h_{\ell}$'s:} Let $\calM$ denote the set of basis functions that are already in the model. 
+	
+	We start with only the constant function $h_0 \parens{\bx} = 1$, and all functions in the set $\calC$ are candidate functions. Hence, $\calM = \sets{h_0}$ at the very beginning. 
+	
+	At each stage, we consider all products of a function $h_{\ell}$ in the model set $\calM$ with one of the reflected pairs in $\calC$ that has \emph{not} appeared in $\calM$ as a new basis function pair. We add the following term to the model $\calM$ 
+	\begin{align}\label{eq-mars-1}
+		\hat{\beta}_{M+1} h_{\ell} \parens{\bx} \parens{X_j - t}_+ + \hat{\beta}_{M+2} h_{\ell} \parens{\bx} \parens{t - X_j}_+, 
+	\end{align}
+	that produces the largest decrease in training error. In \eqref{eq-mars-1}, $h_{\ell} \in \calM$, and $M = \abs{\calM}$, the number of basis functions in the model prior to adding new terms, and $\hat{\beta}_{M+1}$ and $\hat{\beta}_{M+2}$ are coefficients estimated by least squares, along with all the other coefficients in the model. 
+	
+	Then, this process is continued until the model set $\calM$ contains some pre-specified maximum number of terms. 
+	
+	\textit{Remark.} Each input variable can appear \emph{at most once} in a product. This prevents the formation of higher-order powers of an input, which increase or decrease too sharply near the boundaries of the feature space. 
+	
+	\item \textbf{Avoiding Overfitting:} At the end of the fitting process, we have a large model of the form \eqref{eq-mars-model}. This model typically overfits the data, and so a \emph{backward deletion procedure} is necessary. 
+	
+	The term whose removal causes the smallest increase in residual squared error is deleted from the model at each stage, producing an estimated best model $\hat{f}_{\lambda}$ of each size (number of terms) $\lambda$. 
+	
+	From computational consideration, we use generalized cross-validation to choose the best number of $\lambda$, where the \emph{generalized cross-validation} is defined as 
+	\begin{align}\label{eq-mars-gcv}
+		\mathrm{GCV} \parens{\lambda} := \frac{\sum_{i=1}^n \parens{y_i - \hat{f}_{\lambda} \parens{\bx_i}}^2}{\parens{1 - M \parens{\lambda} / n}^2}. 
+	\end{align}
+	In \eqref{eq-mars-gcv}, $M \parens{\lambda}$ is the effective number of parameters in the model, which accounts for both 
+	\begin{itemize}
+		\item the number of terms in the models, and 
+		\item the number of parameters used in selecting the optimal positions of the knots. 
+	\end{itemize}
+	
+	\textit{Example.} If there are $r$ linearly independent basis functions in the model, and $K$ knots were selected in the forward process, then 
+	\begin{align*}
+		M \parens{\lambda} = r + c K, 
+	\end{align*}
+	where $c = 3$ in MARS. 
+	
+	When the model is restricted to be \emph{additive}, we should choose $c = 2$. 
+	
+	\item \textbf{Comments on MARS:} 
+	\begin{enumerate}
+		\item Functions of form \eqref{eq-mars-model} can operate locally and are zero over part of their range. In particular, note that the product $h_{\ell} \parens{\bx} \parens{X_j - t}_+$ appearing in \eqref{eq-mars-1} is nonzero only when both $h_{\ell} \parens{\bx}$ and $\parens{X_j - t}_+$ are nonzero. 
+		
+		As a result, the regression surface is built up parsimoniously, using nonzero components locally. 
+
+		\item Exploiting the piecewise linear basis functions, computation in MARS is very efficient. 
+		
+		\item The forward modeling strategy in MARS is hierarchical, in the sense that multiway products are built up from products involving terms already in the model. The philosophy here is that a high-order interaction will likely \emph{only} exist if some of its lower-order terms exist as well. 
+		
+		\item MARS procedure sets an upper limit on the order of interaction. This can aid in the interpretation of the final model. 
+	
+	\end{enumerate}
+	
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

@@ -1,0 +1,958 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 14, Boosting and Additive Trees}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Boosting and Additive Trees}{14}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 10, Boosting and Additive Trees} in \textcite{Friedman2001-np}, and 
+	\item \textit{Chapter 14, Committee Machines} in \textcite{Izenman2009-jk}. 
+\end{itemize}
+The main idea of \textit{boosting} is to combine the outputs of many ``weak'' learners to produce a powerful ``committee''. 
+
+
+\section*{I. Introduction and AdaBoosting Algorithm}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Consider a two-class problem with the output variable coded as $Y \in \sets{-1, +1}$. Given a vector of predictor variables $X$, a classifier $G \parens{X}$ produces a prediction belonging to $\braces{-1, +1}$. 
+	
+	Let the training data be $\sets{\parens{\bx_i, y_i}}_{i=1}^n$, where $y_i \in \sets{-1, +1}$. 
+	
+	\item \textbf{Error Rate:} The \emph{error rate} of the training sample is 
+	\begin{align*}
+		\overline{\mathrm{err}} := \frac{1}{n} \sum_{i=1}^n \indic \parens{y_i \ne G \parens{\bx_i}}, 
+	\end{align*}
+	and the \emph{expected error rate} on future predictions is $\E_{X, Y} \bracks{\indic \parens{Y \ne G \parens{X}}}$. 
+	
+	\item \textbf{Weak Classifier:} A \textit{weak classifier} is the one whose error rate is only \textit{slightly better} than random guessing. 
+	
+	\item \textbf{Main Idea of Boosting:} Boosting sequentially apply the weak classification algorithm to \textit{repeatedly} modified versions of the data and produces a \textit{sequence of weak classifiers} $G_m$, for $ m = 1, 2, \cdots, M $. The predictions from all of them are then combined through a \textit{weighted} majority vote to produce the final prediction 
+	\begin{align}
+		G \parens{\bx} = \sign \parens[\Bigg]{\sum_{m=1}^M \alpha_m G_m \parens{\bx}}, 
+	\end{align}
+	where $\alpha_1, \cdots, \alpha_M$ are computed from the boosting algorithm and provide weights of each weak classifier $G_m$. The effect of $\sets{\alpha_m}_{m=1}^M$ is to give higher weights to the more accurate classifiers in the sequence. 
+	
+	\item \textbf{Boosting Algorithm:} Below is the AdaBoost.M1 Algorithm. 
+
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+			\caption{AdaBoost.M1 Algorithm}\label{algo-adaboostm1}
+			\begin{algorithmic}[1]
+				\STATE Initialize the observation weights $w_i = 1 / n$ for all $i = 1, 2, \cdots, n$; 
+				\STATE For $m = 1$ to $M$: 
+				\begin{enumerate}
+					\item[(a)] Fit a classifier $G_m$ to the training data using weights $w_i$; 
+					\item[(b)] Compute
+					\begin{align*}
+						\mathrm{err}_m = \frac{\sum_{i=1}^n w_i \cdot \indic \parens{y_i \ne G_m \parens{\bx_i}} }{\sum_{i=1}^n w_i}; 
+					\end{align*}
+					\item[(c)] Compute
+					\begin{align*}
+						\alpha_m = \log \parens[\bigg]{\frac{1 - \text{err}_m}{\text{err}_m}}; 
+					\end{align*}
+					\item[(d)] Set $w_i \leftarrow w_i \cdot \exp \bracks{\alpha_m \cdot \indic \parens{y_i \ne G_m \parens{\bx_i}}}$ for all $i = 1, 2, \cdots, n$. 
+				\end{enumerate}
+				\STATE Output $G \parens{\bx} = \sign \parens[\big]{\sum_{m=1}^M \alpha_m G_m \parens{\bx}}$. 
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\vspace{10pt}
+	
+	\textit{Remark:} AdaBoost in Algorithm \ref{algo-adaboostm1} is called the \textit{discrete AdaBoost}, since its output is a discrete label $\sets{-1, 1}$. 
+	
+	\item \textbf{More on the Weights in Boosting:} Note that at each step, we modify the weights of each training observation $\sets{\parens{\bx_i, y_i}}_{i=1}^n$. 
+	\begin{itemize}
+		\item At the first step, the weights are all equal to $\frac{1}{n}$; 
+		\item At the $m$-th step for $m = 2, 3, \cdots, M$, the observations that were misclassified by $G_{m-1}$ have their weights \emph{increased}, and the weights are decreased for those that were classified correctly, by noting that $1 - \text{err}_m > \text{err}_m$ so that $\alpha_m > 0$, since $G_m$'s are weak classifiers and perform better than random guessing. 
+	\end{itemize}
+	As iterations proceed, observations that are difficult to be classified correctly receive gradually \emph{increasing} influence. 
+	
+\end{enumerate}
+
+
+\section*{II. Boosting Fits an Additive Model}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Additive Expansion View of Boosting:} Boosting can be viewed as a way of fitting an additive expansion in a set of elementary ``basis'' functions, where the basis functions are the individual classifiers $G_m$ that map to $\sets{-1, +1}$. 
+	
+	\item \textbf{Basis Functions and the Associated Model Fitting:} In general, basis function expansions are of the form 
+	\begin{align*}
+		f \parens{\bx} = \sum_{m=1}^M \beta_m b \parens{\bx; \gamma_m}, 
+	\end{align*}
+	where $\beta_m$, for $m = 1, \cdots, M$, are the expansion coefficients and $b \parens{\,\cdot\,; \gamma}$ are the simple functions of a multivariate argument, characterized by a set of parameters $\gamma$. 
+	
+	Models with additive expansions are fit by \emph{minimizing} a loss function $L$ averaged over the training data
+	\begin{align}\label{loss.basis}
+		\minimize_{\braces{\beta_m, \gamma_m}_{m=1}^M} \ \braces[\Bigg]{\sum_{i=1}^n L \parens[\bigg]{y_i, \sum_{m=1}^M \beta_m b \parens{\bx_i; \gamma_m}}}. 
+	\end{align}
+	Typical choices of the loss functions are 
+	\begin{itemize}
+		\item the squared-error loss, or 
+		\item the likelihood-based loss functions. 
+	\end{itemize}
+	
+	\item \textbf{Computational Consideration:} It is typically \emph{computationally expensive} to solve the problem \eqref{loss.basis} \emph{directly}. A simple alternative is to solve the subproblem of fitting just a \emph{single basis function}, and the corresponding optimization problem becomes 
+	\begin{align*}
+		\minimize_{\beta, \gamma} \, \braces[\Bigg]{\sum_{i=1}^n L \parens{y_i, \beta b \parens{\bx_i; \gamma}}}. 
+	\end{align*}
+
+\end{enumerate}
+
+
+\section*{III. Forward Stagewise Additive Modeling}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Forward Stagewise Additive Modeling:} \emph{Forward stagewise modeling} approximates the solution to \eqref{loss.basis} 
+	\begin{enumerate}
+		\item by \textit{sequentially} adding new basis functions to the expansion, and 
+		\item \textit{without} adjusting the parameters and coefficients of those that have already been added. 
+	\end{enumerate}
+	
+	The algorithm is outlined as below. 
+
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{Forward Stagewise Additive Modeling}\label{algo-forward-stagewise-additive}
+			\begin{algorithmic}[1]
+				\STATE Initialize $f_0 = 0$. 
+				\STATE For $m = 1$ to $M$: 
+				\begin{enumerate}
+					\item[(a)] Compute
+					\begin{align*}
+						\parens{\beta_m, \gamma_m} := \argmin_{\beta, \gamma} \sum_{i=1}^n L \parens[\big]{y_i, f_{m-1} \parens{\bx_i} + \beta b \parens{\bx_i; \gamma}}; 
+					\end{align*}
+					\item[(b)] Set 
+					\begin{align*}
+						f_m \parens{\bx} = f_{m-1} \parens{\bx} + \beta_m b \parens{\bx; \gamma_m}. 
+					\end{align*}
+				\end{enumerate}
+			\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\vspace{5pt}
+	At each iteration $m$, one 
+	\begin{enumerate}
+		\item solves for the optimal basis function $b \parens{\bx; \gamma_m}$ and the corresponding coefficient $\beta_m$, and 
+		\item adds to the current function $f_{m-1}$. 
+	\end{enumerate}
+	In particular, notice that previously added terms are \emph{not} modified. 
+	
+	\item \textbf{Example --- Square Error Loss Function:} Consider the squared error loss function 
+	\begin{align*}
+		L \parens{y, f \parens{\bx}} := \parens{y - f \parens{\bx}}^2. 
+	\end{align*}
+	Then, at the $m$-step, we have 
+	\begin{align*}
+		L \parens{y_i, f_{m-1} \parens{\bx_i} + \beta b \parens{\bx_i; \gamma}} = & \, \parens{y_i - f_{m-1} \parens{\bx_i} - \beta b \parens{\bx_i; \gamma}}^2 \\ 
+		= & \, \parens{r_{i, m-1} \parens{\bx_i} - \beta b \parens{\bx_i; \gamma}}^2, 
+	\end{align*}
+	where 
+	\begin{align*}
+		r_{i, m-1} \parens{\bx_i} := y_i - f_{m-1} \parens{\bx_i} 
+	\end{align*}
+	is the \textit{residual} of the current model on the $i$-th observation. 
+	
+	In this setting, we see that the term $\beta_m b \parens{\bx_i; \gamma_m}$ that best fits the \textit{current residuals} is added to the expansion at each step. 
+
+\end{enumerate}
+
+
+\section*{IV. Exponential Loss and AdaBoost}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Exponential Loss:} Define the \textit{exponential loss function} as 
+	\begin{align}\label{exp.loss}
+		L \parens{y, f \parens{\bx}} := \exp \parens{-y f \parens{\bx}}. 
+	\end{align}
+	
+	\item \textbf{Goal:} We show that the AdaBoost outlined in Algorithm \ref{algo-adaboostm1} is equivalent to the forward stagewise additive modeling (Algorithm \ref{algo-forward-stagewise-additive}) using the exponential loss function \eqref{exp.loss}. 
+	
+	\item \textbf{Linking Forward Stagewise Additive Modeling and AdaBoost:} For AdaBoost, the basis functions are the individual classifier $G_m(x) \in \braces{-1, +1}$. Using the exponential loss, we solve
+	\begin{align*}
+		\parens{\beta_m, G_m} := \argmin_{\beta, G} \braces[\Bigg]{\sum_{i=1}^n \exp \bracks[\big]{-y_i \parens{f_{m-1} \parens{\bx_i} + \beta  G \parens{\bx_i}}}}
+	\end{align*}
+	for the classifier $G_m$ and corresponding coefficient $\beta_m$ to be added at each step. 
+	
+	Letting $w_i^{\parens{m}} = \exp \parens{-y_i f_{m-1} \parens{\bx_i}}$, we have 
+	\begin{align}\label{exp.loss.ada}
+		\parens{\beta_m, G_m} = \argmin_{\beta, G} \braces[\Bigg]{\sum_{i=1}^n w_i^{\parens{m}} \exp \parens{- \beta y_i G \parens{\bx_i}}}, 
+	\end{align}
+	where $w_i^{\parens{m}}$ does \emph{not} depend on $\beta$ or $G$ and can be regarded as the weight applied to the $i$-th observation. 
+	
+	\item \textbf{Derivation of the Solution to \eqref{exp.loss.ada}:} For first note that, for any $\beta > 0$, the solution to \eqref{exp.loss.ada} in $G_m$ is 
+	\begin{align*}
+			G_m := & \, \argmin_{G \in \sets{\pm 1}} \braces[\Bigg]{e^{-\beta} \sum_{ \sets{ i \,\vert\, y_i = G \parens{\bx_i}} } w_i^{\parens{m}} + e^{\beta} \sum_{ \sets{ i \,\vert\, y_i \ne G \parens{\bx_i} } } w_i^{\parens{m}}} \\ 
+			= & \, \argmin_{G \in \sets{\pm 1}} \braces[\Bigg]{\parens{e^{\beta} - e^{-\beta}} \sum_{i = 1}^n w_i^{\parens{m}} \indic \parens{y_i \ne G \parens{\bx_i}} + e^{-\beta} \sum_{i = 1}^n w_i^{\parens{m}}} \\ 
+			= & \, \argmin_{G \in \sets{\pm 1}} \braces[\Bigg]{\sum_{i=1}^n w_i^{\parens{m}} \indic \parens{y_i \ne G \parens{\bx_i}}}, 
+	\end{align*}
+	which is the classifier that minimizes the weighted error rate in predicting $y$. 
+	
+	Plugging $G_m$ into the objective function in  \eqref{exp.loss.ada}, we have
+	\begin{align*}
+		\parens{e^{\beta} - e^{-\beta}} \sum_{i = 1}^n w_i^{\parens{m}} \indic \parens{y_i \ne G_m \parens{\bx_i}} + e^{-\beta} \sum_{i = 1}^n w_i^{\parens{m}}. 
+	\end{align*}
+	Viewing it as a function of $\beta$ and differentiating it with respect to $\beta$ yield 
+	\begin{align*}
+		\parens{e^{\beta} + e^{-\beta}} \sum_{i = 1}^n w_i^{\parens{m}} \indic \parens{y_i \ne G_m \parens{\bx_i}} - e^{-\beta} \sum_{i = 1}^n w_i^{\parens{m}} \stackrel{\text{set}}{=} 0. 
+	\end{align*}
+	It follows that the minimizer $\beta_m$ must satisfy the equation 
+	\begin{align*}
+		\parens{e^{2 \beta_m} + 1} \sum_{i = 1}^n w_i^{\parens{m}} \indic \parens{y_i \ne G_m \parens{\bx_i}} = \sum_{i = 1}^n w_i^{\parens{m}}, 
+	\end{align*}
+	that is, 
+	\begin{align*}
+		e^{2 \beta_m} = \frac{\sum_{i = 1}^n w_i^{\parens{m}} - \sum_{i = 1}^n w_i^{\parens{m}} \indic \parens{y_i \ne G_m \parens{\bx_i}}}{\sum_{i = 1}^n w_i^{\parens{m}} \indic \parens{y_i \ne G_m \parens{\bx_i}}}, 
+	\end{align*}
+	implying
+	\begin{align*}
+		\beta_m = \frac{1}{2} \log \parens[\bigg]{\frac{1 - \text{err}_m}{\text{err}_m}}, 
+	\end{align*}
+	and $\text{err}_m$ is the minimized weighted error rate
+	\begin{align*}
+		\text{err}_m = \frac{\sum_{i=1}^n w_i^{\parens{m}} \indic \parens{y_i \ne G_m \parens{\bx_i}}}{\sum_{i=1}^n w_i^{\parens{m}} }. 
+	\end{align*}
+	Then, the approximation is updated as 
+	\begin{align*}
+		f_m \parens{\bx} = f_{m-1} \parens{\bx} + \beta_m G_m \parens{\bx}, 
+	\end{align*}
+	and the weights for the next iteration is 
+	\begin{align*}
+		w^{\parens{m+1}}_i = w^{\parens{m}}_i \cdot \exp \parens{- \beta_m y_i G_m \parens{\bx_i}}. 
+	\end{align*}
+	Since $-y_i G_m \parens{\bx_i} = 2 \cdot \indic \parens{y_i \ne G_m \parens{\bx_i}} - 1$, we can write the preceding equation as 
+	\begin{align*}
+		w^{\parens{m+1}}_i = w^{\parens{m}}_i \exp \parens{\alpha_m \indic \parens{y_i \ne G_m \parens{\bx_i}}} \cdot \exp \parens{-\beta_m}, 
+	\end{align*}
+	where $\alpha_m = 2 \beta_m$ is the quantity define in Algorithm \ref{algo-adaboostm1}. Since $e^{-\beta_m}$ multiplies all weights by the same amount, it has no effect. 
+	
+	Therefore, we have seen that the AdaBoost (Algorithm \ref{algo-adaboostm1}) minimizes the exponential loss function \eqref{exp.loss} via a forward stagewise additive modeling approach. 
+
+\end{enumerate}
+
+
+\section*{V. Properties of Exponential Loss}
+	
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Computational Advantages of Exponential Loss:} Using the exponential loss function \eqref{exp.loss} is computationally appealing --- it leads to the simple modular re-weighting AdaBoost algorithm. 
+	
+	\item \textbf{Minimizer of Population-version Exponential Loss:} It can be shown that 
+	\begin{align}\label{eq-min-pop-exp-loss}
+		f^* \parens{\bx} := \argmin_{f \parens{\bx}} \E_{Y \,\vert\, X = \bx} \bracks[\big]{e^{-Y f\parens{\bx}}} = \frac{1}{2} \log \parens[\bigg]{\frac{\Pr \parens{Y = 1 \,\vert\, X = \bx}}{\Pr\parens{Y = -1 \,\vert\, X = \bx}}}, 
+	\end{align}
+	or, equivalently, 
+	\begin{align*}
+		\Pr \parens{Y = 1 \,\vert\, X = \bx} = \frac{1}{1 + e^{-2f^* \parens{\bx}}}. 
+	\end{align*}
+	Therefore, the additive expansion produced by AdaBoost is estimating one-half of the log-odds of $\Pr\parens{Y = 1 \,\vert\, X = \bx}$. 
+	
+	To show \eqref{eq-min-pop-exp-loss}, we first note that 
+	\begin{align*}
+		\E_{Y \,\vert\, X = \bx} \bracks[\big]{e^{-Y f \parens{\bx}}} = \Pr \parens{Y = 1 \,\vert\, X = \bx} e^{-f \parens{\bx}} + \Pr \parens{Y = -1 \,\vert\, X = \bx} e^{f \parens{\bx}} =: L \parens{f \parens{\bx}}. 
+	\end{align*}
+	Take the derivative of $L$ with respect to $f \parens{\bx}$, and we have 
+	\begin{align*}
+		\frac{\diff L \parens{f \parens{\bx}}}{\diff f \parens{\bx}} = - \Pr \parens{Y = 1 \,\vert\, X = \bx} e^{-f \parens{\bx}} + \Pr \parens{Y = -1 \,\vert\, X = \bx} e^{f \parens{\bx}} \stackrel{\text{set}}{=} 0, 
+	\end{align*}
+	yielding 
+	\begin{align*}
+		e^{2f^* \parens{\bx}} = \frac{\Pr \parens{Y = 1 \,\vert\, X = \bx}}{\Pr \parens{Y = -1 \,\vert\, X = \bx}}. 
+	\end{align*}
+	Taking the logarithm on both sides and dividing by 2 yield the desired result. 
+	
+	\item \textbf{Connection to the Deviance:} Assume 
+	\begin{align*}
+		p \parens{\bx} := \Pr \parens{Y = 1 \,\vert\, X = \bx} = \frac{e^{f \parens{\bx}}}{e^{ f \parens{\bx} } + e^{-f \parens{\bx} }} = \frac{1}{1 + e^{-2 f \parens{\bx}}}. 
+	\end{align*}
+	Let $Y' := \frac{Y+1}{2} \in \braces{0, 1}$, and notice that 
+	\begin{align*}
+		p \parens{\bx} = \Pr \parens{Y = 1 \,\vert\, X = \bx} = \Pr \parens{Y' = 1 \,\vert\, X = \bx}. 
+	\end{align*}
+	The binomial log-likelihood function is 
+	\begin{align*}
+		\ell \parens{Y', f \parens{\bx} } := & \, Y' \log p \parens{\bx} + \parens{1 - Y'} \cdot \log \parens{1 - p \parens{\bx} } \\ 
+		= & \, Y' \log \parens[\bigg]{\frac{p \parens{\bx}}{1 - p \parens{\bx}}} + \log \parens{1 - p \parens{\bx}} \\ 
+		= & \, 2 Y' f \parens{\bx} - 2 f \parens{\bx} - \log \parens{1 + e^{-2f\parens{\bx}}} \\ 
+		= & \, \begin{cases}
+			- \log \parens{1 + e^{-2f \parens{\bx}}}, & \, \text{ if } Y = 1, \\ 
+			-2 f \parens{\bx} - \log \parens{1 + e^{-2f \parens{\bx}}} = - \log \parens{1 + e^{2f \parens{\bx}}}, & \, \text{ if } Y = -1, 
+		\end{cases} \\ 
+		= & \, - \log \parens{1 + e^{-2 Y f \parens{\bx}}}, 
+	\end{align*}
+	where $- \ell \parens{Y', f \parens{\bx} }$ is also called the \emph{binomial deviance}. 
+	Then, 
+	\begin{align*}
+		\E_{Y \,\vert\, X = \bx} \bracks{\ell \parens{Y', f \parens{\bx} }} = & \, - \Pr \parens{Y = 1 \,\vert\, X = \bx} \log \parens{1 + e^{-2 f \parens{\bx}}} \\ 
+		& \qquad \qquad - \parens{1 - \Pr \parens{Y = 1 \,\vert\, X = \bx} } \log \parens{1 + e^{2 f \parens{\bx}}}. 
+	\end{align*}
+	Differentiating $\E_{Y' \,\vert\, X = \bx} \bracks{\ell \parens{Y', f \parens{\bx} }}$ with respect to $f \parens{\bx}$ and setting the derivation to 0 yield 
+	\begin{align*}
+		f^* \parens{\bx} = & \, \argmax_{f \parens{\bx}} \E_{Y' \,\vert\, X = \bx} \bracks{\ell \parens{Y', f \parens{\bx} }} \\ 
+		= & \, \frac{1}{2} \log \parens[\bigg]{\frac{\Pr \parens{Y = 1 \,\vert\, X = \bx}}{\Pr \parens{Y = -1 \,\vert\, X = \bx}}}. 
+	\end{align*}
+	Therefore, the \textit{population version of the maximizer} of the binomial log-likelihood function $\E_{Y' \,\vert\, X = \bx} \bracks{\ell \parens{Y', f \parens{\bx} } }$ and the \textit{population version of the minimizer} of the exponential loss function $\E_{Y \,\vert\, X = \bx} \bracks{e^{- Y f \parens{\bx}}}$ are identical. 
+	
+	\textit{Remark.} This result only refers to the \emph{population level}, or if one has \emph{infinitely many} data. If one works finite samples, then the minimizers of $\E_{Y' \,\vert\, X = \bx} \bracks{- \ell \parens{Y', f \parens{\bx}}}$ and $\E_{Y \,\vert\, X = \bx} \bracks{e^{- Y f \parens{\bx}}}$ are \emph{different}. 
+
+\end{enumerate}
+
+
+\section*{VI. Loss Functions and Robustness}
+
+\subsection*{VI.1 Robust Loss Functions for Classification}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Margin $yf\parens{\bx}$:} Let $y \in \sets{-1, +1}$. Both the exponential loss function and the binomial deviance are monotonically decreasing functions of the ``margin'' $yf\parens{\bx}$: for the classification rule $G \parens{\bx} = \sign \parens{f \parens{\bx}}$, 
+	\begin{enumerate}
+		\item if the margin $y_i f \parens{\bx_i} > 0$, the observation $i$ is classified correctly, and 
+		\item if the margin $y_i f \parens{\bx_i} < 0$, the observation $i$ is classified incorrectly. 
+	\end{enumerate}
+	The classification boundary is defined by $f \parens{\bx} = 0$. The \textit{goal} of the classification algorithm is to produce positive margins as frequently as possible. 
+	
+	Any loss criterion used for classification should penalize \textit{negative} margins more \textit{heavily} than positive ones since positive margin observations are already correctly classified. 
+	
+	\item \textbf{Misclassification Loss and Its Continuous Approximations:} The misclassification loss function is defined as 
+	\begin{align*}
+	  	L \parens{y, f \parens{\bx}} := \indic \parens{y f \parens{\bx} < 0}, 
+	\end{align*}
+	which takes on the value of 1 if the observation $i$ is misclassified and 0 otherwise. In other words, the penalty for a negative margin (a misclassification) is 1 and no penalty is imposed for a positive margin. 
+	
+	\textit{Remark.} The exponential loss and deviance loss can be viewed as monotone continuous approximations to the misclassification loss. 
+	
+	\item \textbf{Comparisons and Contrasts between Exponential Loss and Deviance Loss:} 
+	\begin{enumerate}
+		\item \textit{Similarity:} Both continuously penalize \textit{increasingly} negative margin values more \textit{heavily} than they reward increasingly positive ones. 
+		\item \textit{Difference:} 
+		\begin{enumerate}
+			\item \textit{Degree of Penalization on Negative Margin:} 
+			\begin{itemize}
+				\item For large negative margins, the deviance loss increases their influence \textit{linearly}, and 
+				\item the exponential loss increases their influence \textit{exponentially}. 
+			\end{itemize}
+			As a consequence, the exponential loss puts much more influence on observations with large negative margins, and the deviance concentrates less on these observations, and puts influence more evenly among all of the data. 
+			
+			\item \textit{Robustness:} The binomial deviance is \emph{more robust} in noisy settings where the Bayes error rate is not close to zero, especially in situations where there is misspecification of the class labels in the training data. 
+		\end{enumerate}
+	\end{enumerate}
+	
+	\item \textbf{A Discussion of Squared-Error Loss Function Used in Classification:} 
+	\begin{itemize}
+		\item \textit{Population Version of Minimizer:} The minimizer of the squared-error loss is 
+		\begin{align*}
+			f^* \parens{\bx} := & \, \argmin_{f \parens{\bx}} \E_{Y \,\vert\, X = \bx} \bracks[\big]{\parens{Y - f \parens{\bx}}^2} \\ 
+			= & \, \E \bracks{Y \,\vert\, X = \bx} \\ 
+			= & \, 2 \Pr \parens{Y = 1 \,\vert\, X = \bx} - 1. 
+		\end{align*}
+		
+		\item \textit{Discussion:} Squared-error loss is \textit{not} a good surrogate for misclassification error as it is not a monotonically decreasing function in terms of the margin $yf \parens{\bx}$. It is increasing when $yf\parens{\bx} > 1$. Therefore, if $y_i f \parens{\bx_i} > 1$, it increases \textit{quadratically} and increases the influence (error) on observations that are \emph{correctly} classified with increasing certainty, thereby reducing the relative influence of those incorrectly classified $y_i f \parens{\bx_i} < 0$. 
+
+		\item \textit{Conclusion:} If class assignment is the goal, a \textbf{monotone decreasing} criterion in the margin serves as a better surrogate loss function. 
+		
+	\end{itemize}
+	
+	\item \textbf{$W$-class Classification Problem:} Supposing that we have $W$ classes ($W > 2$) and the response variable $Y$ takes values in the set $\calW := \braces{1, 2, \cdots, W}$. We seek a classifier $G$ mapping to $\calW$. 
+	
+	It is sufficient to know the class conditional probabilities $p_w \parens{\bx} := \Pr \parens{Y = w \,\vert\, \bx}$ for $w = 1, \cdots, W$, and the Bayes classifier is 
+	\begin{align*}
+		G \parens{\bx} = \argmax_{w \in \calW} p_{w} \parens{\bx}. 
+	\end{align*}
+	We don't need to know $p_w \parens{\bx}$ for all $w = 1, 2, \cdots, W$, but just the largest one. 
+	
+	\item \textbf{$W$-class Logistic Regression:} The logistic model generalized to $W$ classes is 
+	\begin{align*}
+		p_w \parens{\bx} = \frac{e^{f_w \parens{\bx}}}{\sum_{\ell = 1}^W e^{f_{\ell} \parens{\bx}}}, \qquad \text{ for each } w = 1, \cdots, W, 
+	\end{align*}
+	which ensures that $0 \le p_w \parens{\bx} \le 1$, for all $w = 1, 2, \cdots, W$, and that they sum to 1. 
+	
+	Note that the functions $f_w$'s are identifiable only up to an arbitrary common function $h$. To avoid redundancy, one can set $f_W \parens{\bx} = 0$ or $\sum_{w=1}^W f_w \parens{\bx} = 0$. 
+	
+	The $W$-class multinomial deviance loss function is 
+	\begin{align*}
+		L \parens{y, p \parens{\bx}} = & \, - \sum_{w=1}^W \indic \parens{y = w} \log p_w \parens{\bx} \nonumber \\ 
+		= & \, - \sum_{w=1}^W \indic \parens{y = w} f_w \parens{\bx} + \log \parens[\Bigg]{\sum_{\ell = 1}^W e^{f_{\ell} \parens{\bx}}}. 
+	\end{align*}
+	This criterion penalizes incorrect predictions only \textit{linearly} in their degree of incorrectness. 
+	
+\end{enumerate}
+
+\subsection*{VI.2 Robust Loss Functions for Regression}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Two Types of Loss Functions:} Analogous to the exponential loss function (\emph{not} robust) and the binomial deviance function (robust), the loss functions considered in the regression setting include 
+	\begin{enumerate}
+		\item the \textit{squared error loss function}, $L \parens{y, f \parens{\bx}} = \parens{y - f \parens{\bx}}^2$, and 
+		\item the \textit{absolute error loss function}, $L \parens{y, f \parens{\bx}} = \abs{y - f \parens{\bx}}$. 
+	\end{enumerate}
+	
+	\item \textbf{Solutions to the Two Loss Functions:} The population minimizer of the squared error loss function is 
+	\begin{align*}
+		f^* \parens{\bx} = \argmin_{f \parens{\bx}} \E_{Y \,\vert\, X = \bx} \bracks[\big]{\parens{Y - f \parens{\bx}}^2} = \E \bracks{Y \,\vert\, X = \bx}, 
+	\end{align*}
+	and that of the absolute error loss function is 
+	\begin{align*}
+		f^* \parens{\bx} = \argmin_{f \parens{\bx}} \E_{Y \,\vert\, X = \bx} \bracks[\big]{\abs{Y - f \parens{\bx}}} = \text{median} \parens{Y \,\vert\, X = \bx}. 
+	\end{align*}
+	\textit{Remark.} If the distribution of the error is \emph{symmetric}, the two solutions coincide. 
+	
+	\item \textbf{Robustness Comparison of Two Loss Functions:} In the finite sample case, the squared error loss function places much more emphasis on observations with large absolute residuals $\abs{y_i - f \parens{\bx_i}}$, and is \emph{less robust}. The performance of the squared-error loss severely degrades for long-tailed error distributions and for outliers. 
+	
+	\item \textbf{Huber Loss Function:} A robust loss function used for regression that is \emph{insensitive} to outliers while is nearly as efficient as the least squares for Gaussian errors is the Huber's loss criterion, 
+	\begin{align}
+		L_{\delta} \parens{y, f \parens{\bx}} := \begin{cases}
+		\parens{y - f \parens{\bx}}^2, & \, \text{ if } \abs{y - f \parens{\bx}} \le \delta, \\
+		2 \delta \abs{y - f \parens{\bx}} - \delta^2, & \, \text{ otherwise}, 
+		\end{cases}
+	\end{align}
+	where $\delta > 0$. 
+	
+\end{enumerate}
+
+
+\section*{VII. ``Off-the-Shelf'' Procedures for Data Mining}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Typical Characteristics of Datasets in the Real World:} 
+	\begin{enumerate}
+		\item Datasets are often very large in terms of the number of observations and number of variables; 
+		\item Datasets are usually \textit{messy} in the sense that the inputs tend to be mixtures of quantitative, binary and categorical variables; 
+		\item Datasets may contain missing values; 
+		\item Distributions of numeric predictors and response variables are often long-tailed and highly skewed; 
+		\item The predictor variables are generally measured on different scales. 
+	\end{enumerate}
+	
+	\item \textbf{Difficulties in Data Mining:} 
+	\begin{enumerate}
+		\item Due to the large size nature of the datasets, computational consideration play an important role; 
+		\item Only a \emph{small fraction} of the large number of predictors are actually relevant to prediction. One needs to determine which variables to be include into the model; %Usually, people lack reliable domain knowledge to help create the relevant features. 
+		\item Data mining applications require \emph{interpretable models} and producing a sole predictive model is \emph{not} enough. It is also desirable to have information providing \textit{qualitative} understanding between joint values of the input variables and the resulting predicted response value. Thus, \textit{black box} methods such as neural networks are far \textit{less} useful for data mining. 
+	\end{enumerate}
+	
+	\item \textbf{``Off-the-Shelf'' Method:} An \emph{``off-the-shelf'' method} is the one that can be directly applied to the data \textit{without} requiring a great deal of time-consuming data preprocessing or careful tuning of the learning procedure. One example is the \textit{decision tree}. 
+	
+	\item \textbf{Advantages of Decision Trees:} The following are some advantages of decision trees from the perspective of the ``off-the-shelf'' method: 
+	\begin{enumerate}
+		\item They are relatively fast to construct and produce interpretable models; 
+		\item They naturally incorporate mixtures of numeric and categorical predictors and missing values; 
+		\item They are invariant under (strictly monotone) transformations of the individual predictors; 
+		\item They are immune to the effects of predictor outliers; 
+		\item They perform internal feature selection as an integral part of the procedure and are resistant to the inclusion of many irrelevant predictors; 
+		\item The disadvantage of decision trees is that it may not provide predictive accuracy comparable to some other methods. 
+	\end{enumerate}
+\end{enumerate}
+
+
+\section*{VIII. Boosting Trees}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Review of Classification and Regression Trees (CART):} Classification and regression trees partition the space of all joint predictor variable values into disjoint regions $R_j$ for $j = 1, \cdots, J$, as represented by the terminal nodes of the tree. A constant $\gamma_j$ is assigned to each such region and the predictive rule is 
+	\begin{align*}
+		\bx \in R_j \hspace{20pt} \implies \hspace{20pt} f \parens{\bx} = \gamma_j. 
+	\end{align*}
+	Then, a tree can be expressed as 
+	\begin{align*}
+		T \parens{\bx; \Theta} = \sum_{j=1}^J \gamma_j \indic \parens{\bx \in R_j}, 
+	\end{align*}
+	with parameters $\Theta = \braces{R_j, \gamma_j}_{j=1}^J$. Here, $J$ is treated as a meta-parameter. 
+	
+	\item \textbf{Parameter Estimation in CART:} The parameters in $\Theta$ are estimated by minimizing the empirical risk 
+	\begin{align}\label{Theta.min}
+		\widehat{\Theta} := \argmin_{\Theta} \sum_{j=1}^J \sum_{\bx_i \in R_j} L \parens{y_i, \gamma_j}. 
+	\end{align}
+	The estimation takes on two steps: 
+	
+	\textit{Step 1: Estimating $\gamma_j$ given $R_j$}. 
+	\begin{itemize}
+		\item For \underline{regression} problems, given the partitions of the regions $R_j$, one can estimate $\gamma_j$ trivially by the mean of the $y_i$'s falling in $R_j$; 
+		\item For \underline{classification} problems, given the partitions of the regions $R_j$, $\hat{\gamma}_j$ is the modal class of observations falling in $R_j$. 
+	\end{itemize}
+	
+	\textit{Step 2: Estimating $R_j$}. This is the hard part and one can take a \emph{greedy, top-down recursive partitioning algorithm} to find $R_j$. Also, it is sometimes necessary to approximate \eqref{Theta.min} by a smoother and more convenient criterion to optimize $R_j$, i.e., 
+	\begin{align*}
+		\widehat{\Theta} = \argmin_{\Theta} \ \braces[\Bigg]{\sum_{i=1}^n \widetilde{L} \parens{y_i, T \parens{\bx_i, \Theta}}}. 
+	\end{align*}
+	
+	\item \textbf{Boosted Trees:} The \textit{boosted tree model} is a sum of trees 
+	\begin{align}\label{eq-tree-structure}
+		f_M \parens{\bx} = \sum_{m=1}^M T \parens{\bx; \Theta_m} 
+	\end{align}
+	induced in a \emph{forward stagewise} manner (Algorithm \ref{algo-forward-stagewise-additive}). 
+	
+	At each step in the forward stagewise procedure, one solves the problem 
+	\begin{align}\label{boosted.tree}
+		\widehat{\Theta}_m = \argmin_{\Theta_m} \braces[\Bigg]{\sum_{i=1}^n L \parens[\big]{y_i, f_{m-1} \parens{\bx_i} + T \parens{\bx_i; \Theta_m}}}
+	\end{align}
+	for the region set and constants $\Theta_m = \braces{R_{m, j}, \gamma_{m, j}}_{j=1}^{J_m}$ of the next tree, given the current model $f_{m-1}$. 
+	
+	\item \textbf{Parameter Estimation in Boosted Tree:} We proceed by a two-step procedure: 
+	
+	\textit{Step 1:} Given the regions $R_{m,j}$, estimate the optimal constants $\gamma_{m,j}$ in each region by 
+	\begin{align*}
+		\hat{\gamma}_{m,j} := \argmin_{\gamma_{m,j}} \sum_{\bx_i \in R_{m,j}} L \parens[\big]{y_i, f_{m-1} \parens{\bx_i} + \gamma_{m, j}}. 
+	\end{align*}
+	
+	\textit{Step 2:} Estimating the regions is harder. 
+	\begin{itemize}
+		\item In the regression problem, for the squared-error loss, the solution is simply the regression tree that best predicts the current residuals $y_i - f_{m-1} \parens{\bx_i}$, and $\hat{\gamma}_{m,j}$ is the mean of these residuals in each corresponding region; 
+		\item In the binary classification problem, for the exponential loss, the stagewise approach gives rise to the AdaBoost method. That is, if the trees $T \parens{\bx; \Theta_m}$ are restricted to be \emph{scaled} classification trees\footnote{A tree is said to be a \textit{scaled classification tree} if the tree is of the form $\beta_m \cdot T \parens{\bx; \Theta_m}$, with the restriction that $\gamma_{m,j} \in \braces{-1, +1}$.}, the solution to \eqref{boosted.tree} is the tree that minimizes the weighted error rate $\sum_{i=1}^n w_i^{\parens{m}}\indic \parens{y_i \ne T \parens{\bx_i; \Theta_m}}$ with $w_i^{\parens{m}} = e^{-y_i f_{m-1} \parens{\bx_i}}$. 
+		\item Still in the two-class classification problem with the exponential loss, without the scaled classification tree restriction, one can simplifies \eqref{boosted.tree} to a weighted exponential criterion for the new tree 
+		\begin{align*}
+			\widehat{\Theta}_m = \argmin_{\Theta_m} \braces[\Bigg]{\sum_{i=1}^n w_i^{\parens{m}} \exp \parens{-y_i T \parens{\bx_i; \Theta_m}}}. 
+		\end{align*}
+		Then, one can implement a greedy recursive-partitioning algorithm using this weighted exponential loss as a splitting criterion. Given $R_{m,j}$, the solution is the weighted log-odds in each corresponding region 
+		\begin{align}\label{eq:10.32}
+			\hat{\gamma}_{m,j} = \frac{1}{2} \log\parens[\Bigg]{\frac{\sum_{\bx_i \in R_{m,j}} w_i^{\parens{m}} \indic \parens{y_i = 1}}{\sum_{\bx_i \in R_{m,j}} w_i^{\parens{m}}\indic \parens{y_i = -1}}}. 
+		\end{align} 
+	\end{itemize}
+	
+	\item \textbf{Derivation of \eqref{eq:10.32}:} Given the $R_{m, j}$ for $j = 1, \cdots, J$, by the definition of a tree, we have 
+	\begin{align*}
+		\widehat{\bgamma}_m := & \, \argmin_{\bgamma_{m} \in \Real^J} \, \braces[\Bigg]{ \sum_{i=1}^n w_i^{\parens{m}} \exp \bracks[\big]{-y_i T \parens{x_i; R_{m,j}, \bgamma_{m,j}}}} \\ 
+		= & \, \argmin_{\bgamma_{m} \in \Real^J} \, \braces[\Bigg]{\sum_{i=1}^n w_i^{\parens{m}} \exp \bracks[\Bigg]{-y_i \sum_{j=1}^J \gamma_{m,j} \indic \parens{\bx_i \in R_{m,j}}}}, 
+	\end{align*}
+	where $\bgamma_m := \parens{\gamma_{1,m}, \cdots, \gamma_{J,m}}^\top \in \Real^J$. 
+	
+	Let $f: \Real^J \to \Real$ so that 
+	\begin{align*}
+		f \parens{\bgamma_m} := \sum_{i=1}^n w_i^{\parens{m}} \exp \bracks[\Bigg]{-y_i \sum_{j=1}^J \gamma_{m,j} \indic \parens{\bx_i \in R_{m,j}}}. 
+	\end{align*}
+	Taking the partial derivative of $f$ with respect to $\gamma_{m, j'}$ for some $j' \in \sets{1, \cdots, J}$ yields 
+	\begin{align*}
+		\frac{\partial f \parens{\bgamma_m}}{\partial \gamma_{m,j'}} = & \, \sum_{i=1}^n w_i^{\parens{m}} \exp \bracks[\Bigg]{-y_i \sum_{j=1}^J \gamma_{m,j} \indic \parens{\bx_i \in R_{m,j}}} \parens[\big]{-y_i \indic \parens{\bx_i \in R_{m, j'}}} \\ 
+		= & \, - \sum_{\sets{i \,\vert\, \bx_i \in R_{m,j'}}} y_i w_i^{\parens{m}} \exp \parens[\big]{-y_i \gamma_{m,j'}} \\ 
+		= & \, - \sum_{\sets{i \,\vert\, \bx_i \in R_{m,j'}}} \parens[\Big]{\indic \parens{y_i = 1} w_i^{\parens{m}} \exp \parens[\big]{- \gamma_{m,j'}} - \indic \parens{y_i = -1} w_i^{\parens{m}} \exp \parens[\big]{\gamma_{m,j'}}}. 
+	\end{align*}
+	We must have $\left.\frac{\partial f\parens{\bgamma_m}}{\partial \gamma_{m,j'}}\right\vert_{\gamma_{m,j'} = \widehat{\gamma}_{m,j'}} = 0$, which is equivalent to solving the equation 
+	\begin{align*}
+		\sum_{\sets{i \,\vert\, \bx_i \in R_{m,j'}}} \parens[\Big]{\indic \parens{y_i = 1} w_i^{\parens{m}} \exp \parens[\big]{- \widehat{\gamma}_{m,j'}} - \indic \parens{y_i = -1} w_i^{\parens{m}} \exp \parens[\big]{\widehat{\gamma}_{m,j'}}} = 0, 
+	\end{align*}
+	that is, 
+	\begin{align*}
+		\sum_{\sets{i \,\vert\, \bx_i \in R_{m,j'}}} \indic \parens{y_i = 1} w_i^{\parens{m}} \exp \parens[\big]{- \widehat{\gamma}_{m,j'}} = \sum_{\sets{i \,\vert\, \bx_i \in R_{m,j'm}}} \indic \parens{y_i = -1} w_i^{\parens{m}} \exp \parens[\big]{\widehat{\gamma}_{m,j'}}, 
+	\end{align*}
+	or, equivalently, 
+	\begin{align*}
+		\exp \parens{2 \widehat{\gamma}_{m,j'}} \sum_{\sets{i \,\vert\, \bx_i \in R_{m,j'}}} \indic \parens{y_i = -1} w_i^{\parens{m}} = \sum_{\sets{i \,\vert\, \bx_i \in R_{m,j'}}} \indic \parens{y_i = 1} w_i^{\parens{m}}, 
+	\end{align*}
+	or, equivalently, 
+	\begin{align*}
+		\widehat{\gamma}_{m, j'} = \frac{1}{2} \log \parens[\Bigg]{ \frac{\sum_{\sets{i \,\vert\, \bx_i \in R_{m,j'}}} w_i^{\parens{m}} \indic \parens{y_i = 1}}{\sum_{\sets{ i \,\vert\, \bx_i \in R_{m,j'}}} w_i^{\parens{m}} \indic \parens{y_i = -1}}}, 
+	\end{align*}
+	which is desired result. 
+
+\end{enumerate}
+
+
+\section*{IX. Numerical Optimization via Gradient Boosting}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Assume that the loss criterion differentiable $L$ is differentiable. The loss in using $f \parens{\bx}$ to predict $y$ on the training data is 
+	\begin{align*}
+		J \parens{f} = \sum_{i=1}^n L \parens[\big]{y_i, f \parens{\bx_i}}. 
+	\end{align*}
+	The goal is to minimize $J$ with respect to $f$, where $f \parens{\bx}$ is constrained to be a sum of trees, i.e., 
+	\begin{align*}
+		f \parens{\bx} = \sum_{m=1}^M T \parens{\bx; \Theta_{m}} = \sum_{m=1}^M \sum_{j=1}^J \gamma_{m, j} \indic \parens{\bx \in R_{m, j}}. 
+	\end{align*}
+	
+	\item \textbf{Steepest Descent Review:} Ignore the assumption that $f$ takes on the form of a sum of trees for the moment. Minimizing the loss function $J$ can be viewed as a numerical optimization problem 
+	\begin{align}\label{f.opt}
+		\hat{\boldf} := \argmin_{\boldf \in \Real^n} J \parens{\boldf}, 
+	\end{align}
+	where the ``parameters'' $\boldf \in \Real^n$ are the values of the approximating function $f \parens{\bx_i}$ at each of the $n$ data points $\bx_i$ 
+	\begin{align*}
+		\boldf := \parens[\big]{f \parens{\bx_1}, f \parens{\bx_2}, \cdots, f \parens{\bx_n}}^\top \in \Real^n. 
+	\end{align*}
+	Numerical optimization procedures solve \eqref{f.opt} as a sum of component vectors 
+	\begin{align*}
+		\boldf_M = \sum_{m = 0}^M \bh_m, \qquad \qquad \text{ where } \bh_m \in \Real^n, 
+	\end{align*}
+	where $\boldf_0 = \bh_0$ is an initial guess, and each successive $\boldf_m$ is induced based on the current parameter vector $\boldf_{m-1}$, the sum of the previously induced updates. 
+	
+	The \textit{steepest descent} chooses $\bh_m = - \rho_m \bg_m$, where $\rho_m > 0$ is a scalar step size and $\bg_m \in \Real^n$ is the \textit{gradient} of $J$ evaluated at $\boldf_{m-1}$. The $i$-th component of the gradient $\bg_m$ is given by 
+	\begin{align*}
+		g_{m, i} = \bracks[\Bigg]{\left. \frac{\partial J \parens{\boldf}}{\partial \boldf} \right\vert_{\boldf = \boldf_{m-1}}}_{i}, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+	\end{align*}
+	The \textit{step length} $\rho_m$ is given by 
+	\begin{align*}
+		\rho_m := \argmin_{\rho > 0} L \parens{\boldf_{m-1} - \rho \, \bg_m}. 
+	\end{align*}
+	The current solution is then updated as 
+	\begin{align*}
+		\boldf_m = \boldf_{m-1} - \rho_m \, \bg_m, 
+	\end{align*}
+	and the process repeats at the next iteration. Steepest descent can be viewed as a very \textit{greedy} strategy, since $-\bg_m$ is the local direction in $\Real^n$ for which $J$ is most rapidly decreasing at $\boldf = \boldf_{m-1}$.  
+	
+	\item \textbf{Forward Stagewise Boosting as a Greedy Algorithm:} Forward stagewise boosting (Algorithm \ref{algo-forward-stagewise-additive}) is also a \textit{greedy} strategy. At each step, the solution tree is the one that maximally reduces \eqref{boosted.tree}, given the current model $f_{m-1}$ and its fits $f_{m-1} \parens{\bx_i}$. Thus, the tree predictions $T \parens{\bx_i; \Theta_m}$ are analogous to the components of the negative gradient $\bg$. 
+
+	% The \textit{principal} difference between them is that the tree components $$\bt_m = \braces{T \parens{\bx_1; \Theta_m}, \cdots, T \parens{x_n; \Theta_m}}^\top$$ are \textit{not} independent, and they are constrained to be the predictions of a $J_m$-terminal node decision tree. 
+	
+	\item \textbf{A Dilemma:} 
+	\begin{enumerate}
+		\item \textit{Dilemma:} In the \textit{steepest descent} method, the gradient is defined only at the training data points $\bx_i$, whereas the ultimate goal is to generalize to new data \emph{not} present in the training set. 
+		\item \textit{Possible Solution:} A possible solution is to induce a tree $T \parens{\,\cdot\,; \Theta_m}$ at the $m$-th iteration whose predictions are as close as possible to the negative gradient. 
+		\item \textit{Example:} If one use the squared error loss function, one can approximate as follows 
+		\begin{align*}
+			\widetilde{\Theta} = \argmin \sum_{i=1}^n \parens{-g_{m,i} - T \parens{\bx_i; \Theta}}^2, 
+		\end{align*}
+		i.e., one fits the tree $T$ to the negative gradient values by least squares. 
+	\end{enumerate}
+	
+	% \textit{Remark.} The solution to \eqref{eq-gradient-boosting} may \emph{not} be identical to that to \eqref{boosted.tree}. 
+	
+	\item \textbf{Examples of Negative Gradients:} 
+	\begin{itemize}
+		\item \textit{Least Squared Error Loss in Regression:} The loss function is $L \parens{y_i, f \parens{\bx_i}} = \frac{1}{2} \parens{y_i - f \parens{\bx_i}}^2$, and 
+		\begin{align*}
+			- \frac{\partial L \parens{y_i, f \parens{\bx_i}}}{\partial f \parens{\bx_i}} = y_i - f \parens{\bx_i}, 
+		\end{align*}
+		the ordinary residual; 
+		\item \textit{Absolute Error Loss in Regression:} The loss function is $L \parens{y_i, f \parens{\bx_i}} = \abs{y_i - f \parens{\bx_i}}$, and 
+		\begin{align*}
+			- \frac{\partial L \parens{y_i, f \parens{\bx_i}}}{\partial f \parens{\bx_i}} = \sign \parens{y_i - f \parens{\bx_i}}, 
+		\end{align*}
+		the sign of the ordinary residual; 
+		\item \textit{Huber Loss in Regression:} The loss function is 
+		\begin{align*}
+			L \parens{y_i, f \parens{\bx_i}} = \begin{cases}
+				\frac{1}{2} \parens{y_i - f \parens{\bx_i}}^2, & \, \text{ if } \abs{y_i - f \parens{\bx_i}} \le \delta, \\ 
+				\delta \abs{y_i - f \parens{\bx_i}} - \frac{1}{2} \delta^2, & \, \text{ otherwise}, 
+			\end{cases}
+		\end{align*}
+		and 
+		\begin{align*}
+			- \frac{\partial L \parens{y_i, f \parens{\bx_i}} }{\partial f \parens{\bx_i} } = \begin{cases}
+			y_i - f \parens{\bx_i}, & \, \text{ for } \abs{y_i - f \parens{\bx_i}} \le \delta, \\ 
+			\delta \sign \parens{y_i - f \parens{\bx_i}}, & \, \text{ for } \abs{y_i - f \parens{\bx_i}} > \delta, 
+			\end{cases} 
+		\end{align*}
+		where $\delta > 0$;  
+		\item \textit{Multinomial Deviance Loss in $W$-class Classification:} The loss function is the multinomial deviance
+		\begin{align*}
+			L \parens{y_i, f_{1} \parens{\bx_i}, f_{2} \parens{\bx_i}, \cdots, f_{K} \parens{\bx_i}} = - \sum_{w=1}^W \indic \parens{y_i = w} f_w \parens{\bx_i} + \log \parens[\Bigg]{\sum_{\ell = 1}^W e^{f_{\ell} \parens{\bx_i}}}, 
+		\end{align*} 
+		and 
+		\begin{align*}
+			- \frac{\partial L \parens{y_i, f_{1} \parens{\bx_i}, f_{2} \parens{\bx_i}, \cdots, f_{W} \parens{\bx_i}} }{\partial f_{w}\parens{\bx_i}} = \indic \parens{y_i = w} - p_w \parens{\bx_i}, 
+		\end{align*}
+		where $p_w \parens{\bx_i} = \frac{e^{f_w \parens{\bx_i}}}{\sum_{\ell = 1}^W e^{f_{\ell} \parens{\bx_i}}}$ for all $w = 1, 2, \cdots, W$. Note that $W$ least squares trees are constructed at each iteration. 
+
+	\end{itemize} 
+	
+	\item \textbf{Gradient Boosting Algorithm for Regression:} The gradient boosted algorithm is outlined below. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{Gradient Tree Boosting Algorithm}\label{algo-gradient-boosting}
+		\begin{algorithmic}[1]
+			\STATE Initialize $f_0 = \argmin_{\gamma} \sum_{i=1}^n L \parens{y_i, \gamma}$; 
+			\STATE For $m = 1$ to $M$: 
+			\begin{enumerate}
+				\item For $ i = 1, \cdots, n$, compute
+				\begin{align*}
+					r_{m,i} = - \frac{\partial L \parens{y_i, f \parens{\bx_i}}}{\partial f \parens{\bx_i}} \bigg\vert_{f = f_{m-1}}; 
+				\end{align*}
+				\item Fit a regression tree to the targets $r_{m, i}$ giving terminal regions $R_{m,j}$ for $j = 1, 2, \cdots, J_m$; 
+				\item For $j = 1, 2, \cdots, J_m$, compute
+				\begin{align*}
+					\gamma_{m, j} = \argmin_{\gamma} \ \braces[\Bigg]{\sum_{\bx_i \in R_{m,j}} L \parens{y_i, f_{m-1} \parens{\bx_i} + \gamma}}; 
+				\end{align*}
+				\item Update 
+				\begin{align*}
+					f_m \parens{\bx} = f_{m-1} \parens{\bx} + \sum_{j=1}^{J_m} \gamma_{m,j} \indic \parens{\bx \in R_{m, j}}; 
+				\end{align*} 
+			\end{enumerate}
+			\STATE Output $f_M \parens{\bx}$. 
+		\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+	
+	\vspace{10pt}
+	
+	\textit{Remark.} In the algorithm above, two basic \textit{tuning parameters} are 
+	\begin{enumerate}
+		\item the number of iterations $M$, and 
+		\item the sizes of each of the constituent trees $J_m$ for $m = 1, 2, \cdots, M$. 
+	\end{enumerate}
+	
+	\item \textbf{Gradient Boosting Algorithm for Classification:} Lines 2(a)-(d) are repeated for $W$ classes at each iteration $m$. The result at Line 3 is $W$ different (coupled) tree expansions $f_{w,M} \parens{\bx}$ for all $w = 1, 2, \cdots, W$. 
+	
+	The complete algorithm is shown below. 
+	
+	\begin{minipage}{\linewidth}
+		\begin{algorithm}[H]
+		\caption{Gradient Tree Boosting Algorithm for $W$-class Classification}\label{algo-gradient-boosting-classification}
+		\begin{algorithmic}[1]
+			\STATE Initialize $f_{w,0} \parens{\bx} = 0$ for $w = 1, 2, \cdots, W$; 
+			\STATE For $m = 1$ to $M$: 
+			\begin{enumerate}
+				\item Set 
+				\begin{align*}
+					p_{w} \parens{\bx} = \frac{e^{f_w \parens{\bx}}}{\sum_{\ell=1}^W e^{f_{\ell} \parens{\bx}}}; 
+				\end{align*}
+				\item For $w=1$ to $W$: 
+				\begin{enumerate}
+					\item Compute $r_{i,w,m} = y_{i,w} - p_w \parens{\bx_i}$, for $i = 1, \cdots, n$; 
+					\item Fit a regression tree to the targets $r_{i,w,m}$ for all $i = 1, \cdots, n$, given the terminal regions $R_{j,w,m}$ for all $j = 1, 2, \cdots, J_m$; 
+					\item Compute 
+					\begin{align*}
+						\gamma_{j,w,m} = \frac{W-1}{W} \frac{\sum_{\sets{i \,\vert\, \bx_i \in R_{j,w,m}}} r_{i,w,m}}{\sum_{\sets{i \,\vert\, \bx_i \in R_{j,w,m}}} \abs{r_{i,w,m}} \parens{1 - \abs{r_{i,w,m}}}}, 
+					\end{align*}
+					for $j = 1, 2, \cdots, J_m$; 
+					\item Update 
+					\begin{align*}
+						f_{w,m} \parens{\bx} = f_{w,m-1} \parens{\bx} + \sum_{j=1}^{J_m} \gamma_{j,w,m} \indic \parens{\bx \in R_{j,w,m}}; 
+					\end{align*}
+				\end{enumerate}
+			\end{enumerate}
+			\STATE Output $\hat{f}_w \parens{\bx} = f_{w,M} \parens{\bx}$ for all $w = 1, \cdots, W$. 
+		\end{algorithmic}
+		\end{algorithm}
+	\end{minipage}
+
+\end{enumerate}
+
+
+\section*{X. Right-Sized Trees for Boosting}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Review of Tree Model Pruning:} When constructing a tree-based model, we first build a very large (oversized) tree and then a bottom-up procedure is utilized to prune the oversized tree. 
+	
+	\item \textbf{Naive Approach to Choose Tree Size in Gradient Boosting:} For each tree we build, we use the approach for building a tree model as above. This approach is \emph{bad} for the following reasons: 
+	\begin{enumerate}
+		\item This approach assumes that each tree is the last tree in \eqref{eq-tree-structure}, this is a poor assumption. 
+		\item Earlier trees tend to be very large, especially during the early iterations. 
+		\item This approach can substantially degrades performance and increases computation. 
+	\end{enumerate}
+	
+	\item \textbf{Tree Size in Boosting:} Restrict all trees to be the same size, i.e., $J_m = J$ for all $m = 1, \cdots, M$. At each iteration, a $J$-terminal node regression tree is induced. 
+	
+	In this approach, $J$ is a meta-parameter of the entire boosting procedure and needs to be adjusted to maximize the estimated performance for the data. 
+	
+	\item \textbf{ANOVA Expansion:} Let 
+	\begin{align*}
+		\eta := \argmin_f \E_{X, Y} \bracks{L\parens{Y, f \parens{X}}}. 
+	\end{align*}
+	We consider the degree to which the coordinate variables $\bx := \parens{x_1, \cdots, x_p}^\top$ interact with one another and look at the ANOVA expansion 
+	\begin{align*}
+		\eta \parens{\bx} = \sum_{j} \eta_j \parens{x_j} + \sum_{j, k} \eta_{j,k} \parens{x_j, x_k} + \sum_{j,k,\ell} \eta_{j,k,\ell} \parens{x_j, x_k, x_{\ell}} + \cdots. 
+	\end{align*}
+	Here, each $\eta_j$ is the main effect of $X_j$, and each $\eta_{j,k}$ is the second-order interaction between $X_j$ and $X_k$, and so on. For many problems encountered in practice, lower-order interaction effects dominate. 
+	
+	The interaction level of tree-based approximations is limited by the tree size $J$ and, consequently, no interaction effects of level greater than $J-1$ are possible: 
+	\begin{enumerate}
+		\item $J = 2$ corresponds to single split decision stump and produces boosted models with only \emph{main effects} with \emph{no interaction} permitted; 
+		\item $J = 3$ corresponds to the case where only main effects and two-variable interaction effects are allowed, but no more; 
+		\item $\cdots$
+	\end{enumerate}
+	This suggests the value chosen for $J$ should reflect the level of dominant interactions of $\eta$. 
+	
+	\textit{Remark.} Typically, choose $4 \le J \le 8$ in the context of boosting. 
+	
+\end{enumerate}
+
+
+\section*{XI. Regularization}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Controlling the Meta-parameter $M$:} 
+	\begin{enumerate}
+		\item \textit{Effects of the Choice of $M$:} Each iteration reduces the training risk and the training risk can be arbitrarily small for large values of $M$. Fitting too well to the training datasets can lead to overfitting and degrades the risk in the future predictions. 
+		\item \textit{How to Choose the Best $M$:} The choice of the optimal number of iterations $M^*$ minimizing future risk is application dependent. One can estimate $M^*$ by monitoring prediction risk as a function of $M$ on a validation sample, i.e., early stopping. 
+	\end{enumerate}
+	
+	\item \textbf{Regularization Approach:} One can adopt the \emph{shrinkage technique} to scale the contribution of each tree by a factor $0 < \nu < 1$ when it is added to the current approximation. Line 2(d) in Algorithm \ref{algo-gradient-boosting} is replaced by 
+	\begin{align*}
+		f_m \parens{\bx} = f_{m-1} \parens{\bx} + \nu \cdot \sum_{j=1}^J \gamma_{m,j} \indic \parens{\bx \in R_{m,j}}. 
+	\end{align*}
+	The parameter $\nu$ here can be viewed as controlling the learning rate of the boosting procedure. Smaller values of $\nu$ lead to larger values of $M$ for the same training risk, so there is a trade-off between the two. 
+	
+	\textit{Empirical Rule in Choosing $\nu$ and $M$:} Set $\nu$ to be very small, say $\nu < 0.1$, and then choose $M$ by early stopping. 
+	
+	\item \textbf{Subsampling:} Use \textit{stochastic gradient boosting}. At each iteration, we sample a fraction $\eta \le \frac{1}{2}$ of the training observations \textit{without} replacement, and grow the next tree using these subsamples. 
+	
+	The \textit{advantages} of using subsampling are two-folds: 
+	\begin{enumerate}
+		\item the sampling reduces the computing time by the same fraction $\eta$; 
+		\item the sampling, in some circumstances, can produce a more accurate model. 
+	\end{enumerate}
+	
+\end{enumerate}
+
+
+\section*{XII. Interpretation}
+
+\subsection*{XII.1 Relative Importance of Predictor Variables}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Goal:} We want to learn the relative importance or contribution of each input variable in predicting the response. 
+	
+	\item \textbf{Importance of a Variable in a Single Decision Tree $T$ for Regression:} For a single decision tree $T$, use 
+	\begin{align}
+		\calI_{\ell}^2 = \sum_{t=1}^{J-1} \hat{\imath}^2_t \cdot \indic \parens{v \parens{t} = \ell}
+	\end{align}
+	as a measurement of relevance for each predictor variable $X_{\ell}$. The sum is taken over the $J-1$ internal nodes of the tree. At each node $t$, one of the input variables $X_{v \parens{t}}$ is used to partition the region associated with that node into two sub-regions. 
+	
+	The particular variable chosen is the one that gives \textit{maximal} estimated improvement $\hat{\imath}_t^2$ in squared error risk over that for a constant fit over the entire region. 
+	
+	The squared relative importance of variable $X_{\ell}$ is the \emph{sum} of such squared improvements over all internal nodes for which it was chosen as splitting variable. 
+	
+	\item \textbf{Importance of a Variable in Additive Tree Expansions:} Over the additive tree expansions, the importance of the variable $X_{\ell}$ is measured by the average 
+	\begin{align}\label{eq-importance-additive}
+		\calI_{\ell}^2 = \frac{1}{M} \sum_{m=1}^M \calI_{\ell}^2 \parens{T_m}. 
+	\end{align}
+	
+	\textit{Remark.} The two importances presented above are referred to as \textit{squared relevance}. The actual relevances are their respective square roots. 
+	
+	\item \textbf{Importance of a Variable in $W$-class Classification Problems:} For $W$-class classification, $W$ separate models $f_w$, $w = 1, 2, \cdots, W$ are induced, each consisting of a sum of trees
+	\begin{align*}
+		f_w \parens{\bx} = \sum_{m=1}^M T_{m,w} \parens{\bx}, 
+	\end{align*}
+	and the \textit{importance} \eqref{eq-importance-additive} generalizes to 
+	\begin{align}\label{var.imp.kl}
+		\calI_{\ell, w}^2 = \frac{1}{M} \sum_{m=1}^M \calI_{\ell}^2 \parens{T_{m, w}}. 
+	\end{align}
+	Here, $\calI_{\ell, w}$ is the relevance of $X_{\ell}$ in separating the observations in Class $w$ from the other classes. 
+	
+	The \textit{overall relevance} of $X_{\ell}$ is obtained by averaging over all classes 
+	\begin{align*}
+		\calI_{\ell}^2 = \frac{1}{W} \sum_{w=1}^W \calI_{\ell , w}^2. 
+	\end{align*}
+
+\end{enumerate}
+
+
+\subsection*{XII.2 Partial Dependence Plots}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{An Introduction to the Partial Dependence Plots:} After identifying the most relevant variables, we plot $f$ as a function of its arguments, which is a comprehensive summary of the dependence of the function on the joint values of the input variables. 
+	
+	Functions of higher dimensions can be plotted by conditioning on particular sets of values of all but one or two of the arguments, producing a \textit{trellis} of plots. 
+
+	\item \textbf{Partial Dependence Function:} Consider the sub-vector $X_{\calS}$ of $\ell < p$ of the input predictors $X = \parens{X_1, X_2, \cdots, X_p}^\top$, indexed by $\calS \subseteq \sets{1, 2, \cdots, p}$ and $\abs{\calS} = \ell$. Let $\calC$ be the complement of $\calS$ such that $\calS \cup \calC = \sets{1, 2, \cdots, p}$. Therefore, we can write $f \parens{X} = f \parens{X_{\calS}, X_{\calC}}$. 
+	\begin{itemize}
+		\item \textit{Population Version of Partial Dependence Function:} One way to define the \textit{average or partial dependence} of $f$ on $X_{\calS}$ is
+		\begin{align}
+			f_{\calS} \parens{X_{\calS}} := \E_{X_{\calC}} \bracks{ f \parens{X_{\calS}, X_{\calC}}}, 
+		\end{align}
+		which is a \textit{marginal average} of $f$. This is particularly a useful description of the effect of the chosen subset on $f$ when the variables in $X_{\calS}$ do \emph{not} have strong interactions with those in $X_{\calC}$.  
+		
+		\item \textit{Sample Version of Partial Dependence Function:} Partial dependence function can be estimated by
+		\begin{align}
+			\bar{f}_{\calS} \parens{X_{\calS}} := \frac{1}{n} \sum_{i=1}^n f \parens{X_{\calS}, \bx_{i, \calC}}, 
+		\end{align}
+		where $\sets{\bx_{1,\calC}, \bx_{2,\calC}, \cdots, \bx_{n,\calC}}$ are the values of $X_{\calC}$ occurring in the training data. 
+
+	\end{itemize}
+
+	\item \textbf{An Important Note:} The partial dependence function represents the effect of $X_{\calS}$ on $f$ \emph{after} accounting for the effects of the other variables $X_{\calC}$ on $f$, and they are \textit{not} the effect of $X_{\calS}$ on $f$ ignoring the effects of $X_{\calC}$, which is given by 
+	\begin{align*}
+		\tilde{f}_{\calS} \parens{X_{\calS}} = \E \bracks[\big]{f \parens{X_{\calS}, X_{\calC}} \,\vert\, X_{\calS}}, 
+	\end{align*}
+	and is the best least squares approximation to $f$ by a function of $X_{\calS}$ alone. 
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item The quantities $f_{\calS}$ and $\tilde{f}_{\calS}$ are the same only when $X_{\calS}$ and $X_{\calC}$ are independent. 
+		\item Viewing plots of the partial dependence of the boosted tree approximations on selected variable subsets can help to provide a qualitative description of its properties. 
+	\end{enumerate}
+	
+	\item \textbf{Partial Dependence Function for $W$-class Classification Problem:} For $W$-class classification, there are $W$ separate models, one for each class. Each one is related to the respective probabilities through
+	\begin{align*}
+		f_w \parens{X} = \log p_w \parens{X} - \frac{1}{W} \sum_{\ell=1}^W \log p_{\ell} \parens{X}. 	\end{align*}
+	Each $f_w$ is a \textit{monotone increasing function} of its respective probability on a logarithmic scale. 
+	
+	Partial dependence plots of each respective $f_w$ on its most relevant predictors \eqref{var.imp.kl} can help reveal how the log-odds of realizing that class depend on the respective input variables. 
+	
+\end{enumerate}
+
+
+\section*{XIII. Variants of Gradient Boosting}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{XGBoost:} XGBoost, standing for \textit{extreme gradient boosting}, is an optimized distributed gradient boosting algorithm designed to be highly efficient, flexible and portable. 
+	
+	Main features of XGBoost include 
+	\begin{enumerate}
+		\item \underline{Base Learner:} Base learners in XGBoost can be either trees or linear functions; 
+					
+		\item \underline{Regularization Term:} XGBoost can add either $L_1$ or $L_2$ regularization or both to the loss function; 
+		
+		\item \underline{Derivative:} XGBoost uses the second derivative to speed up the optimization; 
+		
+		\item \underline{Column Subsampling:} Similar to random forest, XGBoost can sample a subset of variables to determine at which variable to split and at which value to split. This can speed up the computation and avoid overfitting. 
+		
+		\item \underline{Efficient Node Splitting Algorithm:} XGBoost uses an approximate node splitting algorithm to construct the boosting trees. This algorithm first proposes candidate splitting points based on the percentiles of feature distribution, and then uses the second derivative information to determine a splitting point. 
+		
+		% \item \underline{Sparsity-aware Split Finding:} XGBoost proposes a default direction in each tree node which is found by maximizing the information gain. This can be learned from data using the non-missing values in each column and can be used to handle missing values. 
+		
+		\item \underline{Parallelization:} XGBoost stores data into different blocks with each column sorted. Different blocks can be distributed to across the machine. When scanning each variable and determining the splitting variable and value, one can collect statistics for each column from each block, which can be done in parallel. 
+	
+	\end{enumerate}
+	
+	\item \textbf{Light GBM:} Light GBM is another optimized implementation of the gradient boosting algorithm. Two main features of it are: 
+	\begin{enumerate}
+		\item \textit{Gradient-based One-side Sampling (GOSS):} Exclude a significant proportion of data with small gradients, and only use the remaining data to estimate the information gain. 
+		\item \textit{Exclusive Feature Bundling (EFB):} Bundle mutually exclusive features (those rarely take nonzero values simultaneously) to reduce the number of features. 
+	\end{enumerate}
+	These can speed up computation dramatically. 
+	
+\end{enumerate}
+
+
+\printbibliography
+
+\end{document}

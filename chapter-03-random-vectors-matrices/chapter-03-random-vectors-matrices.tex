@@ -1,0 +1,1020 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+
+%\usepackage[T1]{fontenc}
+%\usepackage{newpxtext,newpxmath}
+
+\usepackage[red]{zhoucx-notation}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 3, Random Vectors and Matrices}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{#4} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\titlebox{Notes on Statistical and Machine Learning}{}{Random Vectors and Matrices}{3}
+\thispagestyle{plain}
+
+\vspace{10pt}
+
+This note is prepared based on \textit{Chapter 3, Random Vectors and Matrices} in \textcite{Izenman2009-jk}. 
+
+\section*{I. Vector and Matrices} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Orthogonal and Idempotent Matrices:} An $n \times n$ matrix $\bA$ is said to be \textit{orthogonal} if $\bA^\top \bA = \bI_n$, where $\bI_n$ denotes the $n \times n$ identity matrix, and is \textit{idempotent} if $\bA^\top \bA = \bA$. 
+	
+	\item \textbf{Projection Matrix:} An $n \times n$ matrix $\bP$ is said to be a \textit{projection matrix} if and only if $\bP$ is symmetric and idempotent. 
+	
+	If $\bP$ is both projection and orthogonal, then $\bP$ is said to be an orthogonal projector. 
+	
+	\item \textbf{Proposition:} If $\bP$ is a projection matrix and define $\bQ = \bI - \bP$, then $\bQ$ is also a projection matrix. 
+	
+	\begin{proof}
+		To show that $\bQ$ is a projection matrix, we need to show $\bQ$ is both symmetric and idempotent: 
+		\begin{itemize}
+			\item \textit{Symmetry:} $\bQ^\top = \parens{\bI - \bP}^\top = \bI^\top - \bP^\top = \bI - \bP = \bQ$; 
+			\item \textit{Idempotence:} $\bQ^2 = \bQ \bQ = \parens{\bI - \bP} \parens{\bI - \bP} = \bI - \bP - \bP + \bP^2 = \bI - \bP - \bP + \bP = \bI - \bP = \bQ$, where we use the idempotence of $\bP$ in the third equality. 
+		\end{itemize}
+	\end{proof} 
+	
+	\item \textbf{Trace:} The \textit{trace} of an $n \times n$ matrix $\bA$ is defined to be 
+	\begin{align*}
+		\tr \parens{\bA} = \sum_{i=1}^n A_{i,i}, 
+	\end{align*}
+	where $A_{i,i}$ denotes the $\parens{i, i}$-entry of $\bA$. 
+	
+	\item \textbf{Properties of Trace:} 
+	\begin{itemize}
+		\item Let $\bA$ and $\bB$ both be $n \times n$ square matrices. Then, $\tr \parens{\bA + \bB} = \tr \parens{\bA} + \tr \parens{\bB}$; 
+		\item Let $\bA$ be a $n \times m$ matrix and $\bB$ be a $m \times n$ matrix. Then, $\tr \parens{\bA \bB} = \tr \parens{\bB \bA}$. 
+	\end{itemize}
+	
+	\item \textbf{Minor:} Let $\bA$ be an $m \times n$ matrix. The minor $\bM_{i,j}$ of element $A_{i,j}$ is the $\parens{m-1} \times \parens{n-1}$ matrix formed by deleting the $i$-th row and $j$-th column from $\bA$. 
+	
+	\item \textbf{Cofactor and Determinant:} Let $\bA$ be an $n \times n$ matrix. The \textit{cofactor} of $A_{i,j}$ is $ C_{i,j} = \parens{-1}^{i+j} \abs{\bM_{i,j}}$, where $\abs{\bM}$ is the determinant of the matrix $\bM$. One way of defining $\abs{\bA}$ is by using \textit{Laplace's formula}: 
+	\begin{align*}
+		\abs{\bA} = \sum_{i=1}^n A_{i,j} C_{i,j}, 
+	\end{align*}
+	where we expand along the $i$-th row. 
+	
+	\item \textbf{Some Properties of Determinant:} 
+	\begin{itemize}
+		\item $\abs{\bA^\top} = \abs{\bA}$; 
+		\item If $a$ is a scalar and $\bA$ is a $n \times n$ matrix, then $\abs{a \bA} = a^n \cdot \abs{A}$. 
+	\end{itemize}
+	
+	\item \textbf{Singular and Nonsingular Matrices:} The $n \times n$ matrix $\bA$ is said to be \textit{singular} if $\abs{\bA} = 0$, and is \textit{nonsingular} otherwise. 
+	
+	\item \textbf{Matrix Decomposition:} 
+	\begin{itemize}
+		\item \textit{LR Decomposition:} $\bA = \bL \bR$, where $\bL$ is a lower-triangular matrix and $\bR$ is an upper-triangular matrix; 
+		\item \textit{Cholesky Decomposition:} Let $\bA$ be a symmetric positive definite matrix. Then, we can write $\bA = \bL \bL^\top$, where $\bL$ is a lower-triangular matrix; 
+		\item \textit{QR-Decomposition:} $\bA = \bQ \bR$, where $\bQ$ is orthogonal and $\bR$ is upper-triangular. 
+	\end{itemize}
+	
+	\item \textbf{Determinant of a Partitioned Matrix:} Let
+	\begin{align*}
+		\bSigma = \begin{pmatrix}
+			\bA & \bB \\ \bC & \bD
+		\end{pmatrix}
+	\end{align*}	be a partitioned matrix, where $\bA$ and $\bD$ are both square and nonsingular. Then, the determinant of $\bSigma$ can be expressed as 
+	\begin{align*}
+		\abs{\bSigma} = \abs{\bA} \cdot \abs{\bD - \bC \bA^{-1} \bB} = \abs{\bD} \cdot \abs{\bA - \bB \bD^{-1} \bC}. 
+	\end{align*}
+	
+	\item \textbf{Rank:} The \textit{rank} of a matrix $\bA$, denoted $\rank \parens{A}$, is the size of the largest sub-matrix of $\bA$ that has a nonzero determinant; it is also the number of linearly independent rows/columns of $\bA$. 
+
+	\item \textbf{Properties of Rank:} 
+	\begin{enumerate}
+		\item $\rank \parens{\bA\bB} = \rank \parens{\bA}$ if $\abs{\bB} \ne 0$; 
+		\item $\rank \parens{\bA\bB} \le \min \braces{\rank \parens{\bA}, \rank \parens{\bB}}$. 
+	\end{enumerate}
+	
+	\item \textbf{Inverse:} 
+	\begin{enumerate}
+		\item \textit{Definition:} If $\bA$ is an $n \times n$ square nonsingular matrix, then a unique $n \times n$ inverse matrix $\bA^{-1}$ exists such that $\bA \bA^{-1} = \bA^{-1} \bA = \bI_n$. 
+		\item \textit{Properties:} 
+		\begin{itemize}
+			\item If $\bA$ is \textit{orthogonal}, then $ \bA^{-1} = \bA^\top $; 
+			\item $ \parens{\bA \bB}^{-1} = \bB^{-1} \bA^{-1} $, and $ \abs{\bA^{-1}} = \abs{\bA}^{-1}$; 
+			\item $$\parens{\bA + \bB\bD^{-1}\bC}^{-1} = \bA^{-1} - \bA^{-1}\bB\parens{\bD + \bC\bA^{-1}\bB}^{-1}\bC\bA^{-1},$$ where $\bA$ and $\bD$ are $n \times n$ and $m \times m$ nonsingular matrices, respectively; 
+			\item If $\bA$ is $n \times n$ and $\bu \in \mathbb{R}^n$ and $\bv \in \mathbb{R}^n$ are vectors, then, a special case of the previous result is 
+			\begin{align*}
+				\parens{\bA + \bu \bv^\top }^{-1} = \bA^{-1} - \frac{ \parens{\bA^{-1} \bu} \parens{\bv^\top \bA^{-1}} }{1 + \bv^\top \bA^{-1}\bu}, 
+			\end{align*}
+			reducing the problem of inverting $\bA + \bu \bv^\top$ to the one of just inverting $\bA$; 
+			\item If $\bA$ and $\bD$ are symmetric and $\bA$ is nonsingular, then, 
+			\begin{align*}
+				\begin{pmatrix}
+					\bA & \bB \\ \bB^\top & \bD
+					\end{pmatrix}^{-1} = \begin{pmatrix}
+					\bA^{-1} + \bF \bE^{-1}\bF^\top & - \bF \bE^{-1} \\ 
+					- \bE^{-1}\bF^\top & \bE^{-1}
+				\end{pmatrix}, 
+			\end{align*}
+			where $ \bE := \bD - \bB^\top \bA^{-1}\bB $ is nonsingular and $ \bF := \bA^{-1}\bB $. 
+		\end{itemize}
+	\end{enumerate}
+	
+	\item \textbf{Quadratic Form:} If $\bA$ is an $n \times n$-matrix and $\bx \in \mathbb{R}^n$ is a vector, then a quadratic form is
+	\begin{align*}
+		\bx^\top \bA \bx = \sum_{i=1}^n \sum_{j=1}^n A_{i,j} x_i x_j, 	\end{align*}
+	where $A_{i,j}$ is the $\parens{i,j}$-entry of $\bA$ and $\bx = \parens{x_1, x_2, \cdots, x_n}^\top \in \Real^n$. An $n \times n$-matrix $\bA$ is 
+	\begin{enumerate}
+		\item \textit{positive-definite} if, for any $n$-vector $\bx \ne \boldzero_n$, the quadratic form $\bx^\top \bA \bx > 0$, and 
+		\item \textit{nonnegative-definite} or \textit{positive-semidefinite} if $\bx^\top \bA \bx \ge 0$. 
+	\end{enumerate}
+	
+	\item \textbf{Vectoring Operation:} Let $\bA$ be an $m \times n$ matrix and the vectoring operator $\vectorize \parens{\bA}$ denotes the $mn \times 1$-column vector by placing the columns of $\bA$ under one another successively. 
+	
+	\item \textbf{Kronecker Product:} Let $\bA$ be an $m \times n$-matrix and $\bB$ be an $s \times t$-matrix. Then, the \textit{(left) Kronecker product} of $\bA$ and $\bB$, denoted by $\bA \otimes \bB$ is the $ms \times nt$ block matrix 
+	\begin{align}
+		\bA \otimes \bB = \bracks{\bA B_{j,k}} = \begin{pmatrix}
+			\bA B_{1,1} & \cdots & \bA B_{1,t} \\ 
+			\vdots & \ddots & \vdots \\ 
+			\bA B_{s,1} & \cdots & \bA B_{s,t}
+		\end{pmatrix}. 
+	\end{align} 
+	The \textit{right Kronecker product} of $\bA$ and $\bB$ is defined to be $\bracks{A_{i,j} \bB}$. 
+	
+	\item \textbf{Properties of Kronecker Product:} 
+	\begin{itemize}
+		\item $\parens{\bA \otimes \bB} \otimes \bC = \bA \otimes \parens{\bB \otimes \bC}$; 
+		\item $\parens{\bA \otimes \bB} \parens{\bC \otimes \bD} = \parens{\bA \bC} \otimes \parens{\bB \bD}$; 
+		\item $\parens{\bA + \bB} \otimes \bC = \parens{\bA \otimes \bC} + \parens{\bB \otimes \bC}$; 
+		\item $\parens{\bA \otimes \bB}^\top = \bA^\top \otimes \bB^\top$; 
+		\item $\tr \parens{\bA \otimes \bB} = \tr \parens{\bA} \cdot \tr \parens{\bB}$; 
+		\item $ \rank \parens{\bA \otimes \bB} = \rank \parens{\bA} \cdot \rank \parens{\bB} $; 
+		\item If $\bA$ is of size $n \times n$ and $\bB$ is of size $m \times m$, then $\abs{\bA \otimes \bB} = \abs{\bA}^m \cdot \abs{\bB}^n$; 
+		\item If $\bA$ is of size $m \times n$ and $\bB$ is of size $s \times t$, then, $\bA \otimes \bB = \parens{\bA \otimes \bI_s} \parens{\bI_n \otimes \bB} $; 
+		\item If $\bA$ and $\bB$ are square and nonsingular, then $\parens{\bA \otimes \bB}^{-1} = \bA^{-1} \otimes \bB^{-1}$; 
+		\item $ \vectorize \parens{\bA \bB \bC} = \parens{\bA \otimes \bC^\top} \vectorize \parens{\bB}$. 
+	\end{itemize}
+	
+	\item \textbf{Outer Product:} The \textit{outer product} of $\bv \in \Real^n$ with itself is the $n \times n$-matrix $\bv \bv^\top$, which has rank 1. 
+	
+	\item \textbf{Characteristic Polynomial, Eigenvalues and Eigenvectors:} If $\bA$ is a matrix of size $n \times n$, then $\abs{\bA - \lambda \bI_n}$, called the \textit{characteristic polynomial}, is a polynomial of order $n$ in $\lambda$. 
+	
+	The equation $\abs{ \bA - \lambda \bI_n } = 0$ will have $n$ (possibly complex-valued, not necessarily distinct) roots denoted by $\lambda_i := \lambda_i \parens{\bA}$ for $i = 1, 2, \cdots, n$. The root $\lambda_i$ is called an \textit{eigenvalue} of $\bA$, and the set $\braces{\lambda_i}_{i=1}^n$ is called the \textit{spectrum} of $\bA$. 
+	
+	Associated with $\lambda_i$, there is a nonzero vector $\bv_i := \bv_i \parens{\bA} \in \Real^n$ (not all of whose entries of zero) such that $ \bA \bv_i = \lambda_i \bv_i$. The vector $\bv_i$ is called an \textit{eigenvector} associated with $\lambda_i$. 
+	
+	\textit{Remark.} Eigenvalues of a positive-definite matrix are all positive, and eigenvalues of a nonnegative-definite matrix are all nonnegative. 
+	
+	\item \textbf{Properties of Eigenvalues and Eigenvectors:} Let $\bA \in \Real^{n \times n}$ be a symmetric real matrix. 
+	\begin{itemize}
+		\item All eigenvalues of $\bA$ are real; 
+		\item Eigenvectors $\bv_i$ and $\bv_j$ associated with distinct eigenvalues $\lambda_i \ne \lambda_j$ are \textit{orthogonal}; 
+		\item If $ \bV = \parens{\bv_1, \bv_2, \cdots, \bv_n} \in \Real^{n \times n}$, then 
+		\begin{align*}
+			\bA \bV = \bV \bLambda, 
+		\end{align*}
+		where $ \bLambda := \diag \parens{ \lambda_1, \lambda_2, \cdots, \lambda_n} \in \Real^{n \times n}$ is a matrix with the eigenvalues along the diagonal and zeroes elsewhere, and $\bV^\top \bV = \bI_n$; 
+		
+		\item \textit{Spectral Theorem:} One can write the matrix $\bA \in \Real^{n \times n}$ as a weighted average of rank-1 matrices, i.e., 
+		\begin{align*}
+			\bA = \bV \boldsymbol{\Lambda} \bV^\top = \sum_{i=1}^n \lambda_i \bv_i \bv_i^\top, 
+		\end{align*}
+		where $\bI_n = \sum_{i=1}^n \bv_i \bv_i^\top$ and the weights, $ \lambda_1, \cdots, \lambda_n$, are the eigenvalues of $\bA$; 
+		\item The rank of $\bA$ is the number of nonzero eigenvalues; 
+		\item The trace of $\bA$ is equal to the sum of all eigenvalues, i.e., $\tr \parens{\bA} = \sum_{i=1}^n \lambda_i \parens{\bA}$; 
+		\item The determinant of $\bA$ is equal to the product of all eigenvalues, i.e., $\abs{\bA} = \prod_{i=1}^n \lambda_i \parens{\bA}$. 
+	\end{itemize}
+	
+	\textit{Remark.} Some of the results above also hold for a general square matrix (not necessarily symmetric). 
+	
+	\item \textbf{Functions of Matrices:} Let $\bA \in \Real^{n \times n}$ be a symmetric matrix and let $\phi: \Real^n \to \Real^n$ be a function. Then, 
+	\begin{align*}
+		\phi \parens{\bA} = \sum_{i=1}^n \phi \parens{\lambda_i} \bv_i \bv_i^\top, 
+	\end{align*}
+	where $\lambda_i$ is the $i$-th eigenvalue $\bA$, and $\bv_i$ is the corresponding eigenvector. 
+	
+	\textit{Examples:}
+	\begin{itemize}
+		\item Suppose $\bA$ is nonsingular. Then, 
+		\begin{align*}
+			\bA^{-1} = \bV \bLambda^{-1} \bV^\top = \sum_{i=1}^n \lambda_i^{-1} \bv_i \bv_i^{\top}; 
+		\end{align*}
+		\item Suppose $\bA$ is nonnegative-definite. Then, 
+		\begin{align*}
+			\bA^{1/2} = \bV \bLambda^{1/2} \bV^\top = \sum_{i=1}^n \sqrt{\lambda_i} \bv_i \bv_i^{\top}; 
+		\end{align*}
+		\item Suppose $\bA$ is positive-definite. Then, 
+		\begin{align*}
+			\log \parens{\bA} = \sum_{i=1}^n \log \parens{\lambda_i} \bv_i \bv_i^{\top}. 
+		\end{align*}
+	\end{itemize}
+	
+	\item \textbf{Proposition:} If $\bA \in \Real^{m \times n}$ with $m \le n$, then
+	\begin{align*}
+		\lambda_i \parens{\bA^\top \bA} = \lambda_i \parens{\bA \bA^\top}, \hspace{20pt} \text{ for all } i = 1, 2, \cdots, m, 
+	\end{align*}	and $\lambda_i = 0$ for all $i = m+1, m+2, \cdots, n$. Furthermore, for $\lambda_j \parens{\bA \bA^\top} \ne 0$, 
+	\begin{align*}
+		\bv_j \parens{\bA^\top \bA} = & \, \sqrt{\lambda_j \parens{\bA \bA^\top}} \bA^\top \bv_j \parens{\bA \bA^\top}, \\
+		\bv_j \parens{\bA \bA^\top} = & \, \sqrt{\lambda_j \parens{\bA \bA^\top}} \bA \bv_j \parens{\bA^\top \bA}. 
+	\end{align*}
+	
+	\item \textbf{Singular-Value Decomposition:} The \textit{singular-value decomposition} (SVD) of a matrix $\bA \in \Real^{m \times n}$, where $m \le n$, is given by
+	\begin{align}\label{eq-svd}
+		\bA = \bU \boldsymbol{\Psi} \bV^{\top} = \sum_{i=1}^m \sqrt{\lambda_i} \bu_i \bv_i^\top. 
+	\end{align}
+	Here, 
+	\begin{itemize}
+		\item $\bU = \parens{\bu_1, \cdots, \bu_m} \in \Real^{m \times m}$ and $\bu_i = \bv_i \parens{\bA \bA^\top}$ for all $ i = 1, 2, \cdots, m$; 
+		\item $\bV = \parens{\bv1, \cdots, \bv_n} \in \Real^{n \times n}$ and $\bv_j = \bv_j \parens{\bA^\top \bA}$ for all $j = 1, 2, \cdots, n$; 
+		\item $\lambda_i = \lambda_i \parens{\bA \bA^\top}$ for all $i = 1, 2, \cdots, m$, and 
+		\begin{align*}
+			\boldsymbol{\Psi} := 
+			\begin{pmatrix}
+				\quad \boldsymbol{\Psi}_{\sigma} \quad \vdots \quad \boldzero_{m \times \parens{n-m} \quad}
+			\end{pmatrix}. 
+		\end{align*}
+		is a $m \times n$-matrix, and $\boldsymbol{\Psi}_{\sigma}$ is an $m \times m$ diagonal matrix with the nonnegative \emph{singular values}, $ \sigma_1 \ge \sigma_2 \ge \cdots \ge \sigma_m \ge 0 $, of $\bA$ along the diagonal, where $\sigma_i = \sqrt{\lambda_i}$ is the square-root of the $i$-th largest eigenvalue of the $m \times m$-matrix $\bA \bA^\top$ for all $i = 1, 2, \cdots, m$. 
+	\end{itemize}
+	
+	\item \textbf{A Direct Consequence of SVD:} Suppose $\bA \in \Real^{m \times n}$ with $m \le n$. If $\rank \parens{\bA} = t$, then there exists matrices $\bB \in \Real^{m \times t}$ and $\bC \in \Real^{t \times n}$, both of rank $t$, such that $\bA = \bB \bC$. 
+	
+	\item \textbf{Generalized Inverse:} A \emph{$g$-inverse} of a $m \times n$-matrix $\bA$ is any $n \times m$-matrix, denoted by $\bA^-$, such that, for any $m$-vector $\by$ for which $\bA \bx = \by$ is a consistent equation, $ \bx = \bA^- \by$ is a solution. We call such an $\bA^-$ a \textit{reflexive g-inverse}. 
+	
+	\item \textbf{Proposition (Existence of $g$-Inverse):} $\bA^-$ exists if and only if $\bA \bA^- \bA = \bA$. 
+	
+	\item \textbf{Proposition:} A general solution of the consistent equation $ \bA \bx = \by $ is given by 
+	\begin{align*}\label{eq-g-inverse-unique}
+		\bx = \bA^- \by + \parens{\bA^- \bA - \bI_n} \, \bz, 
+	\end{align*}
+	where $\bz \in \Real^n$ is arbitrary. 
+	
+	\textit{Remark.} The consequence of the preceding proposition is that the $g$-inverse of a matrix is \emph{not} unique. 
+	
+	\textit{Remark.} If we let $\bz = \boldzero_n$ in \eqref{eq-g-inverse-unique}, the resulting $\bx = \bA^- \by$ has the minimum norm among all solutions to $\bA \bx = \by $. 
+	
+	\item \textbf{Moore-Penrose Generalized Inverse:} Let $\bA \in \Real^{m \times n}$ be a matrix with the SVD $\bA = \bU \boldsymbol{\Psi} \bV^{\top}$. Then, the \emph{\underline{unique} Moore-Penrose generalized inverse} of $\bA$ is given by 
+	\begin{align*}
+		\bA^\dag = \bV \boldsymbol{\Psi}^\dag \bU^\top, 
+	\end{align*}
+	where $\boldsymbol{\Psi}^\dag$ is a ``diagonal'' matrix whose diagonal elements are the reciprocals of the \emph{nonzero} elements of $ \boldsymbol{\Psi} = \boldsymbol{\Lambda}^{1/2}$, and zeroes otherwise. 
+	
+	\item \textbf{Properties of Moore-Penrose Generalized Inverse:} 
+	\begin{enumerate}
+		\item $\bA \bA^\dag \bA = \bA$; 
+		\item $\bA^\dag \bA \bA^\dag = \bA^\dag$; 
+		\item $\parens{\bA \bA^\dag}^\top = \bA \bA^\dag$; 
+		\item $\parens{\bA^\dag \bA}^\top = \bA^\dag \bA$. 
+	\end{enumerate}
+	
+	\item \textbf{Matrix Norm:} The \textit{norm} of a matrix $\bA \in \Real^{m \times n}$ is a function $\norm{\cdot}$ mapping from $\Real^{m \times n}$ to $\Real$ satisfying the following conditions: 
+	\begin{enumerate}
+		\item $\norm{\bA} \ge 0$; 
+		\item $\norm{\bA} = 0$ iff $ \bA = \boldzero_{m \times n}$; 
+		\item $\norm{\bA + \bB} \le \norm{\bA} + \norm{\bB} $; 
+		\item $\norm{\alpha \bA} = \abs{\alpha} \cdot \norm{\bA}$. 
+	\end{enumerate}
+	In the definition above, $\bA, \bB \in \Real^{m \times n}$ and $\alpha \in \Real$. 
+	
+	\item \textbf{Examples of Matrix Norms:} Let $\bA \in \Real^{m \times n}$. 
+	\begin{enumerate}
+		\item \textit{$p$-norm:} 
+		\begin{align*}
+			\norm{\bA}_p = \parens[\Bigg]{\sum_{i=1}^m \sum_{j=1}^n \abs{A_{i,j}}^p}^{1/p}; 
+		\end{align*}
+		\item \textit{Frobenius norm:} 
+		\begin{align*}
+			\norm{\bA}_{F} := \sqrt{\tr\parens{\bA \bA^\top}} = \parens[\Bigg]{\sum_{i=1}^m \sum_{j=1}^n A_{i,j}^2}^{1/2} = \parens[\Bigg]{\sum_{i=1}^m \lambda_j \parens{\bA \bA^\top}}^{1/2}; 
+		\end{align*}
+		\item \textit{Spectral norm:} Let $m = n$ so that $\bA$ is a square matrix, the \emph{spectral norm} is 
+		\begin{align*}
+			\sqrt{\lambda_1 \parens{\bA\bA^\top}}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Condition Number:} The \textit{condition number} of a nonsingular square matrix $\bA \in \Real^{n \times n}$ is given by
+	\begin{align}
+		\kappa \parens{\bA} := \norm{\bA} \cdot \norm{\bA^{-1}} = \frac{\sigma_1}{\sigma_n}, 
+	\end{align}	which is the ratio of the largest to the smallest nonzero singular value. Here, the norm is taken to be the \textit{spectral norm} and $\sigma_i$ is the square-root of the $i$-th largest eigenvalue of the $n \times n$-matrix $\bA^\top \bA$, for all $i = 1, 2, \cdots, n$. 
+	
+	\item \textbf{Well-conditioned and Ill-conditioned Matrices:} The matrix $\bA$ is said to be \textit{ill-conditioned} if its singular values are widely spread out, so that $\kappa \parens{\bA}$ is large, and $\bA$ is said to be \textit{well-conditioned} if $\kappa \parens{\bA}$ is small. 
+	
+	\item \textbf{Eckart-Young Theorem:} Let $\bA$ and $\bB$ are both $\parens{m \times n}$-matrices. Suppose $\bA$ is of full rank with $\rank \parens{\bA} = \min \sets{m, n}$ and $\bB$ is of reduced rank with $r_{\bB} := \rank \parens{\bB} < \min \sets{m, n}$. Suppose we want to use $\bB$ to approximate $\bA$. Then, 
+	\begin{align}
+		\lambda_j \parens[\big]{ \parens{\bA - \bB} \parens{\bA - \bB}^\top} \ge \lambda_{j+r_{\bB}} \parens{\bA\bA^\top}, 
+	\end{align}
+	with equality if 
+	\begin{align*}
+		\bB = \sum_{i=1}^{r_{\bB}} \sqrt{\lambda_i} \bu_i \bv_i^\top, 	\end{align*}
+	where $\lambda_i = \lambda_i \parens{\bA \bA^\top}$, $\bu_i$ is the eigenvector associated with the $i$-th largest eigenvalue of $\bA \bA^\top$ for all $i = 1, 2, \cdots, m$, and $\bv_j$ is the eigenvector associated with the $j$-th largest eigenvalue of $\bA^\top \bA$, for all $j = 1, 2, \cdots, n$. 
+	
+	\textit{Remark.} Because the choice of $\bB$ provides a simultaneous minimization for \emph{all} eigenvalues $\lambda_i$, it follows that the minimum is achieved for different functions of those eigenvalues, e.g., the trace or the determinant of $\parens{\bA - \bB} \parens{\bA - \bB}^\top$. 
+	
+	\item \textbf{Courant-Fischer Min-Max Theorem:} The $i$-th largest eigenvalue of a symmetric matrix $\bA \in \Real^{n \times n}$ can be expressed as 
+	\begin{align}\label{eq-cf-minmax}
+		\lambda_i \parens{\bA} = \inf_{\bL} \sup_{\sets{\bx \,\vert\, \bL \bx = \boldzero_{i-1}, \bx \neq \boldzero_n}} \frac{\bx^\top \bA \bx}{\bx^\top \bx}, 
+	\end{align}
+	where the ``$\inf$'' is taken over $\bL \in \Real^{\parens{i-1} \times n}$ with rank at most $i-1$, and the ``$\sup$'' is the supremum over a nonzero $\bx \in \Real^n$ that satisfies $\bL \bx = \boldzero_{i-1}$. 
+	
+	\textit{Remark.} In \eqref{eq-cf-minmax}, the equality is achieved if $\bL = \parens{\bv_1, \bv_2, \cdots, \bv_{i-1}}^\top \in \Real^{\parens{i-1} \times n}$ and $\bx$ is the eigenvector associated with the $i$-th largest eigenvalue. 
+	
+	\item \textbf{Corollaries of Courant-Fischer Min-Max Theorem:} 
+	\begin{enumerate}
+		\item The $i$-th smallest eigenvalue of $\bA$ can be written as 
+		\begin{align*}
+			\lambda_{n-i+1} \parens{\bA} = \sup_{\bL} \inf_{\sets{\bx \,\vert\, \bL \bx = \boldzero_{n-i+1}, \bx \neq \boldzero_n}} \frac{\bx^\top \bA \bx}{\bx^\top \bx}. 
+		\end{align*}
+		\item The following inequalities hold 
+		\begin{align*}
+			\lambda_{n} \parens{\bA} \le \frac{\bx^\top \bA \bx}{\bx^\top \bx} \le \lambda_1 \parens{\bA}, \qquad \text{ for all } \bx \neq \boldzero_{n}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Hoffman-Wielandt Theorem:} Suppose $\bA$ and $\bB$ are both symmetric $\parens{n \times n}$-matrices. Suppose $\bA$ and $\bB$ have eigenvalues $\sets{\lambda_i \parens{\bA}}_{i=1}^n$ and $\sets{\lambda_i \parens{\bB}}_{i=1}^n$, respectively. Then, 
+	\begin{align}
+		\sum_{i=1}^n \parens{\lambda_i \parens{\bA} - \lambda_i \parens{\bA}}^2 \le \tr \parens[\big]{\parens{\bA - \bB} \parens{\bA - \bB}^\top}. 
+	\end{align}
+	
+	% \textit{Remark.} This result is useful for studying the bias in sample eigenvalues. 
+	
+	\item \textbf{Poincar{\'e} Separation Theorem:} Let $\bA \in \Real^{n \times n}$ and let $\bU \in \Real^{n \times m}$ with $m \le n$  such that $\bU^\top \bU = \bI_m$. Then, 
+	\begin{align}
+		\lambda_i \parens{\bU^\top \bA \bU} \le \lambda_i \parens{\bA}, \qquad \text{ for all } i = 1, 2, \cdots, m, 
+	\end{align}
+	with equality being held if the columns of $\bU$ are the first $m$ eigenvectors of $\bA$. 
+	
+	\item \textbf{Matrix Calculus:} 
+	\begin{enumerate}
+		\item \textit{Jacobian Matrix:} Let $\bx = \parens{x_1, \cdots, x_n}^\top \in \Real^n$ and 
+		\begin{align*}
+			\by = \parens{y_1, \cdots, y_m}^\top = \parens[\big]{f_1 \parens{\bx}, \cdots, f_m \parens{\bx}}^\top = \boldf \parens{\bx} \in \Real^m, 
+		\end{align*}
+		where $\boldf: \Real^n \to \Real^m$. Then, the \textit{partial derivative} of $\by$ with respect to $\bx$ is the $\parens{mn}$-vector 
+		\begin{align*}
+			\frac{\partial \by}{\partial \bx} = \parens[\bigg]{\frac{\partial y_1}{\partial x_1}, \cdots, \frac{\partial y_m}{\partial x_1}, \cdots, \frac{\partial y_1}{\partial x_n}, \cdots, \frac{\partial y_m}{\partial x_n}}^\top. 
+		\end{align*}
+		The partial derivative of $\by$ with respect to $\bx^\top$ is the $\parens{m \times n}$-matrix 
+		\begin{align*}
+			\bJ_{\bx} \by = \frac{\partial \by}{\partial \bx^\top} = 
+			\begin{pmatrix}
+				\frac{\partial y_1}{\partial x_1} & \frac{\partial y_1}{\partial x_2} & \cdots & \frac{\partial y_1}{\partial x_n} \\ 
+				\frac{\partial y_2}{\partial x_1} & \frac{\partial y_2}{\partial x_2} & \cdots & \frac{\partial y_2}{\partial x_n} \\
+				\vdots & \vdots & \ddots & \vdots \\
+				\frac{\partial y_m}{\partial x_1} & \frac{\partial y_m}{\partial x_2} & \cdots & \frac{\partial y_m}{\partial x_n} 
+			\end{pmatrix}, 
+		\end{align*}
+		called the \textit{Jacobian matrix}. 
+		
+		The Jacobian matrix can be used for linear approximation of a multivariate vector-valued function, i.e., 
+		\begin{align*}
+			\boldf \parens{\bx} \approx \boldf \parens{\bc} + \bracks{\bJ_{\bx} \boldf \parens{\bc}} \parens{\bx - \bc}, \qquad \text{ for } \bc \in \Real^n. 
+		\end{align*}
+		
+%		\item \textit{Jacobian:} The \textit{Jacobain} of the transformation $\by = \boldf \parens{\bx}$ is 
+%		\begin{align*}
+%			J = \abs{\bJ_{\bx} \parens{\by}}. 
+%		\end{align*}
+		
+		\item \textit{Gradient Vector:} 
+		\begin{enumerate}
+			\item If $f: \Real^n \to \Real$ is a scalar function, then the \textit{gradient vector} is 
+			\begin{align*}
+				\nabla f \parens{\bx} = \frac{\partial y}{\partial \bx} = \parens[\bigg]{\frac{\partial y}{\partial x_1}, \frac{\partial y}{\partial x_2}, \cdots, \frac{\partial y}{\partial x_n}}^\top = \parens[\bigg]{\frac{\partial y}{\partial \bx^\top}}^\top = \parens{\bJ_{\bx} y}^\top. 
+			\end{align*}
+			
+			\item If $\boldf: \Real \to \Real^m$ is a vector function, then the \textit{gradient vector} is 
+			\begin{align*}
+				\frac{\partial \by}{\partial x} = \parens[\bigg]{\frac{\partial y_1}{\partial x}, \frac{\partial y_2}{\partial x}, \cdots, \frac{\partial y_m}{\partial x}}^\top. 
+			\end{align*}
+		\end{enumerate}
+		
+		\textit{Examples:} If $\bA \in \Real^{m \times n}$, then 
+		\begin{align*}
+			\frac{\partial \bA \bx}{\partial \bx^\top} = \bA, \hspace{20pt} \frac{\partial \bx^\top \bx}{\partial \bx^\top} = 2\bx, \hspace{20pt} \frac{\partial \bx^\top\bA\bx}{\partial \bx^\top} = \bx^\top \parens{\bA+\bA^\top}. 
+		\end{align*}
+		
+		\item \textit{Derivative of a Matrix:} The \textit{derivative} of an $m \times n$ matrix $\bA$ wrt an $r$-vector $\bx$ is the $ \parens{mr} \times n$ matrix of derivatives of $\bA$ wrt each element of $\bx$ 
+		\begin{align*}
+			\frac{\partial \bA}{\partial \bx} = \parens[\bigg]{\frac{\partial \bA^\top}{\partial x_1}, \cdots, \frac{\partial \bA^\top}{\partial x_r}}^\top. 
+		\end{align*}
+		
+		\item \textit{Properties of Derivatives of a Matrix:} Let $\bA$ and $\bB$ be conformable matrices. Then, we have the following 
+		\begin{align*}
+			\frac{\partial (\alpha \bA)}{\partial \bx} = & \, \alpha \frac{\partial \bA}{\partial \bx}, \\ 
+			\frac{\partial (\bA + \bB)}{\partial \bx} = & \, \frac{\partial \bA}{\partial \bx} + \frac{\partial \bB}{\partial \bx}, \\
+			\frac{\partial \bA \bB}{\partial \bx} = & \, \frac{\partial \bA}{\partial \bx} \bB +  \bA \frac{\partial \bB}{\partial \bx}, \\ 
+			\frac{\partial \bA \otimes \bB}{\partial \bx} = & \, \parens[\bigg]{\frac{\partial \bA}{\partial \bx} \otimes \bB} + \parens[\bigg]{\bA \otimes \frac{\partial \bB}{\partial \bx}}, \\ 
+			\frac{\partial \bA^{-1}}{\partial \bx} = & \, -\bA^{-1} \frac{\partial \bA}{\partial \bx}\bA^{-1}. 
+		\end{align*}
+		
+		\item \textit{Gradient Matrix:} If $y = f \parens{\bA}$ is a scalar function of a matrix $\bA \in \Real^{m \times n}$, then the \textit{gradient matrix} is defined to be 
+		\begin{align*}
+			\frac{\partial y}{\partial \bA} = \begin{pmatrix}
+				\frac{\partial y}{\partial A_{1,1}} & \frac{\partial y}{\partial A_{1,2}} & \cdots & \frac{\partial y}{\partial A_{1,n}} \\ 
+			\frac{\partial y}{\partial A_{2,1}} & \frac{\partial y}{\partial A_{2,2}} & \cdots & \frac{\partial y}{\partial A_{2,n}} \\ 
+			\vdots & \vdots & \ddots & \vdots \\ 
+			\frac{\partial y}{\partial A_{m,1}} & \frac{\partial y}{\partial A_{m,2}} & \cdots & \frac{\partial y}{\partial A_{m,n}} \\ 
+			\end{pmatrix}. 
+		\end{align*}
+		
+		\textit{Examples:} Let $\bA \in \Real^{n \times n}$, then 
+		\begin{align*}
+			\frac{\partial \tr \parens{\bA}}{\partial \bA} = \bI_n, \qquad \text{ and } \qquad \frac{\partial \abs{\bA}}{\partial \bA} = \abs{\bA} \cdot \parens{\bA^\top}^{-1}. 
+		\end{align*}
+		
+		\item \textit{Hessian Matrix:} % The \textit{Hessian matrix} is a square matrix whose elements are the second-order partial derivatives of a function. 
+		Let $y = f \parens{\bx}$ be a scalar function of $\bx \in \Real^n$. Then, the \textit{Hessian matrix} of $y$ wrt $\bx$ is the $n \times n$ matrix 
+		\begin{align*}
+			\bH f \parens{\bx} = \frac{\partial}{\partial \bx}\parens[\bigg]{\frac{\partial y}{\partial \bx}}^\top = \frac{\partial^2 f \parens{\bx}}{\partial \bx \partial \bx^\top} = \begin{pmatrix}
+			\frac{\partial^2 f \parens{\bx}}{\partial x_1^2} & \frac{\partial^2 f \parens{\bx}}{\partial x_1 \partial x_2} & \cdots & \frac{\partial^2 f \parens{\bx}}{\partial x_1 \partial x_n} \\ 
+			\frac{\partial^2 f \parens{\bx}}{\partial x_2 \partial x_1} & \frac{\partial^2 f \parens{\bx}}{\partial x_2^2} & \cdots & \frac{\partial^2 f \parens{\bx}}{\partial x_2 \partial x_n} \\ 
+			\vdots & \vdots & \ddots & \vdots \\ 
+			\frac{\partial^2 f \parens{\bx}}{\partial x_n \partial x_1} & \frac{\partial^2 f \parens{\bx}}{\partial x_n \partial x_2} & \cdots & \frac{\partial^2 f \parens{\bx}}{\partial x_n^2} \\
+			\end{pmatrix}
+		\end{align*}
+		Note that $\mathbf{H} f \parens{\bx} = \nabla^2_\bx y = \nabla _\bx \nabla_\bx y$ so that the Hessian matrix is the Jacobian of the gradient of $f$. 
+		
+		The Hessian can be used for a better approximation to a real-valued function $f$ by including a \textit{quadratic} term: for $\bc \in \Real^n$, 
+		\begin{align}
+			f \parens{\bx} \approx f \parens{\bc} + \bracks{ \bJ f \parens{\bc} } \parens{\bx - \bc} + \frac{1}{2} \parens{\bx - \bc}^\top \bracks{ \bH f \parens{\bc}} \parens{\bx - \bc}. 
+		\end{align}
+	\end{enumerate}
+\end{enumerate}
+
+\section*{II. Random Vectors} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Random Vector:} Suppose we have $p$ random variables, $X_1, \cdots, X_p$, each defined on the real line, and we can write them jointly as a $p$-dimensional column vector 
+	\begin{align*}
+		X = \parens{X_1, \cdots, X_p}^\top. 
+	\end{align*}
+	
+	\item \textbf{Joint Cumulative Distribution Function:} The \textit{joint distribution function} $F_X$ of the random vector $X$ is given by 
+	\begin{align*}
+		F_X \parens{\bx} = F_X \parens{x_1, \cdots, x_p} = \Pr \parens{X_1 \le x_1, \cdots, X_p \le x_p} = \Pr \parens{X \le \bx}, 
+	\end{align*}
+	for any $\bx = \parens{x_1, x_2, \cdots, x_p}^\top$. 
+	
+	\item \textbf{Joint Density Function:} If $F_X$ is absolutely continuous, the \emph{joint density function} $f_X$ of the random vector $X$ is 
+	\begin{align*}
+		f_X \parens{\bx} = f_X \parens{x_1, \cdots, x_p} = \frac{\partial^p F_X \parens{u_1, u_2, \cdots, u_p}}{\partial u_1 \partial u_2 \cdots \partial u_p}\bigg\vert_{\bu = \bx}, 
+	\end{align*}
+	which exists almost everywhere, where $\bu = \parens{u_1, u_2, \cdots, u_p}^\top$. 
+	
+	\textit{Relationship between Joint Cumulative Distribution Function and Joint Density Function:} One can obtain the joint cumulative distribution function $F_X$ and the joint density function $f_X$ by
+	\begin{align*}
+		F_X \parens{\bx} = & \, F_X \parens{x_1, \cdots, x_p} \\ 
+		= & \, \int_{-\infty}^{x_p} \cdots \int_{-\infty}^{x_2} \int_{-\infty}^{x_1} f_{X} \parens{u_1, u_2, \cdots, u_p} \ \diff u_1 \diff u_2 \cdots \diff u_p. 
+	\end{align*}
+	
+	\item \textbf{Marginal Distribution and Density Functions:} Let $\parens{X_1, \cdots, X_k}$, with $k < p$, be a subset of the random vector $X = \parens{X_1, \cdots, X_p}$. The marginal distribution function of this subset is 
+	\begin{align*}
+		F_X \parens{x_1, \cdots, x_k} = & \, F_X \parens{x_1, \cdots, x_k, \infty, \cdots, \infty} \nonumber \\ 
+		= & \, \Pr \parens{X_1 \le x_1, \cdots, X_k \le x_k, X_{k+1} \le \infty, \cdots, X_r \le \infty}, 
+	\end{align*}
+	and the marginal density function of the subset is 
+	\begin{align*}
+		f_{X} \parens{x_1, \cdots, x_k} = \int_{-\infty}^\infty \cdots \int_{-\infty}^\infty f_{X} \parens{u_1, \cdots, u_p} \ \diff u_{k+1} \cdots \diff u_p.  
+	\end{align*}
+	
+	\item \textbf{Independence:} The components of a random vector $X \in \Real^p$ are said to be \textit{mutually independent} if the joint distribution can be factored into the product of its $p$ marginals, i.e., 
+	\begin{align*}
+		F_{X} \parens{\bx} = \prod_{i=1}^p F_{X_i} \parens{x_i}
+	\end{align*}
+	where $F_{X_i}$ is the marginal distribution function of $X_i$ for all $i = 1, 2, \cdots, p$. This also means that the joint density function can be factored in the following way under independence, 
+	\begin{align*}
+		f_{X} \parens{\bx} = \prod_{i=1}^p f_{X_i} \parens{x_i}. 
+	\end{align*}
+	
+	\item \textbf{Expectation of a Random Vector:} If $X \in \Real^p$ is a random vector, its expected value is the following $p$-dimensional vector 
+	\begin{align*}
+		\bmu_X = \E \bracks{X} = \parens[\big]{\E \bracks{X_1}, \cdots, \E \bracks{X_p}}^\top = \parens{\mu_1, \cdots, \mu_p}^\top \in \Real^p. 
+	\end{align*}
+	
+	\item \textbf{Covariance Matrix:} The $p \times p$ \textit{covariance matrix} of a $p$-dimensional random vector $X$ is given by 
+	\begin{align*}
+		\bSigma_{XX} = & \, \cov \parens{X, X} \\ 
+		= & \, \E \bracks{ \parens{X - \E \bracks{X}} \parens{X - \E \bracks{X}}^\top} \\ 
+		= & \, \E \bracks{ \parens{X_1 - \mu_1, \cdots, X_p - \mu_p} \parens{X_1 - \mu_1, \cdots, X_p - \mu_p}^\top} \\ 
+		= & \, \begin{pmatrix}
+			\sigma_1^2 & \sigma_{1,2} & \cdots & \sigma_{1,p} \\ 
+			\sigma_{1,2} & \sigma_{2}^2 & \cdots & \sigma_{2,p} \\ 
+			\vdots & \vdots & \ddots & \vdots \\ 
+			\sigma_{p,1} & \sigma_{p,2} & \cdots & \sigma^2_{p}
+		\end{pmatrix}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\sigma_i^2 := \var \parens{X_i} = \E \bracks{ \parens{X_i - \E \bracks{X_i}}^2}
+	\end{align*}
+	is the \textit{variance} of $X_i$ for $i = 1, \cdots, p$ and 
+	\begin{align*}
+		\sigma_{i,j} := \cov \parens{X_i, X_j} = \E \bracks{ \parens{X_i - \E \bracks{X_i}} \parens{X_j - \E \bracks{X_j}}}
+	\end{align*}
+	is the \textit{covariance} between $X_i$ and $X_j$ for $i, j = 1, \cdots, p$ and $i \ne j$. 
+	
+	\item \textbf{Correlation Matrix:} The \textit{correlation matrix} of a $p$-dimensional random vector $X$ is obtained from the covariance matrix $\bSigma_{XX}$ by dividing the $i$-th row by $\sigma_i$ and dividing the $j$-th column by $\sigma_j$, which is given by the following $p \times p$ matrix 
+	\begin{align*}
+		\bP_{XX} = \begin{pmatrix}
+			1 & \rho_{1,2} & \cdots & \rho_{1,p} \\ 
+			\rho_{2,1} & 1 & \cdots & \rho_{2,p} \\ 
+			\vdots & \vdots & \ddots & \vdots \\
+			\rho_{p,1} & \rho_{p,2} & \cdots & \rho_{p,p}
+		\end{pmatrix}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\rho_{i,j} = \rho_{j,i} = \begin{cases}
+		\dfrac{\sigma_{i,j}}{\sigma_i \sigma_j}, & \text{ if } i \ne j \\
+		1,  & \text{ otherwise }
+		\end{cases} 
+	\end{align*}
+	is the \textit{pairwise correlation coefficient} of $X_i$ with $X_j$ for $i, j = 1, \cdots, p$. 
+	
+	\textit{Remark.} The correlation coefficient $\rho_{i,j}$ lies between $-1$ and $+1$ and is a measure of association between $X_i$ and $X_j$: 
+	\begin{enumerate}
+		\item When $\rho_{i,j} = 0$, we say that $X_i$ and $X_j$ are \emph{uncorrelated}; 
+		\item When $\rho_{i,j} > 0$, we say that $X_i$ and $X_j$ are \emph{positively correlated}; and 
+		\item When $\rho_{i,j} < 0$, we say that $X_i$ and $X_j$ are \emph{negatively correlated}. 
+	\end{enumerate}
+	
+	\item \textbf{Stacking Two Random Vectors:} Suppose $X$ and $Y$ are two random vectors, where $X$ is $p$-dimensional and $Y$ is $q$-dimensional. Let $Z$ be the random vector of $\parens{p+q}$-dimensional, 
+	\begin{align*}
+		Z = \begin{pmatrix}
+			X \\ Y
+		\end{pmatrix}. 
+	\end{align*}
+	Then, the expected value of $Z$ is the $\parens{p+q}$-dimensional vector 
+	\begin{align*}
+		\bmu_Z = \E \bracks{Z} = \begin{pmatrix}
+			\E \bracks{X} \\ \E \bracks{Y}
+		\end{pmatrix} = \begin{pmatrix}
+			\mu_X \\ \mu_Y
+		\end{pmatrix}, 
+	\end{align*}
+	and the covariance matrix of $Z$ is the following partitioned matrix of size $ \parens{ p + q} \times \parens{p + q} $ 
+	\begin{align*}
+		\bSigma_{ZZ} = & \, \E \bracks{\parens{Z - \bmu_Z} \parens{Z - \bmu_Z}^\top} \\ 
+		= & \, \begin{pmatrix}
+			\cov \parens{X, X} & \cov \parens{X, Y} \\ 
+			\cov \parens{Y, X} & \cov \parens{Y, Y}
+		\end{pmatrix} \\ 
+		= & \, \begin{pmatrix}
+			\bSigma_{XX} & \bSigma_{XY} \\ 
+			\bSigma_{YX} & \bSigma_{YY}
+		\end{pmatrix}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\bSigma_{XY} = \cov \parens{X, Y} = \E \bracks{\parens{X - \bmu_X} \parens{Y - \bmu_Y}^\top} = \bSigma_{YX}^\top \in \Real^{p \times q}. 
+	\end{align*}
+	
+	\item \textbf{Linearly Related Random Vectors:} If the $q$-dimensional random vector $Y$ is linearly related to the $p$-dimensional random vector $X$ in the sense that 
+	\begin{align*}
+		Y = \bA X + \bb, 
+	\end{align*}
+	where $\bA$ is a fixed matrix of size $p \times q$ and $\bb$ is a $q$-dimensional fixed vector, then the mean vector and covariance matrix of $Y$ are given by 
+	\begin{align*}
+		\bmu_Y = & \, \bA \bmu_X + \bb, \\ 
+		\bSigma_{YY} = & \, \bA \bSigma_{XX} \bA^\top, 
+	\end{align*}
+	respectively. 
+
+\end{enumerate}
+
+\section*{III. Multivariate Gaussian Distribution} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Review of a Gaussian Random Variable:} The real-valued univariate random variable $X$ is said to have \textit{Gaussian distribution} with mean $\mu$ and variance $\sigma^2$, written as $X \sim \Normal \parens{\mu, \sigma^2}$, if its density function is given by 
+	\begin{align*}
+		f \parens{x \,\vert\, \mu, \sigma^2} = \frac{1}{ \parens{2 \pi \sigma^2}^{1/2}} \exp \parens[\bigg]{-\frac{1}{2\sigma^2} \parens{x-\mu}^2} \qquad \text{ for all } x \in \Real, 
+	\end{align*}
+	where $\mu \in \Real$ and $\sigma > 0$. 
+	
+	\item \textbf{Gaussian Random Vector:} The $p$-dimensional random vector $X$ is said to have the $p$-variate \textit{Gaussian distribution} with mean vector $\bmu \in \Real^p$ and covariance matrix $\bSigma \in \Real^{p \times p}$, which is positive-definite and symmetric, written as $X \sim \Normal_p \parens{\bmu, \bSigma}$, if its density function is given by
+	\begin{align*}
+		f \parens{\bx \,\vert\, \bmu, \bSigma} = \frac{1}{ \parens{2\pi}^{p/2} \abs{\bSigma}^{1/2}} \exp \parens[\bigg]{-\frac{1}{2} \parens{\bx-\bmu}^\top \bSigma^{-1} \parens{\bx - \bmu}} \qquad \text{ for all } \bx \in \Real^p. 
+	\end{align*}
+	
+	\item \textbf{Mahalanobis Distance:} The square-root, $\Delta$, of the quadratic form, 
+	\begin{align*}
+		\Delta^2 = \parens{\bx - \bmu}^\top \bSigma^{-1} \parens{\bx - \bmu}, 
+	\end{align*}
+	is called the \textit{Mahalanobis distance} from $\bx$ to $\mu$. 
+	
+	\item \textbf{Singular Multivariate Gaussian Distribution:} If $\bSigma$ is \textit{singular}, then, almost surely, the random vector $X$ lives on some hyperplane of \textit{reduced} dimensionality and its density function does \emph{not} exist. In this case, $X$ is said to have a \textit{singular} Gaussian distribution. 
+	
+	\item \textbf{Cramer-Wold Theorem:} The distribution of a $p$-dimensional random vector $X$ is \textit{completely} determined by its one-dimensional linear projections, $\balpha^\top X$, for any vector $\balpha \in \Real^p$. More precisely, the random vector $X$ has the multivariate Gaussian distribution if and only if \emph{every} linear function of $X$ has the univariate Gaussian distribution. 
+	
+	\item \textbf{Spherical Gaussian Density:} If $\bSigma = \sigma^2 \bI_p$, then the multivariate Gaussian density function becomes 
+	\begin{align}\label{eq-gaussian-special-pdf}
+		f \parens{\bx \,\vert\, \bmu, \sigma^2} = \frac{1}{ \parens{2\pi}^{p/2} \abs{\sigma}^{p/2}} \exp \parens[\bigg]{-\frac{1}{2\sigma^2} \parens{\bx - \bmu}^\top \parens{\bx - \bmu}}, 
+	\end{align}
+	and this is termed a \textit{spherical Gaussian density}. 
+	
+	\textit{Remark.} In \eqref{eq-gaussian-special-pdf}, 
+	\begin{align*}
+		\parens{\bx - \bmu}^\top \parens{\bx - \bmu} = a^2 
+	\end{align*}
+	is the equation of a $p$-dimensional sphere centered at $\bmu$; in other words, the equation $\parens{\bx - \bmu}^\top \parens{\bx - \bmu} = a^2$ is an \textit{ellipsoid} centered at $\bmu$. 
+	
+	In general, the equation 
+	\begin{align*}
+		\parens{\bx - \bmu}^\top \bSigma^{-1} \parens{\bx - \bmu} = a^2 
+	\end{align*}
+	is an ellipsoid centered at $\bmu$, with $\bSigma$ determining its orientation and shape. The multivariate Gaussian density function is \textit{constant} along these ellipsoids. 
+	
+	\item \textbf{2-dimensional Gaussian Random Vector:} Let $p=2$ and $X = \parens{X_1, X_2}^\top \sim \Normal_2 \parens{\mu, \bSigma}$, where 
+	\begin{align*}
+		\bmu = \parens{\mu_1, \mu_2}^\top, \qquad \bSigma = \begin{pmatrix}
+			\sigma_1^2 & \rho \sigma_1 \sigma_2 \\ 
+			\rho \sigma_1 \sigma_2 & \sigma_2^2
+		\end{pmatrix}, 
+	\end{align*}
+	$\sigma_1^2$ is the variance of $X_1$, $\sigma_2^2$ is the variance of $X_2$, and 
+	\begin{align*}
+		\rho = \frac{\cov \parens{X_1, X_2}}{\sqrt{\var \bracks{X_1} \var \bracks{X_2}}} = \frac{\sigma_{1,2}}{\sigma_1 \sigma_2}
+	\end{align*}
+	is the correlation between $X_1$ and $X_2$. It follows that 
+	\begin{align*}
+		\abs{\bSigma} = \parens{1 - \rho^2} \sigma_1^2 \sigma_2^2, 
+	\end{align*}
+	and 
+	\begin{align*}
+		\bSigma^{-1} = \frac{1}{1-\rho^2} \begin{pmatrix}
+			\sigma_1^{-2} & - \rho \sigma_1^{-1} \sigma_2^{-1} \\ 
+			- \rho \sigma_1^{-1} \sigma_2^{-1} & \sigma_2^{-2}
+		\end{pmatrix}. 
+	\end{align*}
+	The density function of the resulting bivariate Gaussian random vector is 
+	\begin{align*}
+		f \parens{\bx \,\vert\, \bmu, \bSigma} = \frac{1}{2 \pi \sigma_1 \sigma_2 \sqrt{1 - \rho^2}} \exp \parens[\bigg]{-\frac{1}{2} Q}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		Q = \frac{1}{1-\rho^2} \bracks[\Bigg]{\parens[\bigg]{\frac{x_1 - \mu_1}{\sigma_1}}^2 - 2 \rho \parens[\bigg]{\frac{x_1 - \mu_1}{\sigma_1}} \parens[\bigg]{\frac{x_2 - \mu_2}{\sigma_2}} + \parens[\bigg]{\frac{x_2 - \mu_2}{\sigma_2}}^2}. 
+	\end{align*}
+	If $X_1$ and $X_2$ are uncorrelated, $\rho = 0$, and the bivariate Gaussian density function reduces to the product of two univariate Gaussian densities, 
+	\begin{align*}
+		f \parens{\bx \,\vert\, \bmu, \bSigma} = & \, \frac{1}{2 \pi \sigma_1 \sigma_2} \exp \parens[\Bigg]{-\frac{1}{2} \parens[\bigg]{\frac{x_1 - \mu_1}{\sigma_1}}^2 - \frac{1}{2} \parens[\bigg]{\frac{x_2 - \mu_2}{\sigma_2}}^2} \\ 
+		= & \, f \parens{x_1 \,\vert\, \mu_1, \sigma_1^2} \times f \parens{x_2 \,\vert\, \mu_2, \sigma_2^2}, 
+	\end{align*}
+	implying that $X_1$ and $X_2$ are independent. 
+	
+	\item \textbf{``Partitioned'' Gaussian Distribution:} Consider two random vectors $X \in \Real^p$ and $Y \in \Real^q$ and let $\bZ$ be the $\parens{p+q}$-dimensional random vector
+	\begin{align*}
+		Z = \begin{pmatrix}
+			X \\ Y
+		\end{pmatrix} \in \Real^{p+q}. 
+	\end{align*}
+	Assume that $Z$ has a multivariate Gaussian distribution, and then, the exponent in the density function is the following quadratic form
+	\begin{align*}
+		-\frac{1}{2} \parens{\bz - \bmu_{Z}}^\top \bSigma_{Z}^{-1} \parens{\bz - \bmu_{Z}}. 
+	\end{align*}
+	The inverse matrix of $\bSigma_{Z}$ is 
+	\begin{align*}
+		\bSigma_{Z}^{-1} = \begin{pmatrix}
+			\bA_{11} & \bA_{12} \\ \bA_{21} & \bA_{22}
+		\end{pmatrix}, 
+	\end{align*}
+	where 
+	\begin{align*}
+	\bA_{11} = & \, \bSigma_{XX}^{-1} + \bSigma_{XX}^{-1} \bSigma_{XY} \parens{\bSigma_{YY} - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}}^{-1} \bSigma_{YX} \bSigma_{XX}^{-1},  \\ 
+	\bA_{12} = & \, - \bSigma_{XX}^{-1} \bSigma_{XY} \parens{\bSigma_{YY} - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}}^{-1} = \bA_{21}^\top, \\ 
+	\bA_{22} = & \, \parens{\bSigma_{YY} - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}}^{-1}. 
+	\end{align*}
+	In particular, we can write $\bSigma_{ZZ}^{-1}$ as 
+	\begin{align*}
+		\begin{pmatrix}
+			\bI_p & - \bSigma_{XX}^{-1} \bSigma_{XY} \\ 
+			\boldzero & \bI_q
+		\end{pmatrix} 
+		\begin{pmatrix}
+			\bSigma_{XX}^{-1} & \boldzero \\ 
+			\boldzero & \parens{\bSigma_{YY} - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}}^{-1}
+		\end{pmatrix} 
+		\begin{pmatrix}
+			\bI_p & \boldzero \\ 
+			- \bSigma_{YX} \bSigma_{XX}^{-1} & \bI_q
+		\end{pmatrix}. 
+	\end{align*}
+	
+	\item \textbf{Transformation of Gaussian Random Vector:} Consider the following nonsingular transformation of $\bZ$
+	\begin{align*}
+		U = \begin{pmatrix}
+			U_1 \\ U_2 
+		\end{pmatrix} = 
+		\begin{pmatrix}
+			\bI_p & \boldzero \\ - \bSigma_{YX} \bSigma_{XX}^{-1} & \bI_q
+		\end{pmatrix} \begin{pmatrix}
+			\bX \\ \bY
+		\end{pmatrix}. 
+	\end{align*}
+	Then, the mean of $U$ is 
+	\begin{align*}
+		\bmu_{U} = 
+		\begin{pmatrix}
+			\bI_p & \boldzero \\ - \bSigma_{YX} \bSigma_{XX}^{-1} & \bI_q
+		\end{pmatrix} \begin{pmatrix}
+			\bmu_X \\ \bmu_Y
+		\end{pmatrix}, 
+	\end{align*}
+	and the covariance matrix is
+	\begin{align*}
+		\bSigma_{UU} = 
+		\begin{pmatrix}
+			\bSigma_{XX} & \boldzero \\ \boldzero & \bSigma_{YY} - \bSigma_{YX}\bSigma_{XX}^{-1} \bSigma_{XY}
+		\end{pmatrix}. 
+	\end{align*}
+	Therefore, 
+	\begin{itemize}
+		\item the marginal distribution of $U_1 = X$ is $\Normal_p \parens{\bmu_X, \bSigma_{XX}}$, 
+		\item the marginal distribution of $U_2 = Y - \bSigma_{YX} \bSigma_{XX}^{-1} X$ is $$\Normal_q \parens{\mu_Y - \bSigma_{YX} \bSigma_{XX}^{-1} \mu_X, \bSigma_{YY} - \bSigma_{YX}\bSigma_{XX}^{-1} \bSigma_{XY}},$$ and 
+		\item $U_1$ and $U_2$ are independent. 
+	\end{itemize}
+	
+	\item \textbf{Conditional Gaussian Distribution:} Given $X = \bx \in \Real^p$, the \textit{conditional distribution} of $Y$ is a $q$-variate Gaussian distribution with mean vector and covariance matrix given by
+	\begin{align*}
+		\bmu_{Y \mid \bx} = & \, \bmu_{Y} + \bSigma_{YX} \bSigma^{-1}_{XX} \parens{\bx - \mu_{X}}, \\
+		\bSigma_{Y \mid \bx} = & \, \bSigma_{YY} - \bSigma_{YX} \bSigma_{XX}^{-1} \bSigma_{XY}, 
+	\end{align*}	respectively.  
+
+\end{enumerate}
+
+\section*{IV. Random Matrices}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Random Matrix:} The $m \times n$ matrix 
+	\begin{align*}
+		\bZ = \begin{pmatrix}
+			Z_{1,1} & Z_{1,2} & \cdots & Z_{1,n} \\ 
+			Z_{2,1} & Z_{2,2} & \cdots & Z_{2,n} \\ 
+			\vdots & \vdots & \ddots & \vdots \\ 
+			Z_{m,1} & Z_{m,2} & \cdots & Z_{m,n}
+		\end{pmatrix}
+	\end{align*}
+	with $m$ rows and $n$ columns is a \emph{matrix-valued random variable} if each entry $Z_{i,j}$ is a random variable for all $ i = 1, \cdots, m $ and $ j = 1, \cdots, n$. 
+	
+	\item \textbf{Expected Value of a Random Matrix:}
+	\begin{align*}
+		\bmu_{\bZ} = \E \bracks{\bZ} = \begin{pmatrix}
+			\E \bracks{Z_{1,1}} & \E \bracks{Z_{1,2}} & \cdots & \E \bracks{Z_{1,n}} \\ 
+			\E \bracks{Z_{2,1}} & \E \bracks{Z_{2,2}} & \cdots & \E \bracks{Z_{2,n}} \\ 
+			\vdots & \vdots & \ddots & \vdots \\ 
+			\E \bracks{Z_{m,1}} & \E \bracks{Z_{m,2}} & \cdots & \E \bracks{Z_{m,n}}. 
+		\end{pmatrix}
+	\end{align*}
+	
+	\item \textbf{Covariance Matrix of a Random Matrix:} The \textit{covariance matrix} of a random matrix $\bZ$ is the matrix of covariances of all pairs of elements in $\bZ$, i.e., 
+	\begin{align*}
+		\bSigma_{\bZ\bZ} = \cov \parens[\big]{\vectorize \parens{\bZ}, \vectorize \parens{\bZ}} = \E \bracks{\vectorize \parens{\bZ - \bmu_{\bZ}} \vectorize \parens{\bZ - \bmu_{\bZ}}^\top} \in \Real^{mn \times mn}. 
+	\end{align*}
+	
+	\item \textbf{Transformation of $\bZ \mapsto \bW = \bA \bZ \bB^\top + \bC$:} Consider the following transformation of 
+	\begin{align*}
+		\bZ \mapsto \bW = \bA \bZ \bB^\top + \bC, 
+	\end{align*}
+	where $\bA$, $\bB$ and $\bC$ are constant matrices. Then, 
+	\begin{enumerate}
+		\item $\bmu_{\bW} = \E \bracks{\bA \bZ \bB^\top + \bC} = \bA \E \bracks{\bZ} \bB^\top + \bC = \bA \bmu_{\bZ} \bB^\top + \bC$; 
+		\item $\bSigma_{\bW\bW} = \var \bracks{\bA \bZ \bB^\top + \bC} = \var \bracks{\bA \bZ \bB^\top} = \E \bracks{\vectorize \parens{\bW - \bmu_{\bW}} \vectorize \parens{\bW - \bmu_{\bW}}^\top}$. 
+		
+		\textit{Derivation:} Since 
+		\begin{align*}
+			\vectorize \parens{\bW - \bmu_{\bW}} = \vectorize \parens{\bA \parens{ \bZ - \bmu_{\bZ}} \bB^\top} = \parens{\bA \otimes \bB}\vectorize \parens{\bZ - \bmu_{\bZ}}, 
+		\end{align*}
+		it follows that 
+		\begin{align*}
+			\bSigma_{\bW\bW} = & \, \E \bracks{\parens{\bA \otimes \bB} \vectorize \parens{\bZ - \bmu_{\bZ}} \parens{\parens{\bA \otimes \bB} \vectorize \parens{\bZ - \bmu_{\bZ}}}^\top} \\ 
+			= & \, \parens{\bA \otimes \bB} \E \bracks{\vectorize \parens{\bZ - \bmu_{\bZ}} \vectorize \parens{\bZ - \bmu_{\bZ}}^\top} \parens{\bA \otimes \bB}^\top \\ 
+			= & \, \parens{\bA \otimes \bB} {\bSigma_{\bZ\bZ}} \parens{\bA^\top \otimes \bB^\top}. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Wishart Distribution:} 
+	\begin{enumerate}
+		\item \textit{Definition:} Let $X_i$, $ i = 1, \cdots, n$, be $n$ independent $p$-dimensional random vectors distributed as 
+		\begin{align*}
+			X_i \sim \Normal_p \parens{\bmu_i, \bSigma} , \qquad \text{ for all } i = 1, \cdots, n \ge p. 
+		\end{align*}
+		Define the following $p \times p$ positive semidefinite random matrix 
+		\begin{align*}
+			\bW := \sum_{i=1}^n X_i X_i^\top. 
+		\end{align*}
+		Then, $\bW$ is said to have the \textit{Wishart distribution} with $n$ degrees of freedom and associated matrix $\bSigma$, denoted by $\bW \sim \mathrm{Wishart}_p \parens{n, \bSigma}$. 
+		
+		If $\bmu_i = \boldzero_p$, the resulting Wishart random matrix $\bW$ is said to be \textit{central}; otherwise, it is said to be \textit{non-central}. 
+		
+		\item \textit{Density Function:} The joint density function of the $p \parens{p+1}/2$ elements of $\bW$ is 
+		\begin{align*}
+			f_{\bW} \parens{\bw \,\vert\, n, \bSigma} = c_{p, n} \abs{\bSigma}^{-n/2} \abs{\bw}^{\frac{1}{2}\parens{n-p-1}} \exp \parens[\bigg]{-\frac{1}{2} \tr \parens{\bw \bSigma^{-1}}}, 
+		\end{align*}
+		where 
+		\begin{align*}
+			\frac{1}{c_{p, n}} = 2^{\frac{np}{2}} \pi^{\frac{p \parens{p-1}}{4}} \prod_{i=1}^p \Gamma \parens[\bigg]{\frac{n+1-i}{2}}. 
+		\end{align*}
+		
+		\textit{Remark 1.} If $\bW$ is singular, the density is 0, and the corresponding Wishart random matrix $\bW$ is said to be \textit{singular}. 
+		
+		\textit{Remark 2.} If $p = 1$, $\mathrm{Wishart}_1 \parens{n, \sigma^2}$ is identical to a $\sigma^2 \chi_n^2$ distribution. 
+		
+		\item \textit{Moments:} The first two moments of the Wishart distribution $\mathrm{Wishart}_p \parens{n, \bSigma}$ are 
+		\begin{align*}
+			\E \bracks{\bW} = & \, n \bSigma, \\ 
+			\var \bracks{\vectorize \parens{\bW}} = & \, \E \bracks[\Big]{\parens[\big]{\vectorize \parens{\bW - n \bSigma}} \vectorize \parens{\bW - n \bSigma}^\top} \nonumber \\ 
+			= & \, n \parens{\bI_{p^2} + \bI_{\parens{p, p}}} \parens{\bSigma \otimes \bSigma}, 
+		\end{align*}
+		where $\bI_{\parens{p, q}}$ is a \textit{permuted identity matrix} and is a $pq \times pq$-matrix partitioned into $\parens{p \times q}$-submatrices such that the $\parens{i, j}$-th submatrix has a 1 in its $\parens{j,i}$-th position and zeros everywhere else. 
+		
+		\item \textit{Properties of Wishart Distribution:}
+		\begin{enumerate}
+			\item Let $\bW_j \sim \mathrm{Wishart}_p \parens{n_j, \bSigma}$, $j = 1, 2, \cdots, m$, be independently distributed (central or not). Then, 
+			\begin{align*}
+				\sum_{j=1}^n \bW_j \sim \mathrm{Wishart}_p \parens[\Bigg]{\sum_{j=1}^m n_j, \bSigma}. 
+			\end{align*}
+			
+			\item Suppose $\bW \sim \mathrm{Wishart}_p \parens{n, \bSigma}$, and let $\bA \in \Real^{d \times p}$ be a constant matrix with rank $d$. Then, 
+			\begin{align*}
+				\bA \bW \bA^\top \sim \mathrm{Wishart}_d \parens{n, \bA \bSigma \bA^\top}. 
+			\end{align*}
+			
+			\item Suppose $\bW \sim \mathrm{Wishart}_p \parens{n, \bSigma}$, and let $\bv \in \Real^p$ be a fixed vector. Then, 
+			\begin{align*}
+				\bv^\top \bW \bv \sim \sigma_{\bv}^2 \chi_n^2, 
+			\end{align*}
+			where $\sigma_{\bv}^2 := \bv^\top \bSigma \bv$. In particular, the chi-squared distribution is central if the Wishart distribution is central. 
+			
+			\item Let $\bX = \parens{X_1, \cdots, X_n}^\top \in \Real^{n \times p}$, where $X_i \sim \Normal_p \parens{\boldzero_p, \bSigma}$, for $i = 1, 2, \cdots, n$, are independently and identically distributed. Let $\bA \in \Real^{n \times n}$ be symmetric with rank $r$, and let $\bv \in \Real^p$ be a fixed vector. Let $\by = \bX \bv$. Then, 
+			\begin{align*}
+				\bX^\top \bA \bX \sim \mathrm{Wishart}_p \parens{r, \bSigma}
+			\end{align*}
+			if and only if $\by^\top \bA \by \sim \sigma_{\bv}^2 \chi_n^2$, where $\sigma_{\bv}^2 := \bv^\top \bSigma \bv$. 
+		\end{enumerate}
+		
+	\end{enumerate}
+	
+	\item \textbf{Properties of Permuted Identity Matrix:} 
+	\begin{enumerate}
+		\item The permuted identity matrix $I_{\parens{p, p}}$ can be expressed as the sum of $p^2$ Kronecker products as 
+		\begin{align*}
+			I_{\parens{p, p}} = \sum_{i=1}^p \sum_{j=1}^p \parens{\bH_{i,j} \otimes \bH_{i,j}^\top}, 
+		\end{align*}
+		where $\bH_{i,j} \in \Real^{p \times p}$ is a matrix with $\parens{i,j}$-th element equal to 1 and zero otherwise. 
+		
+		\item For any $\bA \in \Real^{p \times p}$, we have 
+		\begin{align*}
+			I_{\parens{p, p}} \vectorize \parens{\bA} = \vectorize \parens{\bA^\top}. 
+		\end{align*}
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{V. Maximum Likelihood Estimation of the Gaussian Random Vector}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Assume that $X_1, X_2, \cdots, X_n$ are $n$ i.i.d $p$-dimensional Gaussian random vectors, that is, 
+	\begin{align*}
+		X_i \iid \Normal_p \parens{\bmu, \bSigma}, \qquad \text{ for all } i = 1, \cdots, n, 
+	\end{align*}
+	where the parameters, $\bmu \in \Real^{p}$ and $\bSigma \in \Real^{p \times p}$, are both \emph{unknown}. We estimate $\bmu$ and $\bSigma$ using the method of maximum likelihood. 
+	
+	\item \textbf{Likelihood Function:} By independence, the \textit{likelihood function} of $\bmu$ and $\bSigma$ is 
+	\begin{align*}
+		L \parens[\big]{\bmu, \bSigma \,\vert\, X_1, \cdots, X_n} = \parens{2 \pi}^{-np/2} \abs{\bSigma}^{-n/2} \exp \parens[\Bigg]{-\frac{1}{2} \sum_{i=1}^n \parens{X_i - \bmu}^\top \bSigma^{-1} \parens{X_i - \bmu}}, 
+	\end{align*}
+	and the \textit{log-likelihood function} is 
+	\begin{align*}
+		\ell \parens{\bmu, \bSigma} := & \, \log L \parens{\bmu, \bSigma \,\vert\, X_1, \cdots, X_n} \nonumber \\ 
+		= & \, - \frac{np}{2} \log \parens{2 \pi} - \frac{n}{2} \log \abs{\bSigma} - \frac{1}{2} \sum_{i=1}^n \parens{X_i - \bmu}^\top \bSigma^{-1} \parens{X_i - \bmu} \nonumber \\ 
+		= & \, - \frac{np}{2} \log \parens{2 \pi} - \frac{n}{2} \log \abs{\bSigma} - \frac{1}{2} \tr \parens[\Bigg]{\bSigma^{-1} \sum_{i=1}^n \parens{X_i - \bar{X}}^\top \parens{X_i - \bar{X}}} \nonumber \\ & \qquad 
+		- \frac{n}{2} \parens{\bar{X} - \bmu}^\top \bSigma^{-1} \parens{\bar{X} - \bmu}, 
+	\end{align*}
+	where $\bar{X} = \frac{1}{n} \sum_{i=1}^n X_i$ is the \textit{sample mean}. 
+	
+	\item \textbf{MLE of $\bmu$:} To find the MLE of $\bmu$, we differentiate $\ell \parens{\bmu, \bSigma}$ with respect to $\bmu$ and obtain 
+	\begin{align*}
+		\frac{\partial \ell}{\partial \bmu} \parens{\bmu, \bSigma} = n \bSigma^{-1} \parens{\bar{X} - \bmu}. 
+	\end{align*}
+	Setting this derivative to 0, the MLE of $\bmu$ is 
+	\begin{align*}
+		\widehat{\bmu} = \bar{X}, 
+	\end{align*}
+	the \textit{sample mean}. 
+	
+	\item \textbf{MLE of $\bSigma$:} Plugging $\widehat{\bmu} = \bar{X}$ back into $\ell \parens{\bmu, \bSigma}$, we have 
+	\begin{align*}
+		\ell \parens{\widehat{\bmu}, \bSigma} = - \frac{np}{2} \log \parens{2 \pi} - \frac{n}{2} \log \abs{\bSigma} - \frac{1}{2} \tr \parens[\Big]{\bSigma^{-1} \bS}, 
+	\end{align*}
+	where $\bS := \sum_{i=1}^n \parens{X_i - \bar{X}} \parens{X_i - \bar{X}}^\top$. 
+	
+	We take the derivative of $\ell \parens{\widehat{\bmu}, \bSigma}$ with respect to $\bSigma$ and obtain 
+	\begin{align*}
+		\frac{\partial \ell}{\partial \bSigma} \parens{\widehat{\bmu}, \bSigma} = - \frac{n}{2} \bSigma^{-1} + \frac{1}{2} \bSigma^{-1} \bS \bSigma^{-1}. 
+	\end{align*}
+	Setting this derivative to $\boldzero_{p \times p}$, we have the MLE of $\bSigma$ is 
+	\begin{align*}
+		\widehat{\bSigma} = \frac{1}{n} \bS, 
+	\end{align*}
+	the \textit{sample covariance matrix}. 
+	
+	\item \textbf{Unbiased of $\widehat{\mu}$ and $\widehat{\bSigma}$:} 
+	\begin{enumerate}
+		\item The MLE of $\bmu$, $\widehat{\bmu} = \bar{X}$, is an unbiased estimator of $\mu$, that is, 
+		\begin{align*}
+			\E \bracks{\bar{X}} = \bmu; 
+		\end{align*}
+		\item The MLE of $\bSigma$, $\widehat{\bSigma} = \parens{1/n} \bS$, is \textit{not} unbiased, and 
+		\begin{align*}
+			\E \bracks[\big]{\widehat{\bSigma}} = \frac{n-1}{n} \bSigma. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Sampling Distribution of $\widehat{\bmu} = \bar{X}$:} Since $\bar{X}$ is a linear combination of $X_1, \cdots, X_n$, each of which is i.i.d as $\Normal_p \parens{\bmu, \bSigma}$, $\widehat{\bmu} = \bar{X}$ is distributed as 
+	\begin{align*}
+		\bar{X} \sim \Normal_p \parens[\bigg]{\bmu, \, \frac{1}{n} \bSigma}. 
+	\end{align*}
+	
+	\item \textbf{Sampling Distribution of $\widehat{\bSigma} = \frac{1}{n} \bS$:} 
+	\begin{enumerate}
+		\item \textit{Assuming $\bmu = \boldzero_p$:} Let $\bv \in \Real^p$ be a fixed vector and consider $Y_i = \bv^\top X_i$, for all $i = 1, 2, \cdots, n$. Then, 
+		\begin{align*}
+			Y_i \sim \Normal_1 \parens{0, \sigma_{\bv}^2}, \qquad \text{ where } \sigma_{\bv}^2 = \bv^\top \bSigma \bv, 
+		\end{align*}
+		and 
+		\begin{align*}
+			Y := \parens{Y_1, Y_2, \cdots, Y_n}^\top \sim \Normal_n \parens{\boldzero_n, \sigma_{\bv}^2 \cdot \bI_n}. 
+		\end{align*}
+		Let $\bA = \bI_n - \frac{1}{n} \bJ_n$, where $\bJ_n = \boldone_n \boldone_n^\top$ is a matrix with all entries being 1. Note that $\bA$ is idempotent with rank $n - 1$. From univariate theory, 
+		\begin{align*}
+			\frac{1}{n} \boldone_n^\top Y = \bar{Y} \sim \Normal_1 \parens[\bigg]{0, \frac{1}{n} \sigma_{\bv}^2}, 
+		\end{align*}
+		and 
+		\begin{align*}
+			Y^\top \bA Y = \sum_{i=1}^n \parens{Y_i - \bar{Y}}^2 \sim \sigma_{\bv}^2 \cdot \chi_{n-1}^2
+		\end{align*}
+		are independently distributed for any $\bv$. 
+		
+		Now, let $\bX = \parens{X_1, \cdots, X_n}^\top$. Then, 
+		\begin{align*}
+			\frac{1}{n} \bX^\top \boldone_{n} \sim \Normal_p \parens[\bigg]{\boldzero_p, \frac{1}{n} \bSigma}, 
+		\end{align*}
+		and, using the properties of the Wishart distribution, 
+		\begin{align}
+			\bX^\top \bA \bX = \bS \sim \mathrm{Wishart}_p \parens{n-1, \bSigma}. 
+		\end{align}
+		
+		\textit{Independence of $\bar{X}$ and $\bS$:} Because $Y \sim \Normal_n \parens{\boldzero_{n}, \sigma_{\bv}^2 \cdot \bI_n}$, it follows that 
+		\begin{align*}
+			\frac{1}{n} \boldone_n^\top Y \sim \Normal_1 \parens[\bigg]{0, \frac{1}{n} \sigma_{\bv}^2}, \qquad \text{ and } \qquad Y^\top \bJ_n Y \sim \sigma_{\bv}^2 \cdot \chi_{n}^2. 
+		\end{align*}
+		Furthermore, it is easy to obtain $\bA \parens{\frac{1}{n} \boldone_n} = \boldzero_{n}$ so that the columns of $\bA$ and $\frac{1}{n} \boldone_n$ are mutually orthogonal. Thus, 
+		\begin{align*}
+			\bX^\top \ba_i = X_i - \bar{X}, \qquad \text{ for all } i = 1, 2, \cdots, n, 
+		\end{align*}
+		where $\ba_i$ is the $i$-th column of $\bA$, and $\bX^\top \parens{\frac{1}{n} \boldone_n}$ are statistically independent of each other. Thus, 
+		\begin{align*}
+			\bX^\top \parens[\bigg]{\frac{1}{n} \boldone_n} = \bar{X} \qquad \text{ and } \qquad \bX^\top \bA \bX = \parens{\bX^\top \bA} \parens{\bX^\top \bA}^\top = \bS
+		\end{align*}
+		are independently distributed. 
+
+		
+		\item \textit{Assuming $\bmu \neq \boldzero_p$:} The case of $\bmu \neq \boldzero_p$ is dealt with by replacing $X_i$ by $X_i - \mu$, for $i = 1, 2, \cdots, n$. This does \emph{not} change $\bS$, and $\bar{X}$ above is replaced by $\bar{X} - \bmu$. Thus, $\bS$ is independent of $\bar{X} - \bmu$ (and, hence, of $\bar{X}$), and
+		\begin{align}
+			\widehat{\bSigma} = \frac{1}{n} \bS \sim \frac{1}{n} \mathrm{Wishart}_p \parens{n-1, \bSigma}. 
+		\end{align}
+	\end{enumerate}
+
+\end{enumerate}
+
+\printbibliography
+
+\end{document}

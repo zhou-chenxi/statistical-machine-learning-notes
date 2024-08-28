@@ -1,0 +1,740 @@
+\documentclass[12pt]{article}
+
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage{amssymb}
+\RequirePackage[mathscr]{eucal}
+\RequirePackage{mathtools}
+\RequirePackage{etoolbox}
+\usepackage[red]{zhoucx-notation}
+
+% \usepackage{subcaption}
+\usepackage{lipsum}
+
+\geometry{letterpaper, top = 1in, bottom = 1in, left = 1in, right = 1in}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\renewcommand{\qedsymbol}{\hfill\rule{2mm}{2mm}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textsf{Chapter 23, Principal Component Analysis}}
+\lhead{\textsf{Chenxi Zhou}}
+\renewcommand{\headrulewidth}{1pt}
+\cfoot{\thepage}
+
+\newcommand{\titlebox}[4]{
+\begin{tcolorbox}[colback = blue!5!white!95, colframe = blue!70!black
+% colback = yellow!30!white, colframe = yellow!70!black 
+]
+  \noindent \textbf{ #1 } \hfill \textit{#2} 
+  \begin{center}
+  	 \LARGE{\textbf{#3}}
+  \end{center}
+\textbf{Chapter:} \textit{\text{#4}} \hfill \textbf{Prepared by:} \textit{Chenxi Zhou}
+\end{tcolorbox}
+}
+
+\begin{document}
+
+\thispagestyle{plain}
+\titlebox{Notes on Statistical and Machine Learning}{}{Principal Component Analysis}{23}
+
+\vspace{10pt} 
+
+This note is prepared based on 
+\begin{itemize}
+	\item \textit{Chapter 7, Linear Dimensionality Reduction} in \textcite{Izenman2009-jk}, 
+	\item \textit{Chapter 16, Nonlinear Dimensionality Reduction and Manifold Learning} in \textcite{Izenman2009-jk}, 
+	\item \textit{Chapter 14, Unsupervised Learning} in \textcite{Friedman2001-np}, and 
+	\item \textit{Chapter 8, Sparse Multivariate Methods} in \textcite{Hastie2015-rm}. 
+\end{itemize}
+
+
+\section*{I. Introduction}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Motivation:} Faced with high-dimensional data, there are two ways of projection the data onto a lower-dimensional subspace without losing important information regarding some characteristics of the original variables: 
+	\begin{enumerate}
+		\item \textit{feature selection}, also known as variable selection; 
+		\item \textit{feature extraction}, creating a reduced set of linear or nonlinear transformations of the input variables. 
+	\end{enumerate}
+	
+	\item \textbf{Introduction:} Principal component analysis (PCA), initially proposed by Hotelling in 1933, is to derive a reduced set of \textit{orthogonal} linear projections of a single collection of correlated variables, $X = \parens{X_1, \cdots, X_p}^\top$, where the projections are ordered by decreasing variances. 
+	
+	\item \textbf{Main Usages of PCA:} It has two main usages: 
+	\begin{enumerate}
+		\item to reduce dimensionality: for example, the reduced set of linear transformation of input variables can be used in principal components regression; 
+		\item to discover important features of the data: 
+		\begin{itemize}
+			\item the \emph{first} few principal component scores can be used to identify outliers, distribution peculiarities, and clusters of points; 
+			\item the \emph{last} few principal component scores show linear projections of $X$ that have smallest variance: the component with zero or near-zero variance is virtually constant and can be used to detect collinearity and outliers and alter the perceived dimensionality of data. 
+		\end{itemize}
+	\end{enumerate}
+
+\end{enumerate}
+
+
+\section*{II. Population Principal Components}	
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Assume that a $p$-dimensional random vector
+	\begin{align*}
+		X = \parens{X_1, \cdots, X_p}^\top \in \Real^p, 
+	\end{align*}
+	has the mean $\E \bracks{X} = \bmu_{X} \in \Real^p$ and the covariance matrix $\var \bracks{X} = \bSigma_{XX} \in \Real^{p \times p}$. Principal component analysis is to replace the set of $p$ (unordered and correlated) input variables, $X_1, \cdots, X_p$, by a set of $t$ (ordered and uncorrelated) linear projections, $\xi_1, \cdots, \xi_t$, where $t \le p$, of the input variables, 
+	\begin{align}\label{xij}
+		\xi_j = \bb_j^\top X = b_{j,1} X_1 + \cdots + b_{j,p} X_p, \qquad \text{ for all } j = 1, \cdots, t. 
+	\end{align}
+	We attempt to minimize the loss of information by such a replacement. 
+	
+	\item \textbf{Total Variation:} In PCA, the ``information'' is interpreted as the \textit{total variation} of the original input variables, 
+	\begin{align*}
+		\sum_{j=1}^p \var \bracks{X_j} = \tr \parens{\bSigma_{XX}}. 
+	\end{align*}
+	Since $\bSigma_{XX}$ is positive semi-definite, according to the spectral decomposition theorem, we have 
+	\begin{align*}
+		\bSigma_{XX} = \bU \bLambda \bU^\top, 
+	\end{align*}
+	where $\bLambda := \diag \parens{\lambda_1, \cdots, \lambda_p} \in \Real^{p \times p}$ contains all the eigenvalues of $\bSigma_{XX}$ on its diagonal and $\bU \in \Real^{p \times p}$ is an orthogonal matrix with eigenvectors of $\bSigma_{XX}$ as its columns. Hence, the total variation is 
+	\begin{align*}
+		\tr \parens{\bSigma_{XX}} = \tr \parens{\bLambda} = \sum_{j=1}^p \lambda_j. 
+	\end{align*}
+	
+	\item \textbf{Construction of the Principal Components:} The $j$-th coefficient vector, $\bb_j = \parens{b_{j,1}, \cdots, b_{j,p}}^\top \in \Real^p$, is chosen so that: 
+	\begin{itemize}
+		\item The first $t$ linear projections $\xi_j$, $j = 1, 2, \cdots, t$, of $X$ are ranked in terms of their variances $\var \bracks{\xi_j}$, which are listed in the \emph{decreasing} order of magnitude 
+		\begin{align*}
+			\var \bracks{\xi_1} \ge \var \bracks{\xi_2} \ge \cdots \ge \var \bracks{\xi_t} \ge 0. 
+		\end{align*}
+		\item $\xi_j$ is uncorrelated with all $\xi_k$, for all $k < j$. 
+	\end{itemize}
+
+\end{enumerate}
+
+
+\section*{III. Derivation of PCA Using the Least Squares Method}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Least-Squares Optimality of PCA:} Let 
+	\begin{align*}
+		\bB := \parens{\bb_1, \cdots, \bb_t}^\top \in \Real^{t \times p}
+	\end{align*}
+	be a matrix of weights, where $t \le p$. Then, the linear projections \eqref{xij} can be written as a $t$-vector
+	\begin{align*}
+		\bxi = \bB X, 
+	\end{align*}
+	where $\bxi := \parens{\xi_1, \cdots, \xi_t}^\top \in \Real^t$. We want to find a $p$-vector $\bmu$ and an $p \times t$ matrix $\bA$ such that the projections $\bxi$ have the property 
+	\begin{align*}
+		X \approx \bmu + \bA \bxi
+	\end{align*}
+	in the least squares sense: 
+	\begin{align}\label{ls_criterion}
+		\E \bracks[\Big]{\parens[\big]{X - \bmu - \bA \bxi}^\top \parens[\big]{X - \bmu - \bA \bxi}}. 
+	\end{align}
+	Since $\bxi = \bB X$, the problem now becomes to choose $\mu$, $\bA$ and $\bB$ to minimize 
+	\begin{align*}
+		f \parens{\bA, \bB, \bmu} := \E \bracks[\Big]{\parens[\big]{X - \bmu - \bA \bB X}^\top \parens[\big]{X - \bmu - \bA \bB X}}. 
+	\end{align*}
+	First note that $f$ is convex in all $\bA$, $\bB$ and $\bmu$. Thus, any stationary point is a global minimizer. Differentiating $f$ with respect to $\bmu$ and setting the result to zero, we have 
+	\begin{align*}
+		\widehat{\bmu} := \argmin_{\bmu} f \parens{\bA, \bB, \bmu} = \parens{\bI - \bA \bB} \bmu_X. 
+	\end{align*}
+	Plugging $\widehat{\bmu}$ back to $f$, we obtain 
+	\begin{align*}
+		f \parens{\bA, \bB, \widehat{\bmu}} = & \, \E \bracks[\Big]{\parens{X - \bmu_X}^\top \parens{\bI - \bA \bB}^\top \parens{\bI - \bA \bB} \parens{X - \bmu_X}} \\ 
+		= & \, \E \bracks[\Big]{ \tr \parens[\big]{\parens{\bI - \bA \bB}^\top \parens{\bI - \bA \bB} \parens{X - \bmu_X} \parens{X - \bmu_X}^\top }} \\ 
+		= & \, \tr \parens[\big]{ \parens{\bI - \bA \bB} \bSigma_{XX} \parens{\bI - \bA \bB}^\top}. 
+	\end{align*}
+	Let $\bC := \bA \bB$ and $\bSigma_{XX}^{\frac{1}{2}} = \bU \bLambda^{\frac{1}{2}} \bU^\top$ so that $\bSigma_{XX}^{\frac{1}{2}} {\bSigma_{XX}^{\frac{1}{2} \top}} = \bSigma_{XX}$, where $\bSigma_{XX} = \bU \bLambda \bU^\top$ is the spectral decomposition of $\bSigma_{XX}$. We can then rewrite $f$ as 
+	\begin{align*}
+		\tilde{f} \parens{\bC} = \tr \parens[\big]{ \parens{\parens{\bI - \bC} \bSigma_{XX}^{\frac{1}{2}}} \parens{\parens{\bI - \bC} \bSigma_{XX}^{\frac{1}{2}}}^\top }. 
+	\end{align*}
+	By the Eckart-Young's inequality, $\tilde{f}$ is minimized when 
+	\begin{align*}
+		\bC \bSigma_{XX}^{\frac{1}{2}} = \sum_{j=1}^t \lambda_j^{\frac{1}{2}} \bu_j \bu_j^\top = \bU^{\parens{t}} {\bLambda^{\parens{t}}}^{\frac{1}{2}} {\bU^{\parens{t}}}^{\top}, 
+	\end{align*}
+	where $\bu_j$ is the eigenvector of $\bSigma_{XX}$ associated with the $j$-th largest eigenvalue of $\bSigma_{XX}$, $\bU^{\parens{t}} = \parens{\bu_1, \bu_2, \cdots, \bu_t} \in \Real^{p \times t}$, and $\bLambda^{\parens{t}} \in \Real^{t \times t}$ is the diagonal matrix with the largest $t$ eigenvalues on its diagonal. It follows that 
+	\begin{align*}
+		\widehat{\bC} := \argmin_{\bC} \tilde{f} \parens{\bC} = \bU^{\parens{t}} {\bU^{\parens{t}}}^{\top}. 
+	\end{align*}
+	We can then let 
+	\begin{align*}
+		\widehat{\bA} = \bU^{\parens{t}}, \qquad \text{ and } \qquad \widehat{\bB} = {\bU^{\parens{t}}}^{\top}, 
+	\end{align*}
+	where $\parens{\widehat{\bA}, \widehat{\bB}} := \argmin_{\bA, \bB} f \parens{\bA, \bB}$. In addition, we have 
+	\begin{align*}
+		\widehat{\bmu} = \parens{\bI - \widehat{\bA} \widehat{\bB}} \bmu_X. 
+	\end{align*}
+	Thus, the best rank-$t$ approximation to the original $X$ is given by 
+	\begin{align*}
+		X^{\parens{t}} = \widehat{\bmu} + \widehat{\bC} X = \bmu_X + \widehat{\bC} \parens{X - \bmu_X}. 
+	\end{align*}
+	It also follows that the minimum of $f$ at $\parens{\widehat{\bA}, \widehat{\bB}, \widehat{\mu}}$ is 
+	\begin{align*}
+		f \parens{\widehat{\bA}, \widehat{\bB}, \widehat{\bmu}} = \sum_{j=t+1}^p \lambda_j, 
+	\end{align*}
+	the sum of the smallest $p - t$ eigenvalues of $\bSigma_{XX}$. 
+	
+%	\item \textbf{Additional Results:} The optimizers $\mu^{(t)}$, $A^{(t)}$ and $B^{(t)}$ that minimize \eqref{ls_criterion} also simultaneously minimize all the eigenvalues of the $r \times r$ matrix
+%	
+%	\textbf{\color{red} Solve this optimization problem!}
+	
+	\item \textbf{Principal Components:} The first $t$ principal components are given by the linear projections $\xi_1, \cdots, \xi_t$, where
+	\begin{align*}
+		\xi_j = \bu_j^\top X, \qquad \text{ for all } j = 1, \cdots, t,
+	\end{align*}
+	and $\bu_j$ is the eigenvector of $\bSigma_{XX}$ associated with the $j$-th largest eigenvalue. 
+	
+	\item \textbf{Covariance between $\xi_i$ and $\xi_j$:} The covariance between $\xi_i$ and $\xi_j$ is
+	\begin{align*}
+		\cov \parens{\xi_i, \xi_j} = \cov \parens{\bu_i^\top X, \bu_j^\top X} = \bu_i^\top \bSigma_{XX} \bu_j = \delta_{ij} \lambda_j,
+	\end{align*}
+	where $\delta_{ij}$ is the Kronecker delta. In particular, 
+	\begin{enumerate}
+		\item $\var \bracks{\xi_1}$ is the largest eigenvalue of $\bSigma_{XX}$, $\lambda_1$, and 
+		\item all pairs of derived variables are uncorrelated, $\cov \parens{\xi_i, \xi_j} = 0$ for $i \neq j$. 
+	\end{enumerate}
+	
+	\item \textbf{Goodness-of-fit Measurement for the First $t$ Principal Components:} A \textit{goodness-of-fit} measure of how well the first $t$ principal components represent the $p$ original variables is given by the ratio
+	\begin{align}\label{eq-goodness}
+		R := \frac{\lambda_{t+1} + \cdots + \lambda_p}{\lambda_1 + \cdots + \lambda_p},
+	\end{align}
+	the proportion of the total variation in the input variables that is explained by the last $p-t$ principal components. The larger proportion of the total variation in $X$ that the first $t$ principal components explains, the smaller value $R$ is. 
+
+\end{enumerate}
+
+
+\section*{IV. Derivation of PCA Using a Variance-Maximization Technique}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Problem Formulation:} Choose the coefficient vectors 
+	\begin{align*}
+		\bb_j = \parens{b_{j,1}, b_{j,2}, \cdots, b_{j,p}}^\top \in \Real^p, \qquad \text{ for all } j = 1, \cdots, t, 
+	\end{align*}
+	in a sequential manner so that 
+	\begin{enumerate}
+		\item the variances of the derived variables, $\var \bracks{\xi_j} = \bb_j^{\top} \bSigma_{XX} \bb_j$, are arranged in the \emph{descending} order subject to the normalizations $\bb_j^\top \bb_j = 1$ for all $j = 1, 2, \cdots, t$, and 
+		\item they are uncorrelated with previously chosen derived variables, that is,  
+		\begin{align*}
+			\cov \parens{\xi_i, \xi_j} = \bb_i^\top \bSigma_{XX} \bb_j = 0, \qquad \text{ for all } i < j. 
+		\end{align*}
+	\end{enumerate}
+	
+	\item \textbf{Derivation of the First Principal Component:} The first principal component, $\xi_1$, is obtained by choosing the $p$ coefficients, $\bb_1$, so that the variance of $\xi_1$ is maximized, under the constraint that $\bb_1^\top \bb_1 = 1$. This amounts to solving the following constrained optimization problem
+	\begin{equation*}
+		\begin{aligned}
+			\maximize_{\bb} & \, \bb_1^\top \bSigma_{XX} \bb_1 \\ 
+			\text{ subject to } & \, \bb_1^\top \bb_1 = 1. 
+		\end{aligned}
+	\end{equation*}
+	The Lagrangian function is 
+	\begin{align}\label{eq-pc1-lag}
+		f_1 \parens{\bb_1} := \bb_1^\top \bSigma_{XX} \bb_1 - \lambda_1 \parens{\bb_1^\top \bb_1 - 1}, 
+	\end{align}
+	where $\lambda_1 \ge 0$ is the Lagrangian multiplier. 
+	
+	Differentiating $f_1$ with respect to $\bb_1$ and setting the result equal to zero yield 
+	\begin{align}\label{eq-pc1-lag1}
+		\frac{\partial f_1 \parens{\bb_1}}{\partial \bb_1} = 2 \parens{\bSigma_{XX} - \lambda \bI_p} \bb_1 = \boldzero_p, 
+	\end{align}
+	which is a set of $p$ simultaneous equations. Since $\bb_1 \neq 0$, due to the constraint $\bb_1^\top \bb_1 = 1$, then $\lambda_1$ must be chosen to satisfy the following equation
+	\begin{align*}
+		\abs{\bSigma_{XX} - \lambda_1 \bI_p} = 0. 
+	\end{align*}
+	Thus, $\lambda_1$ has to be the largest eigenvalue of $\bSigma_{XX}$, and $\bb_1$ the eigenvector, $\bu_1$, associated with $\lambda_1$. 
+	
+	\item \textbf{Derivation of the Second Principal Component:} The second principal component, $\xi_2$, is obtained by choosing a second set of coefficients, $\bb_2$, so that 
+	\begin{enumerate}
+		\item the variance of $\xi_2$ is the largest among all linear projections of $X$, 
+		\item $\bb_2^\top \bb_2 = 1$, and 
+		\item $\xi_2$ is uncorrelated with $\xi_1$. 
+	\end{enumerate}
+	The resulting maximization problem is 
+	\begin{equation*}
+		\begin{aligned}
+			\maximize_{\bb_2} & \, \bb_2^\top \bSigma_{XX} \bb_2 \\ 
+			\text{ subject to } & \, \bb_2^\top \bb_2 = 1, \\ 
+			& \, \bb_2^\top \bSigma_{XX} \bb_1 = 0. 
+		\end{aligned}
+	\end{equation*}
+	The Lagrangian function is 
+	\begin{align*}
+		f_2 \parens{\bb_2} := \bb_2^\top \bSigma_{XX} \bb_2 - \lambda_2 \parens{\bb_2^\top \bb_2 - 1} - \nu \parens{\bb_2^\top \bSigma_{XX} \bb_1}, 
+	\end{align*}
+	where $\lambda_2 \ge 0$ and $\nu \ge 0$ are the Lagrangian multipliers. 
+	
+	Differentiating $f_2$ with respect to $\bb_2$ and setting the result equal to zero yields 
+	\begin{align}\label{eq-pc2-lag1}
+		\frac{\partial f_2 \parens{\bb_2}}{\partial \bb_2} = 2 \parens{\bSigma_{XX} - \lambda_2 \bI_p} \bb_2 - \nu \bSigma_{XX} \bb_1 = \boldzero_p. 
+	\end{align}
+	Premultiplying \eqref{eq-pc2-lag1} by $\bb_1^\top$ yields 
+	\begin{align*}
+		2 \bb_1^\top \bSigma_{XX} \bb_2 - 2 \lambda_2 \bb_1^\top \bb_2 - \nu \bb_1^\top \bSigma_{XX} \bb_1 = 0, 
+	\end{align*}
+	which is equivalent to 
+	\begin{align}\label{eq-pc2-lag2}
+		- 2 \lambda_2 \bb_1^\top \bb_2 - \nu \bb_1^\top \bSigma_{XX} \bb_1 = 0. 
+	\end{align}
+	On the other hand, premultiplying \eqref{eq-pc2-lag1} by $\bb_2^\top$ yields 
+	\begin{align*}
+		2 \bb_2^\top \bSigma_{XX} \bb_1 - 2 \lambda_1 \bb_2^\top \bb_1 = 0, 
+	\end{align*}
+	which is equivalent to 
+	\begin{align*}
+		- 2 \lambda_1 \bb_2^\top \bb_1 = 0. 
+	\end{align*}
+	From this preceding equation, we obtain $\bb_2^\top \bb_1 = 0$, since $\lambda_1 \neq 0$. Thus, plugging this result into \eqref{eq-pc2-lag2}, we have 
+	\begin{align*}
+		0 = - \nu \bb_1^\top \bSigma_{XX} \bb_1 = - \nu \lambda_1, 
+	\end{align*}
+	implying $\nu = 0$. Thus, $\lambda_2$ and $\bb_2$ have to satisfy 
+	\begin{align*}
+		\parens{\bSigma_{XX} - \lambda_2 \bI_p} \bb_2 = \boldzero_p. 
+	\end{align*}
+	This means that $\lambda_2$ is the second largest eigenvalue of $\bSigma_{XX}$, and the coefficient vector $\bb_2$ for the second principal component is the eigenvector, $\bu_2$, associated with $\lambda_2$. 
+	
+	\item \textbf{Further Principal Components:} In this sequential manner, we obtain the remaining sets of coefficients for the principal components $\xi_3$, $\xi_4$, $\cdots$, $\xi_p$, where $\xi_j$ is obtained by choosing the set of coefficients, $\bb_j$, for $\xi_j$ so that 
+	\begin{enumerate}
+		\item $\xi_j$ has the largest variance among all linear projections of $X$, and 
+		\item $\xi_j$ is uncorrelated with $\xi_1, \xi_2, \cdots, \xi_{j-1}$. 
+	\end{enumerate}
+	The coefficients of these linear projections are given by the ordered sequence of eigenvectors $\sets{\bu_j}$, where $\bu_j$ is associated with the $j$-th largest eigenvalue, $\lambda_j$, of $\bSigma_{XX}$. 
+	
+\end{enumerate}
+
+
+\section*{V. Sample Principal Components}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Setup:} Suppose we have $n$ i.i.d observations from the random vector $X$, denoted by $\bx_1, \cdots, \bx_n$, where $\bx_i \in \Real^p$ for all $i = 1, \cdots, n$. 
+	
+	\item \textbf{Estimation of $\mu_X$:} We estimate $\bmu_X$ by the sample mean 
+	\begin{align*}
+		\bar{\bx} := \frac{1}{n} \sum_{i=1}^n \bx_i. 
+	\end{align*}
+	
+	\item \textbf{Estimation of $\bSigma_X$:} We estimate $\bSigma_X$ by the sample covariance matrix 
+	\begin{align*}
+		\widehat{\bSigma}_{XX} := \frac{1}{n} \sum_{i=1}^n \parens{\bx_i - \bar{\bx}} \parens{\bx_i - \bar{\bx}}^\top. 
+	\end{align*}
+	The ordered eigenvalues of $\widehat{\bSigma}_{XX}$ are denoted by $\hat{\lambda}_1 \ge \hat{\lambda}_2 \ge \cdots \ge \hat{\lambda}_p \ge 0$, and the eigenvector associated with the $j$-th largest sample eigenvalue $\hat{\lambda}_j$ is the $j$-th sample eigenvector $\hat{\bu}_j$, for all $j = 1, 2, \cdots, p$. 
+	
+	\item \textbf{Estimation of $\bA^{\parens{t}}$, $\bB^{\parens{t}}$ and $\bC^{\parens{t}}$:} We estimate $\bA^{\parens{t}}$ and $\bB^{\parens{t}}$ by
+	\begin{align*}
+		\widehat{\bA}^{\parens{t}} = \parens{\hat{\bu}_1, \hat{\bu}_2, \cdots, \hat{\bu}_t} = \widehat{\bB}^{\parens{t}^\top}. 
+	\end{align*}
+	The best rank-$t$ reconstruction of $X = \bx$ is given by
+	\begin{align*}
+		\hat{\bx}^{\parens{t}} = \bar{\bx} + \widehat{\bC}^{\parens{t}} \parens{\bx - \bar{\bx}}, 
+	\end{align*}
+	where 
+	\begin{align*}
+		\widehat{\bC}^{\parens{t}} = \widehat{\bA}^{\parens{t}} \widehat{\bB}^{\parens{t}} = \sum_{j=1}^t \hat{\bu}_j \hat{\bu}_j^\top. 
+	\end{align*}
+	
+	\item \textbf{Sample Principal Component:} The $j$-th sample principal component of $X = \bx$ is given by 
+	\begin{align*}
+		\hat{\xi}_j = \hat{\bu}_j^\top \parens{\bx - \bar{\bx}}. 
+	\end{align*}
+	
+	\item \textbf{Estimation of $R$ in \eqref{eq-goodness}:} The variance, $\lambda_j$, of the $j$-th principal component is estimated by the sample variance $\hat{\lambda}_j$, for all $j = 1, 2, \cdots, t$. A sample estimate of the measure \eqref{eq-goodness} of how well the first $t$ principal components represent the $p$ original variables is given by the statistic 
+	\begin{align*}
+		\frac{\hat{\lambda}_{t+1} + \hat{\lambda}_{t+2} + \cdots + \hat{\lambda}_{p}}{\hat{\lambda}_{1} + \hat{\lambda}_{2} + \cdots + \hat{\lambda}_{p}}, 
+	\end{align*}
+	which is the proportion of the total sample variation that is explained by the last $p - t$ sample principal components. 
+
+	\item \textbf{Distribution of the Eigenvalues of $\bX \bX^\top$ When $n > p$:} Let $n > p$ and 
+	\begin{align*}
+		\bX := \begin{bmatrix}
+			\bx_1, \bx_2, \cdots, \bx_n
+		\end{bmatrix} \in \Real^{p \times n}. 
+	\end{align*}
+	where $\bx_i \iid \Normal_p \parens{\boldzero_p, \bI_p}$. Then, $\bX \bX^\top \sim \mathrm{Wishart}_p \parens{n, \bI_p}$. 
+	
+	The density function of the eigenvalues of $\bX \bX^\top$ is 
+	\begin{align*}
+		f \parens{\lambda_1, \cdots \lambda_p} = c_{p, n} \prod_{j=1}^p \sqrt{w \parens{\lambda_j}} \prod_{j < k} \parens{\lambda_j - \lambda_k}, 
+	\end{align*}
+	where $\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_p$ are the ordered eigenvalues of $\bX \bX^\top$, $w \parens{x} := x^{n-p-1} e^{-x}$ is the weight function for the Laguerre family of orthogonal polynomials, and $c_{p,n}$ is a normalizing constant dependent upon $p$ and $n$. 
+	
+	\item \textbf{Distribution of the Eigenvalues of $\bX \bX^\top$ When $p > n$:} Let $p > n$ and 
+	\begin{align*}
+		\bX = \begin{bmatrix}
+			\bx_1, \bx_2, \cdots, \bx_n
+		\end{bmatrix} \in \Real^{p \times n}, 
+	\end{align*}
+	where $\bx_i \iid \Normal_p \parens{\boldzero_p, \bI_p}$. Then, $\bX \bX^\top \sim \mathrm{Wishart}_p \parens{n, \bI_p}$. 
+	
+	The empirical distribution function computes the proportion of sample eigenvalues that are less than a given value of $k$, 
+	\begin{align*}
+		G_p \parens{k} = \frac{1}{p} \abs[\big]{\sets{j \mid \hat{\lambda}_j \le k}}. 
+	\end{align*}
+	It can be shown that if $\frac{p}{n} \to \gamma \in \parens{0, \infty}$, then $G_p \parens{k} \to G \parens{k}$ almost surely, where the limiting distribution $G$ has density function 
+	\begin{align*}
+		g \parens{k} = \frac{\sqrt{\parens{b_+ - k} \parens{k - b_-}}}{2 \pi \gamma k}, \qquad \text{ where } b_\pm = \parens{1 \pm \sqrt{\gamma}}^2. 
+	\end{align*}
+
+\end{enumerate}
+
+
+\section*{VI. How Many Principal Components to Retain?} 
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{General Principle:} We should \emph{only} retain those principal components with large variances. 
+	
+	\item \textbf{Scree Plot:} The sample eigenvalues from a PCA are ordered from largest to smallest. The \emph{scree plot} plots the ordered sample eigenvalues against their order number. 
+	
+	If the largest few sample eigenvalues dominate in magnitude, with the remaining sample eigenvalues very small, then the scree plot will exhibit an ``elbow'' in the plot corresponding to the division into ``large'' and ``small'' values of the sample eigenvalues. 
+	
+	It is usually recommended to retain those principal components up to the elbow and also the first PC following the elbow. 
+	
+	\item \textbf{PC Rank Trace:} The problem of deciding how many principal components to retain is equivalent to obtaining an estimate of the rank of the regression coefficient matrix $\bC$ in the principal components case. 
+	
+	The rank trace plots the loss of information when approximating the full-rank regression by a sequence of reduced-rank regressions having increasing ranks. When the true rank of the regression, denoted by $t_0$, is reached, the points in the rank trace plot following that rank should cease to change significantly from both the point for $t_0$ and the full-rank point (rank $p$). 
+	
+	In the principal components case, we plot 
+	\begin{align*}
+		\Delta \widehat{\bC}^{\parens{t}} = \parens[\bigg]{1 - \frac{t}{p}}^{\frac{1}{2}}, \qquad \text{ and } \qquad \Delta \widehat{\bSigma}_{XX}^{\parens{t}} = \parens[\bigg]{\frac{\hat{\lambda}_{t+1}^2 + \hat{\lambda}_{t+2}^2 + \cdots + \hat{\lambda}_{p}^2}{\hat{\lambda}_{1}^2 + \hat{\lambda}_{2}^2 + \cdots + \hat{\lambda}_{p}^2}}^{\frac{1}{2}}, 
+	\end{align*}
+	for all $t = 1, \cdots, p$. A plot of $\Delta \widehat{\bSigma}_{XX}^{\parens{t}}$ against $\Delta \widehat{\bC}^{\parens{t}}$ for different values of $t$ is called a \textit{PC rank trace plot}. 
+	
+	We assess the rank $t$ of $\bC$ by $\hat{t}$, the smallest integer value between 1 and $p$ at which an ``elbow'' can be detected in the PC rank trace plot. 
+
+\end{enumerate}
+
+
+\section*{VII. Invariance and Scaling}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{Disadvantage of PCA:} A shortcoming of PCA is that the principal components are \emph{not} invariant under re-scalings of the initial variables. In other words, PCA is sensitive to the units of measurement of the different input variables. 
+	
+	\item \textbf{Standardizing Variables:} Standardizing (centering and then scaling) the $X$-variables, 
+	\begin{align*}
+		Z \longleftarrow \parens{\diag \parens{\bSigma_{XX}}}^{-\frac{1}{2}} \parens{X - \bmu_X}, 
+	\end{align*}
+	is equivalent to carrying out PCA using the correlation (rather than the covariance) matrix. 
+	
+	When using the correlation matrix, the total variation of the standardized variables is $p$, the trace of the correlation matrix. 
+	
+	\textit{Remark.} The lack of scale invariance implies that a PCA using the correlation matrix may be \emph{very different} from a similar analysis using the corresponding covariance matrix, and no simple relationship exists between the two sets of results. 
+
+\end{enumerate}
+
+
+\section*{VIII. Kernel PCA}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+	
+	\item \textbf{General Idea:} Standard linear PCA we have seen so far are obtained from the eigenvectors of the covariance matrix, and give directions in which the data have maximal variances. 
+	
+	Kernel PCA expands the scope of the standard linear PCA by expanding the features using non-linear transformations. 
+	
+	\item \textbf{Setup:} Let $\bx_1, \cdots, \bx_n \in \Real^p$ be i.i.d observations from a $p$-dimensional random vector. 
+	
+	\item \textbf{General Procedures:} Kernel PCA has the following two-step process: 
+	\begin{enumerate}
+		\item Nonlinearly transform $\bx_i \in \Real^p$ into a point $\Phi \parens{\bx_i}$ in a high-dimensional feature space $\calH$ over which an inner product is defined, for all $i = 1, 2, \cdots, n$. The map $\Phi: \Real^p \to \calH$ is called a \emph{feature map}; 
+		\item Given $\Phi \parens{\bx_1}, \Phi \parens{\bx_2}, \cdots, \Phi \parens{\bx_n} \in \calH$ satisfying $\sum_{i=1}^n \Phi \parens{\bx_i} = \boldzero$, solve a \emph{standard linear PCA problem} in the feature space $\calH$. 
+	\end{enumerate}
+	
+	\textit{Remark.} We do \emph{not} need to define the feature map $\Phi$ explicitly. Instead, as we will see, we only work on the inner product $\innerp{\Phi \parens{\bx}}{\Phi \parens{\by}}_{\calH} =: K \parens{\bx, \by}$, where $\innerp{\,\cdot\,}{\,\cdot\,}_{\calH}$ denotes the inner product in the feature space $\calH$. 
+	
+	\item \textbf{PCA in Feature Space:} In order to carry out linear PCA in feature space so that it mimics the standard treatment of PCA, we have to find eigenvalues $\lambda \ge 0$ and nonzero eigenvectors $\bu \in \calH$ of the estimated covariance matrix, 
+	\begin{align*}
+		\bC = \frac{1}{n} \sum_{i=1}^n \Phi \parens{\bx_i} \Phi \parens{\bx_i}^\top, 
+	\end{align*}
+	under the constraint $\sum_{i=1}^n \Phi \parens{\bx_i} = \boldzero$. 
+	
+	\begin{enumerate}
+		\item \textit{Charactering the Solution:} We consider the eigen-problem 
+		\begin{align}\label{eq-kernel-pca-eigen}
+			\bC \bu = \lambda \bu, 
+		\end{align}
+		where $\bu$ is the eigenvector corresponding to the eigenvalue $\lambda \ge 0$ of $\bC$. Equivalently, we can rewrite \eqref{eq-kernel-pca-eigen} as 
+		\begin{align}\label{eq-kernel-pca-eigen-1}
+			\innerp{\Phi \parens{\bx_i}}{\bC \bu}_{\calH} = \lambda \innerp{\Phi \parens{\bx_i}}{\bu}_{\calH}, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align}
+		Since 
+		\begin{align*}
+			\bC \bu = \frac{1}{n} \sum_{i=1}^n \innerp{\Phi \parens{\bx_i}}{\bu}_{\calH} \Phi \parens{\bx_i} = \lambda \bu, 
+		\end{align*}
+		all solutions $\bu$ with nonzero eigenvalue $\lambda$ must reside in 
+		\begin{align*}
+			\mathrm{Span} \parens[\Big]{ \sets[\big]{\Phi \parens{\bx_1}, \Phi \parens{\bx_2}, \cdots, \Phi \parens{\bx_n}}}. 
+		\end{align*}
+		Hence, there exist coefficients $\alpha_1, \alpha_2, \cdots, \alpha_n$ such that 
+		\begin{align}\label{eq-sol-kernel-pca}
+			\bu = \sum_{j=1}^n \alpha_j \Phi \parens{\bx_j}. 
+		\end{align}
+		With $\bu$ in the form of \eqref{eq-sol-kernel-pca}, we have 
+		\begin{align*}
+			\bC \bu = & \, \frac{1}{n} \sum_{\ell=1}^n \innerp[\bigg]{\Phi \parens{\bx_\ell}}{ \sum_{j=1}^n \alpha_j \Phi \parens{\bx_j} }_{\calH} \Phi \parens{\bx_{\ell}} \\ 
+			= & \, \frac{1}{n} \sum_{\ell=1}^n \sum_{j=1}^n \alpha_j \innerp{\Phi \parens{\bx_{\ell}}}{ \Phi \parens{\bx_j} }_{\calH} \Phi \parens{\bx_{\ell}}, 
+		\end{align*}
+		and, for all $i = 1, 2, \cdots, n$, 
+		\begin{align*}
+			\innerp{\Phi \parens{\bx_i}}{\bC \bu}_{\calH} = & \, \frac{1}{n} \sum_{\ell=1}^n \sum_{j=1}^n \alpha_j \innerp{\Phi \parens{\bx_{\ell}}}{ \Phi \parens{\bx_j} }_{\calH} \innerp{\Phi \parens{\bx_{\ell}}}{\Phi \parens{\bx_i}}_{\calH}. 
+		\end{align*}
+		Hence, \eqref{eq-kernel-pca-eigen-1} can be written as 
+		\begin{align}\label{eq-kernel-pca-eigen-eq-2}
+			\frac{1}{n} \sum_{\ell=1}^n \sum_{j=1}^n \alpha_j \innerp{\Phi \parens{\bx_{\ell}}}{ \Phi \parens{\bx_j} }_{\calH} \innerp{\Phi \parens{\bx_{\ell}}}{\Phi \parens{\bx_i}}_{\calH} = \sum_{j=1}^n \lambda \alpha_j \innerp{\Phi \parens{\bx_j}}{\Phi \parens{\bx_i}}_{\calH}. 
+		\end{align}
+		Let $\bK$ be an $n \times n$ real matrix with the $\parens{i, j}$-th entry being 
+		\begin{align*}
+			\innerp{\Phi \parens{\bx_i}}{\Phi \parens{\bx_j}}_{\calH}, 
+		\end{align*}
+		and $\balpha := \parens{\alpha_1, \alpha_2, \cdots, \alpha_n}^\top \in \Real^n$. Then, we can write \eqref{eq-kernel-pca-eigen-eq-2} as 
+		\begin{align*}
+			\bK^2 \balpha = n \lambda \bK \balpha. 
+		\end{align*}
+		Assuming $\bK$ is invertible and letting $\tilde{\lambda} := n \lambda$, we obtain 
+		\begin{align}
+			\bK \balpha = \tilde{\lambda} \balpha. 
+		\end{align}
+		In other words, $\tilde{\lambda}$ is the eigenvalue of $\bK$ and $\balpha$ is the corresponding eigenvector. 
+		
+		\item \textit{Solution:} Let $\tilde{\lambda}_1 \ge \tilde{\lambda}_2 \ge \cdots \ge \tilde{\lambda}_n \ge 0$ be the eigenvalues of the matrix $\bK$ in the decreasing order, and $\balpha_i = \parens{\alpha_{i,1}, \alpha_{i,2}, \cdots, \alpha_{i,n}}^\top \in \Real^n$ be the eigenvector associated with $\tilde{\lambda}_i$, for all $i = 1, 2, \cdots, n$. 
+		
+		We have the solution to \eqref{eq-kernel-pca-eigen}, $\bu_1, \bu_2, \cdots, \bu_n$, given by 
+		\begin{align*}
+			\bu_i = \sum_{j=1}^n \alpha_{i,j} \Phi \parens{\bx_j}, \qquad \text{ for all } i = 1, 2, \cdots, n. 
+		\end{align*}
+		If we require $\norm{\bu_i}_{\calH} = 1$, we note 
+		\begin{align*}
+			\norm{\bu_i}_{\calH}^2 = & \, \sum_{j=1}^n \sum_{\ell=1}^n \alpha_{i,j} \alpha_{i,\ell} \innerp{\Phi \parens{\bx_j}}{\Phi \parens{\bx_{\ell}}}_{\calH} \\ 
+			= & \, \balpha_i^\top \bK \balpha_i \\ 
+			= & \, \tilde{\lambda}_i \balpha_i^\top \balpha_i \\ 
+			= & \, \tilde{\lambda}_i, 
+		\end{align*}
+		and the desired $\bu_i$ is 
+		\begin{align*}
+			\tilde{\bu}_i := \frac{1}{\tilde{\lambda}_i^{1/2}} \sum_{j=1}^n \alpha_{i,j} \Phi \parens{\bx_j}. 
+		\end{align*}
+		
+	\end{enumerate}
+	
+	\item \textbf{Kernel Principal Component Score of a New Point $\bx$:} Let $\bx \in \Real^p$ be a point possibly different from $\bx_1, \bx_2, \cdots, \bx_n$. In order to obtain the kernel principal component score of $\bx$ corresponding to $\Phi$, we project $\Phi \parens{\bx} \in \calH$ onto the eigenvectors $\tilde{\bu}_1, \tilde{\bu}_2, \cdots, \tilde{\bu}_n$ with the following coefficients 
+	\begin{align*}
+		\innerp{\tilde{\bu}_i}{\Phi \parens{\bx}}_{\calH} = \frac{1}{\tilde{\lambda}_i^{1/2}} \sum_{j=1}^n \alpha_{i,j} \innerp{\Phi \parens{\bx_j}}{\Phi \parens{\bx}}_{\calH} = \frac{1}{\tilde{\lambda}_i^{1/2}} \sum_{j=1}^n \alpha_{i,j} K \parens{\bx_i, \bx}, 
+	\end{align*}
+	for all $i = 1, 2, \cdots, n$. 
+	
+	\item \textbf{On the Centering of the Feature Map:} All developments above assumes 
+	\begin{align*}
+		\sum_{i=1}^n \Phi \parens{\bx_i} = \boldzero. 
+	\end{align*}
+	This essentially assumes each column and each row of $\bK$ sum to 0. 
+	
+	In practice, when we have chosen a kernel function and constructed $\bK$ using real data, each row and each column do not necessarily sum to 0. We apply the following adjustment to the un-centered $\bK$
+	\begin{align*}
+		\widetilde{\bK} := \bH \bK \bH, 
+	\end{align*}
+	where $\bH := \bI_n - \frac{1}{n} \bJ_n$ is the centering matrix, and $\bJ_n$ is an $n \times n$ matrix with all entries being 1. The resulting matrix 
+	\begin{align*}
+		\widetilde{\bK} = \bK - \bK \parens[\bigg]{\frac{1}{n} \bJ_n} - \parens[\bigg]{\frac{1}{n} \bJ_n} \bK + \parens[\bigg]{\frac{1}{n} \bJ_n} \bK \parens[\bigg]{\frac{1}{n} \bJ_n}
+	\end{align*}
+	corresponds to starting with a centered $\Phi$ as required. 
+	
+\end{enumerate}
+
+
+\section*{IX. Sparse PCA}
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+
+	\item \textbf{Motivation:} We often interpret principal components by examining the direction vectors $\bu_j$'s, referred to as \emph{loadings}, to see which variables play a significant role. Often this interpretation is made easier if the loadings are \emph{sparse}. 
+	
+	\item \textbf{Simplified Component Technique-LASSO (SCoTLASS):} SCoTLASS procedures consider the following optimization problem 
+	\begin{equation}\label{eq-scotlass}
+		\begin{aligned}
+			\maximize & \, \bu^\top \bSigma_{XX} \bu, \\ 
+			\text{ subject to } & \ \norm{\bu}_1 \le t, \norm{\bu}_2 = 1. 
+		\end{aligned}
+	\end{equation}
+	The $\norm{\,\cdot\,}_1$ constraint encourages some of the loadings to be zero and hence $\bu$ to be sparse. Further sparse principal components are found in the same way, by forcing the $k$-th component to be orthogonal to the first $k - 1$ components. 
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item The problem \eqref{eq-scotlass} is \emph{not} convex and the computations are difficult; 
+		\item When $\bSigma_{XX}$ is unknown, we can replace it by the sample covariance matrix constructed using the data; 
+		\item The problem \eqref{eq-scotlass} can be equivalently expressed as 
+		\begin{equation}\label{eq-scotlass-1}
+			\begin{aligned}
+				\maximize_{\bM \succeq \boldzero_{p \times p}} & \ \trace \parens{\bSigma_{XX} \bM} \\ 
+				\text{ subject to } & \ \trace \parens{\bM} = 1, \trace \parens{\abs{\bM} \bJ_p} \le t^2, \text{ and } \rank \parens{\bM} = 1, 
+			\end{aligned}
+		\end{equation}
+		where $\bM := \bu \bu^\top \in \Real^{p \times p}$ is a rank one matrix, $\abs{\bM}$ is obtained by taking absolute values entry-wise, and $\bJ_p$ is the $p \times p$ matrix with all entries being 1. In particular, note that $\norm{\bu}_2 = 1$ is equivalent to $\trace \parens{\bM} = 1$, and $\norm{\bu}_1 \le t$ is equivalent to $\trace \parens{\abs{\bM} \bJ_p} \le t^2$. 
+				
+	\end{enumerate}
+	
+	\item \textbf{Convex Relaxation of SCoTLASS \eqref{eq-scotlass-1}:} The formulation \eqref{eq-scotlass-1} is non-convex, due to the presence of the constraint $\rank \parens{\bM} = 1$. A relaxation is to drop this constraint and solve the following semi-definite program (SDP)
+	\begin{equation*}
+		\begin{aligned}
+			\maximize_{\bM \succeq \boldzero_{p \times p}} & \ \trace \parens{\bSigma_{XX} \bM} \\ 
+			\text{ subject to } & \ \trace \parens{\bM} = 1, \text{ and } \trace \parens{\abs{\bM} \bJ_p} \le t^2. 
+		\end{aligned}
+	\end{equation*}
+	
+	\textit{Remarks.}
+	\begin{enumerate}
+		\item This relaxed problem is convex, it has no local optima, and a global optimum can be obtained by various standard methods. 
+		\item If we solve the SDP and \emph{do} obtain a rank one solution, then we have in fact obtained the global optimum of the non-convex SCoTLASS criterion. 
+	\end{enumerate}
+	
+	\item \textbf{Approach by Minimizing the Construction Error (Single Component):} For a single component, with $\bx_1, \cdots, \bx_n$ i.i.d samples from $X$, minimize 
+	\begin{equation*}
+		\begin{aligned}
+			\minimize & \ \frac{1}{n} \sum_{i=1}^n \norm[\big]{\bx_i - \btheta \bu^\top \bx_i}_2^2 + \lambda \norm{\bu}_2^2 + \nu \norm{\bu}_1,  \\ 
+			\text{subject to } & \ \norm{\btheta}_2 = 1. 
+		\end{aligned}
+	\end{equation*}
+	Note that 
+	\begin{enumerate}
+		\item If both $\lambda$ and $\nu$ are zero and $n > p$, we have the minimizer of $\bu$ and that of $\btheta$ are both the eigenvector associated with the largest eigenvalue of the sample covariance matrix $\widehat{\bSigma}_{XX} := \frac{1}{n} \sum_{i=1}^n \bx_i \bx_i^\top$; 
+		\item When $p \gg n$, the solution is \emph{not} necessarily unique unless $\lambda > 0$. For any $\lambda > 0$ and $\nu = 0$, the solution for $\bu$ is proportional to the eigenvector associated with the largest eigenvalue of $\widehat{\bSigma}_{XX}$; 
+		\item The second penalty on $\bu$ encourages sparseness of the loadings. 
+	\end{enumerate}
+	
+	\item \textbf{Approach by Minimizing the Construction Error (Multiple Components):} For $t > 1$ components, with $\bx_1, \cdots, \bx_n$ i.i.d samples from $X$, minimize 
+	\begin{equation}\label{eq-sparse-pca-multiple}
+		\begin{aligned}
+			\minimize & \ \frac{1}{n} \sum_{i=1}^n \norm[\big]{\bx_i - \bTheta \bU^\top \bx_i}_2^2 + \lambda \sum_{k=1}^t \norm{\bu_k}_2^2 + \sum_{k=1}^t \nu_k \norm{\bu_k}_1,  \\ 
+			\text{subject to } & \, \bTheta^\top \bTheta = \bI_t. 
+		\end{aligned}
+	\end{equation}
+	Here, $\bU \in \Real^{p \times t}$ is a matrix with columns $\bu_k$ and $\bTheta \in \Real^{p \times t}$. 
+	
+	\textit{Remarks.} 
+	\begin{enumerate}
+		\item The optimization problem in \eqref{eq-sparse-pca-multiple} is \emph{not} jointly convex in $\bU$ and $\bTheta$, but it is convex in each parameter with the other parameter fixed; 
+		\item Minimization over $\bU$ with $\bTheta$ fixed is equivalent to $t$ elastic net problems and can be done efficiently; 
+		\item Minimization over $\bTheta$ with $\bU$ fixed can be solved by a simple SVD calculation. 
+	\end{enumerate}
+
+\end{enumerate}
+
+
+%\section*{VII. Functional PCA:}
+%
+%\begin{enumerate}
+%	
+%	\item \textbf{Setup:} We view functional observations as a continuously defined record observed at a set of discrete points, so that a single data point is the entire function. 
+%	
+%	Let $X \parens{t}$ be a univariate stochastic process, and $X_1 \parens{t}, \cdots, X_n \parens{t}$ be independent realizations of $X \parens{t}$, where $t$ indicates time or can be thought of as a continuous index varying within a closed interval $\bracks{0, T}$. 
+%	
+%	We assume $\E \bracks{X \parens{t}} = \mu \parens{t}$, and 
+%	\begin{align}
+%		\cov \parens{X \parens{s}, X \parens{t}} = \sigma \parens{s, t}. 
+%	\end{align}
+%	
+%	\item \textbf{Decomposition of $\sigma \parens{s, t}$:} By the spectral decomposition of the covariance function, there exist eigenvalues $\sets{\lambda_j}_{j=1}^{\infty}$ and eigenfunctions $\sets{V_j \parens{t}}_{j=1}^{\infty}$ such that 
+%	\begin{align*}
+%		\sigma \parens{s, t} = \sum_{j=1}^{\infty} \lambda_j V_j \parens{s} V_j \parens{t}, 
+%	\end{align*}
+%	where $\lambda_1 \ge \lambda_2 \ge \cdots \lambda_n \ge \cdots \ge 0$ and $\lambda_j \to 0$ as $j \to \infty$, and 
+%	\begin{align}
+%		\int_0^T \parens{V_j \parens{t}}^2 \diff t = 1, \qquad \text{ and } \qquad \int_0^T V_j \parens{t} V_k \parens{t} \diff t = 0 \text{ if } j \neq k. 
+%	\end{align}	
+%	
+%	\item \textbf{Decomposition of $X \parens{t}$:} The random curve $X \parens{t}$ can be expressed as 
+%	\begin{align}
+%		X \parens{t} = \mu \parens{t} + \sum_{j=1}^{\infty} \xi_i V_j \parens{t} \diff t, 
+%	\end{align}
+%	where 
+%	\begin{align}
+%		\xi_j = \int_{0}^T \parens{X \parens{t} - \mu \parens{t}} V_j \parens{t} \diff t
+%	\end{align}
+%	is a random variable, called the \textit{$j$-th functional PC score}, satisfying $\E \bracks{\xi_j} = 0$ and $\var \bracks{\xi_j} = \lambda_j$, $\sum_{j=1}^{\infty} \lambda_j < \infty$, and $\cov \parens{\xi_j, \xi_k} = 0$ for all $j \neq k$. 
+%	
+%	
+%	\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:}
+%\item \textbf{:} 
+%\end{enumerate}
+%
+
+
+
+\printbibliography
+
+\end{document}

@@ -1,0 +1,15 @@
+[0] Config.pm:343> INFO - This is Biber 2.5
+[0] Config.pm:346> INFO - Logfile is '/Users/chenxizhou/Dropbox/LaTex_Files/0_statistical_learning_machine_learning_comprehensive/chapter_01_introduction/.texpadtmp/chapter_1.blg'
+[55] biber-darwin:290> INFO - === Fri Jun 19, 2020, 21:02:33
+[85] Biber.pm:351> INFO - Reading '/Users/chenxizhou/Dropbox/LaTex_Files/0_statistical_learning_machine_learning_comprehensive/chapter_01_introduction/.texpadtmp/chapter_1.bcf'
+[181] Biber.pm:776> INFO - Found 2 citekeys in bib section 0
+[193] Biber.pm:3493> INFO - Processing section 0
+[211] Biber.pm:3657> INFO - Looking for bibtex format file '/Users/chenxizhou/Dropbox/LaTex_Files/noteref.bib' for section 0
+[213] bibtex.pm:1187> INFO - Decoding LaTeX character macros into UTF-8
+[215] bibtex.pm:1048> INFO - Found BibTeX data source '/Users/chenxizhou/Dropbox/LaTex_Files/noteref.bib'
+[233] UCollate.pm:66> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[233] UCollate.pm:66> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[233] Biber.pm:3306> INFO - Sorting list 'nyt/global/' of type 'entry' with scheme 'nyt' and locale 'en-US'
+[233] Biber.pm:3310> INFO - No sort tailoring available for locale 'en-US'
+[235] bbl.pm:526> INFO - Writing '/Users/chenxizhou/Dropbox/LaTex_Files/0_statistical_learning_machine_learning_comprehensive/chapter_01_introduction/.texpadtmp/chapter_1.bbl' with encoding 'ascii'
+[236] bbl.pm:619> INFO - Output to /Users/chenxizhou/Dropbox/LaTex_Files/0_statistical_learning_machine_learning_comprehensive/chapter_01_introduction/.texpadtmp/chapter_1.bbl
