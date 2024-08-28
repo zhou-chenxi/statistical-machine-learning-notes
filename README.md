@@ -1,2 +1,3 @@
 # Notes on Statistical and Machine Learning 
-Some notes on statistical and machine learning
+
+This repository contains my reading notes on statistical and machine learning. 
